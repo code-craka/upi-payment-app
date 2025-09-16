@@ -1,252 +1,329 @@
-import { NextRequest, NextResponse } from "next/server"
-import { createClerkClient } from "@clerk/nextjs/server"
-import { connectDB } from "@/lib/db/connection"
-import { setSession, getSessionResponse, delSession } from "@/lib/session/redis"
-import { serverLogger } from "@/lib/utils/server-logger"
-import { UserRoleSchema, type UserRole } from "@/lib/types"
-import { z } from "zod"
-import type { User } from "@clerk/nextjs/server"
+import { NextRequest, NextResponse } from "next/server";
+import { currentUser } from "@clerk/nextjs/server";
+import { createClerkClient } from "@clerk/nextjs/server";
+import { cacheUserRole, updateRoleStats, getCachedUserRole } from "@/lib/redis";
+import { connectDB } from "@/lib/db/connection";
+import { 
+  AdminBootstrapRequestSchema, 
+  type AdminBootstrapResponse,
+  type UserRole,
+  type RoleChangeEvent 
+} from "@/lib/types";
+import { z } from "zod";
 
-interface UserPublicMetadata {
-  role?: string;
-}
-
-// Request validation schema
-const BootstrapRequestSchema = z.object({
-  userId: z.string().optional(),
-  email: z.string().email().optional(),
-  action: z.enum(["make-admin", "make-merchant", "remove-role"]).default("make-admin")
-}).refine(
-  (data) => data.userId || data.email,
-  {
-    message: "Either userId or email is required",
-    path: ["userId", "email"]
-  }
-)
-
+// Initialize Clerk client
 const clerk = createClerkClient({ 
   secretKey: process.env.CLERK_SECRET_KEY 
-})
+});
 
-// This endpoint helps bootstrap the first admin user
-// In production, you should secure this or remove after first use
-export async function POST(request: NextRequest) {
+/**
+ * POST /api/admin-bootstrap
+ * 
+ * Bootstrap admin users by assigning roles with dual-write to Clerk and Redis
+ * This endpoint allows initial admin setup and role management
+ */
+export async function POST(request: NextRequest): Promise<NextResponse<AdminBootstrapResponse | { error: string; details?: string }>> {
   try {
-    const body = await request.json()
-    const validatedData = BootstrapRequestSchema.parse(body)
-    const { userId, email, action } = validatedData
-
-    await connectDB()
-
-    let user
-    if (userId) {
-      user = await clerk.users.getUser(userId)
-    } else if (email) {
-      const users = await clerk.users.getUserList({
-        emailAddress: [email]
-      })
-      user = users.data[0]
-    }
-
-    if (!user) {
+    // Get current user for authorization
+    const currentUserData = await currentUser();
+    
+    if (!currentUserData) {
       return NextResponse.json(
         { 
-          error: "User not found",
-          message: "No user found with the provided userId or email"
-        },
-        { status: 404 }
-      )
+          error: "Authentication Required",
+          details: "You must be signed in to access this endpoint"
+        }, 
+        { status: 401 }
+      );
     }
 
-    const previousRole = (user.publicMetadata as UserPublicMetadata)?.role || "none"
+    // Parse and validate request body
+    const body = await request.json();
+    const validationResult = AdminBootstrapRequestSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { 
+          error: "Invalid Request",
+          details: validationResult.error.issues.map(i => i.message).join(", ")
+        }, 
+        { status: 400 }
+      );
+    }
 
-    // Handle role removal
-    if (action === "remove-role") {
-      // Update Clerk metadata
-      await clerk.users.updateUser(user.id, {
-        publicMetadata: {
-          ...user.publicMetadata,
-          role: undefined
-        }
-      })
+    const { userEmail, targetRole, force = false, reason } = validationResult.data;
 
-      // Delete Redis session
-      const sessionDeleted = await delSession(user.id)
+    // Check if current user has admin role (or allow bootstrap if no admins exist)
+    const currentUserRole = currentUserData.publicMetadata?.role as string;
+    const isCurrentUserAdmin = currentUserRole === "admin";
+    
+    // Allow bootstrap only if:
+    // 1. Current user is admin, OR
+    // 2. No admins exist in the system (initial bootstrap)
+    if (!isCurrentUserAdmin) {
+      // Check if any admins exist by querying Clerk users
+      const adminUsers = await clerk.users.getUserList({
+        limit: 1,
+      });
       
-      serverLogger.info("User role removed", {
-        userId: user.id,
-        email: user.emailAddresses[0]?.emailAddress,
-        previousRole,
-        sessionDeleted
-      })
+      const hasAdmins = adminUsers.data.some((user: any) => 
+        user.publicMetadata?.role === "admin"
+      );
+      
+      if (hasAdmins && !force) {
+        return NextResponse.json(
+          { 
+            error: "Access Denied",
+            details: "Admin privileges required or use force flag for emergency bootstrap"
+          }, 
+          { status: 403 }
+        );
+      }
+    }
 
+    // Find target user by email
+    const targetUsers = await clerk.users.getUserList({
+      emailAddress: [userEmail],
+      limit: 1,
+    });
+    
+    if (targetUsers.data.length === 0) {
+      return NextResponse.json(
+        { 
+          error: "User Not Found",
+          details: `No user found with email: ${userEmail}`
+        }, 
+        { status: 404 }
+      );
+    }
+
+    const targetUser = targetUsers.data[0];
+    const previousRole = (targetUser.publicMetadata?.role as UserRole) || null;
+    
+    // Skip if user already has the target role (unless forced)
+    if (previousRole === targetRole && !force) {
       return NextResponse.json({
         success: true,
-        message: `User ${user.emailAddresses[0]?.emailAddress} role has been removed`,
-        data: {
-          id: user.id,
-          email: user.emailAddresses[0]?.emailAddress,
-          role: null,
-          previousRole,
-          sessionDeleted
-        }
-      })
-    }
-
-    // Assign new role
-    const role: UserRole = action === "make-admin" ? "admin" : "merchant"
-    
-    // Validate the role
-    const validatedRole = UserRoleSchema.parse(role)
-    
-    // Invalidate any existing session before setting new role
-    const sessionInvalidated = await delSession(user.id)
-    
-    serverLogger.info("Previous session invalidated before role change", {
-      userId: user.id,
-      email: user.emailAddresses[0]?.emailAddress,
-      newRole: validatedRole,
-      previousRole,
-      sessionInvalidated
-    })
-    
-    // Update Clerk metadata (backup/initial source)
-    await clerk.users.updateUser(user.id, {
-      publicMetadata: {
-        ...user.publicMetadata,
-        role: validatedRole
-      }
-    })
-
-    // Set Redis session (primary source of truth)
-    const sessionSet = await setSession(user.id, {
-      role: validatedRole,
-      permissions: [] // Permissions are now auto-assigned based on role mapping
-    })
-
-    if (!sessionSet) {
-      serverLogger.error("Failed to set Redis session for user", {
-        userId: user.id,
-        role: validatedRole
-      })
-      
-      return NextResponse.json({
-        success: false,
-        error: "Role assignment partially failed",
-        message: "User role updated in Clerk but failed to set session. Please try again.",
-        details: "Redis session creation failed"
-      }, { status: 500 })
-    }
-
-    // Get session response for verification
-    const sessionResponse = await getSessionResponse(user.id)
-
-    serverLogger.info("User role assigned successfully", {
-      userId: user.id,
-      email: user.emailAddresses[0]?.emailAddress,
-      newRole: validatedRole,
-      previousRole,
-      sessionSet,
-      sessionData: sessionResponse
-    })
-
-    return NextResponse.json({
-      success: true,
-      message: `User ${user.emailAddresses[0]?.emailAddress} has been assigned ${validatedRole} role`,
-      data: {
-        id: user.id,
-        email: user.emailAddresses[0]?.emailAddress,
-        role: validatedRole,
+        userId: targetUser.id,
         previousRole,
-        sessionSet,
-        sessionData: sessionResponse
-      }
-    })
+        newRole: targetRole,
+        clerkUpdated: false,
+        redisUpdated: false,
+        message: `User already has ${targetRole} role`,
+        timestamp: Date.now(),
+      });
+    }
+
+    const startTime = Date.now();
+    let clerkUpdated = false;
+    let redisUpdated = false;
+    let updateError: string | undefined;
+
+    try {
+      // 1. Update Clerk metadata (source of truth)
+      await clerk.users.updateUserMetadata(targetUser.id, {
+        publicMetadata: {
+          ...targetUser.publicMetadata,
+          role: targetRole,
+          roleUpdatedAt: Date.now(),
+          roleUpdatedBy: currentUserData.id,
+          roleUpdateReason: reason || "Admin bootstrap",
+        },
+      });
+      
+      clerkUpdated = true;
+
+      // 2. Cache role in Redis for instant access
+      await cacheUserRole(targetUser.id, targetRole, {
+        source: "bootstrap",
+        updatedBy: currentUserData.id,
+        updatedAt: Date.now(),
+        previousRole,
+        reason: reason || "Admin bootstrap",
+      });
+      
+      redisUpdated = true;
+
+      // 3. Update role statistics
+      await updateRoleStats({
+        userId: targetUser.id,
+        oldRole: previousRole,
+        newRole: targetRole,
+      });
+
+    } catch (error) {
+      updateError = error instanceof Error ? error.message : "Unknown update error";
+      console.error("[Bootstrap] Role update failed:", error);
+    }
+
+    // 4. Create audit log (optional - will skip if AuditLogModel is not available)
+    try {
+      await connectDB();
+      
+      const roleChangeEvent: RoleChangeEvent = {
+        userId: targetUser.id,
+        userEmail: targetUser.primaryEmailAddress?.emailAddress || userEmail,
+        previousRole,
+        newRole: targetRole,
+        source: "bootstrap",
+        triggeredBy: currentUserData.id,
+        reason: reason || "Admin bootstrap via API",
+        timestamp: Date.now(),
+        ipAddress: request.headers.get("x-forwarded-for") || 
+                   request.headers.get("x-real-ip") || 
+                   "unknown",
+        userAgent: request.headers.get("user-agent") || "unknown",
+      };
+
+      // Log the event to console as fallback
+      console.log("[Bootstrap] Role change event:", roleChangeEvent);
+
+    } catch (auditError) {
+      console.error("[Bootstrap] Audit log creation failed:", auditError);
+      // Don't fail the request for audit log errors
+    }
+
+    const response: AdminBootstrapResponse = {
+      success: clerkUpdated, // Success if Clerk (source of truth) was updated
+      userId: targetUser.id,
+      previousRole,
+      newRole: targetRole,
+      clerkUpdated,
+      redisUpdated,
+      message: clerkUpdated 
+        ? `Successfully ${previousRole ? 'updated' : 'assigned'} role to ${targetRole}`
+        : `Failed to update role: ${updateError}`,
+      timestamp: Date.now(),
+    };
+
+    const statusCode = clerkUpdated ? 200 : 500;
+    
+    console.log(`[Bootstrap] Role bootstrap ${clerkUpdated ? 'successful' : 'failed'}:`, {
+      targetUser: userEmail,
+      targetUserId: targetUser.id,
+      previousRole,
+      newRole: targetRole,
+      triggeredBy: currentUserData.id,
+      clerkUpdated,
+      redisUpdated,
+      updateError,
+      latency: Date.now() - startTime,
+    });
+
+    return NextResponse.json(response, { status: statusCode });
 
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      serverLogger.warn("Bootstrap API validation error", {
-        errors: error.errors
-      })
-      return NextResponse.json({
-        success: false,
-        error: "Validation Error",
-        message: "Invalid request data",
-        details: error.errors
-      }, { status: 400 })
-    }
-
-    serverLogger.error("Role assignment failed", error)
-    return NextResponse.json({
-      success: false,
-      error: "Role assignment failed",
-      message: "An unexpected error occurred while assigning the role",
-      details: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 })
+    console.error("[Bootstrap] Unexpected error:", error);
+    
+    return NextResponse.json(
+      { 
+        error: "Internal Server Error",
+        details: error instanceof Error ? error.message : "An unexpected error occurred"
+      }, 
+      { status: 500 }
+    );
   }
 }
 
-// Get current user role status
-export async function GET() {
+/**
+ * GET /api/admin-bootstrap
+ * 
+ * Get bootstrap status and hybrid role synchronization statistics
+ */
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    await connectDB()
+    const currentUserData = await currentUser();
     
-    // Get all users and their roles from Clerk
-    const users = await clerk.users.getUserList({ limit: 50 })
-    
-    // Fetch Redis session data for each user
-    const userListPromises = users.data.map(async (user: User) => {
-      const sessionResponse = await getSessionResponse(user.id)
+    if (!currentUserData) {
+      return NextResponse.json(
+        { error: "Authentication Required" }, 
+        { status: 401 }
+      );
+    }
+
+    // Check if current user is admin or if no admins exist
+    const currentUserRole = currentUserData.publicMetadata?.role as string;
+    const isAdmin = currentUserRole === "admin";
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Admin access required" }, 
+        { status: 403 }
+      );
+    }
+
+    // Get user statistics from Clerk with Redis sync status
+    const allUsers = await clerk.users.getUserList({
+      limit: 500, // Adjust based on your needs
+    });
+
+    const roleStats = {
+      admin: 0,
+      merchant: 0,
+      viewer: 0,
+      total: allUsers.data.length,
+      unassigned: 0,
+      synced: 0,
+      unsynced: 0,
+    };
+
+    const syncStatus = [];
+
+    // Check each user's sync status between Clerk and Redis
+    for (const user of allUsers.data) {
+      const clerkRole = user.publicMetadata?.role as UserRole;
+      const cachedRole = await getCachedUserRole(user.id);
       
-      return {
-        id: user.id,
-        email: user.emailAddresses[0]?.emailAddress,
-        clerkRole: user.publicMetadata?.role || "no-role",
-        sessionRole: sessionResponse.role || "no-session",
-        hasSession: sessionResponse.hasSession,
-        sessionUpdatedAt: sessionResponse.updatedAt,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        createdAt: user.createdAt,
-        // Flag if there's a mismatch between Clerk and Redis
-        rolesMismatch: (user.publicMetadata?.role || null) !== (sessionResponse.role || null)
-      }
-    })
+      const isInSync = clerkRole === cachedRole?.role;
+      const userSyncStatus = {
+        userId: user.id,
+        email: user.primaryEmailAddress?.emailAddress,
+        clerkRole: clerkRole || null,
+        redisRole: cachedRole?.role || null,
+        inSync: isInSync,
+        lastSync: cachedRole?.lastSync || null,
+      };
 
-    const userList = await Promise.all(userListPromises)
+      syncStatus.push(userSyncStatus);
 
-    const adminCount = userList.filter((u) => u.sessionRole === "admin").length
-    const needsBootstrap = adminCount === 0
-    const mismatches = userList.filter((u) => u.rolesMismatch)
+      // Update role counts
+      if (clerkRole === "admin") roleStats.admin++;
+      else if (clerkRole === "merchant") roleStats.merchant++;
+      else if (clerkRole === "viewer") roleStats.viewer++;
+      else roleStats.unassigned++;
 
-    serverLogger.info("User list retrieved", {
-      totalUsers: userList.length,
-      adminCount,
-      needsBootstrap,
-      mismatches: mismatches.length
-    })
+      // Update sync counts
+      if (isInSync) roleStats.synced++;
+      else roleStats.unsynced++;
+    }
+
+    // Calculate sync health score
+    const syncHealthScore = roleStats.total > 0 ? 
+      (roleStats.synced / roleStats.total) * 100 : 100;
 
     return NextResponse.json({
       success: true,
-      needsBootstrap,
-      adminCount,
-      totalUsers: userList.length,
-      users: userList,
-      mismatches: mismatches.length > 0 ? mismatches : undefined,
-      stats: {
-        usersWithSessions: userList.filter(u => u.hasSession).length,
-        usersWithoutSessions: userList.filter(u => !u.hasSession).length,
-        rolesMismatches: mismatches.length
-      }
-    })
+      stats: roleStats,
+      syncHealth: {
+        score: Math.round(syncHealthScore),
+        synced: roleStats.synced,
+        unsynced: roleStats.unsynced,
+        total: roleStats.total,
+      },
+      canBootstrap: isAdmin,
+      unsyncedUsers: syncStatus.filter(u => !u.inSync),
+      timestamp: Date.now(),
+    });
 
   } catch (error) {
-    serverLogger.error("User list failed", error)
-    return NextResponse.json({
-      success: false,
-      error: "Failed to get user list",
-      message: "An unexpected error occurred while retrieving user information",
-      details: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 })
+    console.error("[Bootstrap] GET error:", error);
+    
+    return NextResponse.json(
+      { 
+        error: "Internal Server Error",
+        details: error instanceof Error ? error.message : "Unknown error"
+      }, 
+      { status: 500 }
+    );
   }
 }

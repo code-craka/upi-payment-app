@@ -2,7 +2,7 @@
 
 ## Overview
 
-The UPI Admin Dashboard implements multiple layers of security to protect user data, prevent unauthorized access, and ensure compliance with financial regulations. The system features advanced Redis-based session management with enhanced security controls.
+The UPI Admin Dashboard implements multiple layers of security to protect user data, prevent unauthorized access, and ensure compliance with financial regulations. The system features a **hybrid authentication approach** with Upstash Redis and Clerk for enhanced security and performance.
 
 **Author**: Sayem Abdullah Rihan (@code-craka)  
 **Contributor**: Sajjadul Islam  
@@ -11,59 +11,102 @@ The UPI Admin Dashboard implements multiple layers of security to protect user d
 
 ## Security Architecture
 
+### Hybrid Authentication Security
+
+- **Clerk**: Source of truth for authentication and role management
+- **Upstash Redis**: High-performance role cache with 30-second TTL  
+- **Edge Security**: Instant role validation at edge with Redis-first approach
+- **Automatic Failover**: Seamless fallback to Clerk when Redis unavailable
+- **Dual Validation**: Both Redis and Clerk validate roles for critical operations
+
 ### Enhanced Session Management
-- **Redis-First Authentication**: Primary session storage with instant role updates
-- **Hybrid Fallback System**: Clerk fallback when Redis is unavailable
-- **Session Encryption**: Secure session key generation and storage
-- **Auto-Expiration**: 30-day TTL with activity-based renewal
-- **Session Invalidation**: Immediate role change enforcement
+
+- **Redis Cache Layer**: Sub-50ms role validation globally
+- **TTL-Based Expiration**: 30-second cache expiration for security
+- **Auto-Sync Mechanism**: Background synchronization between systems
+- **Session Encryption**: Secure session data with TLS encryption
+- **IP Address Tracking**: Location-based security monitoring
 
 ### Authentication & Authorization
+
 - **Clerk Integration**: Enterprise-grade authentication with MFA support
-- **Role-Based Access Control (RBAC)**: Three-tier permission system with 25+ permissions
-- **Real-time Role Updates**: Users receive role changes without logout required
+- **Role-Based Access Control (RBAC)**: Three-tier permission system (admin, merchant, viewer)
+- **Real-time Role Updates**: Users receive role changes instantly via Redis cache
 - **Permission Inheritance**: Admin role inherits all permissions automatically
-- **JWT Tokens**: Secure token-based authentication with Redis validation
+- **JWT Tokens**: Secure token-based authentication with hybrid validation
 
 ### Data Protection
-- **Redis Security**: AUTH password protection and TLS encryption
-- **MongoDB Encryption**: Encryption at rest for sensitive data
+
+- **Upstash Redis Security**: REST API with TLS 1.3 and token authentication
+- **MongoDB Encryption**: Encryption at rest for sensitive data  
 - **Encryption in Transit**: TLS 1.3 for all communications
 - **Input Sanitization**: DOMPurify integration for XSS prevention
-- **SQL Injection Prevention**: Parameterized queries and Mongoose ODM
+- **NoSQL Injection Prevention**: Parameterized queries and Mongoose ODM
 
 ### API Security
-- **CSRF Protection**: Token-based CSRF prevention
+
+- **CSRF Protection**: Token-based CSRF prevention for state-changing operations
 - **Rate Limiting**: IP-based request throttling with Redis counters
-- **Input Validation**: Zod schema validation for all inputs
+- **Input Validation**: Zod schema validation for all API inputs
 - **Security Headers**: Comprehensive security header implementation
-- **Session Validation**: Dual Redis/Clerk validation for enhanced security
+- **Hybrid Validation**: Dual Redis/Clerk validation for enhanced security
 
 ## Enhanced Security Features
 
-### Redis Session Security
+### Hybrid Role Management Security
+
 ```typescript
-// Secure session management with Redis
-const sessionKey = generateSecureSessionKey(userId);
-await redisClient.setex(sessionKey, SESSION_TTL, JSON.stringify({
-  userId,
-  role,
-  permissions,
-  createdAt: new Date(),
-  ipAddress: request.ip
-}));
+// Secure hybrid role validation
+const authContext = await getHybridAuthContext(userId);
+
+// Redis-first approach for performance
+if (authContext.redis.cached && authContext.redis.ttl > 0) {
+  return authContext.redis.role;
+}
+
+// Fallback to Clerk for reliability  
+if (authContext.clerk.authenticated) {
+  await syncRoleToRedis(userId, authContext.clerk.role);
+  return authContext.clerk.role;
+}
+
+throw new UnauthorizedError('Authentication failed');
 ```
 
 ### Real-time Permission Validation
+
 ```typescript
-// Instant permission checks with Redis
-const hasPermission = await checkRedisPermission(userId, 'orders:write');
-if (!hasPermission) {
+// Instant permission checks with cache
+const userRole = await getCachedUserRole(userId);
+if (!hasPermission(userRole, 'orders:write')) {
+  await auditLog({
+    action: 'permission_denied',
+    userId,
+    permission: 'orders:write',
+    ipAddress: request.ip
+  });
   throw new ForbiddenError('Insufficient permissions');
 }
 ```
 
+### Secure Admin Bootstrap
+
+```typescript
+// Dual-write for role assignments
+await Promise.all([
+  updateClerkRole(userId, newRole),    // Source of truth
+  cacheUserRole(userId, newRole, 30),  // Performance cache
+  auditLog({
+    action: 'role_assigned',
+    userId,
+    newRole,
+    adminId: currentUser.id
+  })
+]);
+```
+
 ### CSRF Protection
+
 \`\`\`typescript
 // Automatic CSRF token validation
 const csrfToken = await getCsrfToken();
@@ -75,6 +118,46 @@ fetch('/api/orders', {
   },
   body: JSON.stringify(data)
 });
+\`\`\`
+
+### Upstash Redis Security
+
+- **REST API Security**: HTTPS-only with bearer token authentication
+- **Global Edge Security**: TLS 1.3 encryption across all edge locations  
+- **Token-Based Auth**: Secure REST API tokens with rotation capability
+- **Rate Limiting**: Built-in DDoS protection and request throttling
+- **Data Encryption**: AES-256 encryption at rest and in transit
+- **Access Control**: IP whitelisting and VPC peering support
+- **Audit Logging**: Complete request and response logging
+- **Compliance**: SOC 2 Type II, ISO 27001, and GDPR compliant
+
+### Redis Security Best Practices
+
+\`\`\`typescript
+// Secure Redis configuration
+export const redisConfig = {
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  retry: {
+    retries: 3,
+    delay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000)
+  },
+  timeout: 5000,
+  headers: {
+    'User-Agent': 'UPI-Admin-Dashboard/1.0'
+  }
+};
+
+// Secure data storage with TTL
+await redis.setex(
+  \`role:\${userId}\`, 
+  30,  // 30-second TTL for security
+  JSON.stringify({
+    role,
+    timestamp: Date.now(),
+    source: 'clerk'
+  })
+);
 \`\`\`
 
 ### Rate Limiting

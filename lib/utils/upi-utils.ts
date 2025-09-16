@@ -1,4 +1,4 @@
-import QRCode from 'qrcode'
+import { toDataURL } from 'qrcode'
 
 export interface UPIPaymentData {
   payeeAddress: string
@@ -32,10 +32,9 @@ export function generateUPIString(data: UPIPaymentData): string {
  */
 export async function generateQRCode(upiString: string): Promise<string> {
   try {
-    const qrCodeDataUrl = await QRCode.toDataURL(upiString, {
+    const qrCodeDataUrl = await toDataURL(upiString, {
       errorCorrectionLevel: 'M',
       type: 'image/png',
-      quality: 0.92,
       margin: 1,
       color: {
         dark: '#000000',

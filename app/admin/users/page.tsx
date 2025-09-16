@@ -24,43 +24,49 @@ export default function UsersPage() {
     setEditDialogOpen(true)
   }
 
-  const handleDeleteUser = async (userId: string) => {
+  const executeUserAction = async (options: {
+    action: () => Promise<void>
+    successTitle: string
+    successDescription: string
+    errorTitle: string
+    errorDescription: string
+  }) => {
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
+      await options.action()
       toast({
-        title: "User deleted",
-        description: "The user has been successfully removed from the system.",
+        title: options.successTitle,
+        description: options.successDescription,
       })
     } catch (error) {
       toast({
-        title: "Error deleting user",
-        description: "There was a problem deleting the user. Please try again.",
+        title: options.errorTitle,
+        description: options.errorDescription,
         variant: "destructive",
       })
     }
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    await executeUserAction({
+      action: () => new Promise((resolve) => setTimeout(resolve, 500)),
+      successTitle: "User deleted",
+      successDescription: `User ${userId} has been successfully removed from the system.`,
+      errorTitle: "Error deleting user",
+      errorDescription: "There was a problem deleting the user. Please try again."
+    })
   }
 
   const handleChangeRole = async (userId: string, newRole: string) => {
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      toast({
-        title: "Role updated",
-        description: `User role has been changed to ${newRole}.`,
-      })
-    } catch (error) {
-      toast({
-        title: "Error updating role",
-        description: "There was a problem updating the user role. Please try again.",
-        variant: "destructive",
-      })
-    }
+    await executeUserAction({
+      action: () => new Promise((resolve) => setTimeout(resolve, 500)),
+      successTitle: "Role updated",
+      successDescription: `User role has been changed to ${newRole}.`,
+      errorTitle: "Error updating role",
+      errorDescription: "There was a problem updating the user role. Please try again."
+    })
   }
 
-  const handleUserCreated = (userData: any) => {
+  const handleUserCreated = (userData: User) => {
     // Handle the created user data
     console.log("User created:", userData)
   }

@@ -4,7 +4,8 @@ import { createSecurityMiddleware } from "@/lib/middleware/security"
 import { createCSRFMiddleware } from "@/lib/middleware/csrf"
 import { serverLogger } from "@/lib/utils/server-logger"
 import { currentUser } from "@clerk/nextjs/server"
-import { getSessionWithFallback, hasRoleWithFallback } from "@/lib/auth/fallback-auth"
+import { getCachedUserRole, syncUserRole, cacheUserRole } from "@/lib/redis"
+import type { UserRole, HybridAuthContext } from "@/lib/types"
 
 // Define route matchers
 const isPublicRoute = createRouteMatcher([
@@ -36,6 +37,75 @@ const securityMiddleware = createSecurityMiddleware({
 
 const csrfMiddleware = createCSRFMiddleware()
 
+/**
+ * Get hybrid auth context with Redis-first, Clerk fallback
+ */
+async function getHybridAuthContext(userId: string): Promise<HybridAuthContext> {
+  const start = Date.now()
+  
+  try {
+    // First, try to get role from Redis cache
+    const cachedRole = await getCachedUserRole(userId)
+    
+    if (cachedRole && cachedRole.role && cachedRole.lastSync > Date.now() - 30000) {
+      // Fresh cache hit (less than 30 seconds old)
+      return {
+        userId,
+        email: "", // Will be populated later if needed
+        role: cachedRole.role as UserRole,
+        source: 'redis',
+        confidence: 0.9,
+        requiresSync: false,
+        lastSync: cachedRole.lastSync,
+      }
+    }
+    
+    // Cache miss or stale - fallback to Clerk
+    const user = await currentUser()
+    
+    if (!user) {
+      return {
+        userId,
+        email: "",
+        role: null,
+        source: 'fallback',
+        confidence: 0,
+        requiresSync: false,
+      }
+    }
+    
+    const clerkRole = user.publicMetadata?.role as UserRole
+    
+    // Sync role to Redis in background (non-blocking)
+    if (clerkRole) {
+      syncUserRole(userId, clerkRole).catch(error => {
+        serverLogger.error("Background role sync failed", error)
+      })
+    }
+    
+    return {
+      userId: user.id,
+      email: user.primaryEmailAddress?.emailAddress || "",
+      role: clerkRole || null,
+      source: 'clerk',
+      confidence: clerkRole ? 0.8 : 0.1,
+      requiresSync: !cachedRole || cachedRole.role !== clerkRole,
+    }
+    
+  } catch (error) {
+    serverLogger.error("Error getting hybrid auth context", error)
+    
+    return {
+      userId,
+      email: "",
+      role: null,
+      source: 'fallback',
+      confidence: 0,
+      requiresSync: true,
+    }
+  }
+}
+
 export default clerkMiddleware(async (auth, req) => {
   try {
     // Apply security middleware first
@@ -66,52 +136,26 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(new URL("/sign-in", req.url))
     }
 
-    // Admin route protection
+    // Admin route protection with hybrid role management
     if (isAdminRoute(req)) {
-      // Get user session with Redis-first, Clerk fallback, TTL auto-refresh
-      const session = await getSessionWithFallback(userId, true)
+      const authContext = await getHybridAuthContext(userId)
       
-      if (!session.hasSession) {
-        // No session found in Redis - check if user exists in Clerk
-        const user = await currentUser()
-        if (!user) {
-          serverLogger.middleware("No user found for admin route access", {
-            pathname: req.nextUrl.pathname,
-            userId
-          })
-          
-          if (req.nextUrl.pathname.startsWith('/api/')) {
-            return NextResponse.json(
-              { 
-                error: "Authentication Required",
-                message: "User session not found"
-              }, 
-              { status: 401 }
-            )
-          }
-          
-          return NextResponse.redirect(new URL("/sign-in", req.url))
-        }
-
-        // User exists but no session - this means they need to be bootstrapped
-        const clerkRole = user.publicMetadata?.role as string
-        
-        serverLogger.middleware("No session found, user needs bootstrap", {
+      // No role found anywhere
+      if (!authContext.role) {
+        serverLogger.middleware("No role found for admin route access", {
           pathname: req.nextUrl.pathname,
-          userId: user.id,
-          clerkRole: clerkRole || 'undefined',
-          sessionSource: session.source,
-          redisAvailable: session.redisAvailable
+          userId,
+          source: authContext.source,
+          confidence: authContext.confidence
         })
         
         if (req.nextUrl.pathname.startsWith('/api/')) {
           return NextResponse.json(
             { 
-              error: "Session Not Found",
-              message: "User session not initialized. Please contact administrator.",
+              error: "Access Denied",
+              message: "No role assigned. Please contact administrator.",
               needsBootstrap: true,
-              sessionSource: session.source,
-              redisAvailable: session.redisAvailable
+              source: authContext.source
             }, 
             { status: 403 }
           )
@@ -119,15 +163,16 @@ export default clerkMiddleware(async (auth, req) => {
         
         return NextResponse.redirect(new URL("/unauthorized", req.url))
       }
-
-      // Check if user has admin role from Redis session
-      if (session.role !== "admin") {
+      
+      // Check if user has admin role
+      if (authContext.role !== "admin") {
         serverLogger.middleware("Access denied for admin route - insufficient role", {
           pathname: req.nextUrl.pathname,
           userId,
-          currentRole: session.role,
+          currentRole: authContext.role,
           requiredRole: "admin",
-          sessionUpdatedAt: session.updatedAt
+          source: authContext.source,
+          confidence: authContext.confidence
         })
         
         if (req.nextUrl.pathname.startsWith('/api/')) {
@@ -136,7 +181,8 @@ export default clerkMiddleware(async (auth, req) => {
               error: "Access Denied",
               message: "Admin privileges required to access this resource",
               requiredRole: "admin",
-              currentRole: session.role
+              currentRole: authContext.role,
+              source: authContext.source
             }, 
             { status: 403 }
           )
@@ -145,15 +191,24 @@ export default clerkMiddleware(async (auth, req) => {
         return NextResponse.redirect(new URL("/unauthorized", req.url))
       }
 
-      // Log successful admin access
+      // Log successful admin access with hybrid context
       serverLogger.middleware("Admin access granted", {
         pathname: req.nextUrl.pathname,
         userId,
-        role: session.role,
-        sessionUpdatedAt: session.updatedAt,
-        sessionSource: session.source,
-        redisAvailable: session.redisAvailable
+        role: authContext.role,
+        source: authContext.source,
+        confidence: authContext.confidence,
+        requiresSync: authContext.requiresSync,
+        lastSync: authContext.lastSync
       })
+      
+      // Add hybrid auth context to request headers for downstream consumption
+      const response = NextResponse.next()
+      response.headers.set('x-auth-source', authContext.source)
+      response.headers.set('x-auth-confidence', authContext.confidence.toString())
+      response.headers.set('x-auth-requires-sync', authContext.requiresSync.toString())
+      
+      return response
     }
 
     return NextResponse.next()

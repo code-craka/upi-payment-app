@@ -122,7 +122,7 @@ UserSchema.statics.findByClerkId = function (clerkId: string) {
 }
 
 UserSchema.statics.findActiveUsers = function (role?: string) {
-  const query = { isActive: true }
+  const query: { isActive: boolean; role?: string } = { isActive: true }
   if (role) query.role = role
   return this.find(query).sort({ createdAt: -1 })
 }

@@ -150,3 +150,174 @@ export const SessionResponseSchema = z.object({
 })
 
 export type SessionResponse = z.infer<typeof SessionResponseSchema>
+
+// ==========================================
+// HYBRID ROLE MANAGEMENT TYPES
+// ==========================================
+
+// Redis Session Data for hybrid role management
+export const RedisSessionDataSchema = z.object({
+  userId: z.string(),
+  role: UserRoleSchema,
+  lastSync: z.number(),
+  clerkSync: z.boolean(),
+  metadata: z.record(z.any()).optional(),
+})
+
+export type RedisSessionData = z.infer<typeof RedisSessionDataSchema>
+
+// Role Statistics for admin dashboard
+export const RoleStatsSchema = z.object({
+  admin: z.number().min(0),
+  merchant: z.number().min(0),
+  viewer: z.number().min(0),
+  total: z.number().min(0),
+  lastUpdated: z.number(),
+})
+
+export type RoleStats = z.infer<typeof RoleStatsSchema>
+
+// Role Sync Status for debugging
+export const RoleSyncStatusSchema = z.object({
+  userId: z.string(),
+  clerkRole: UserRoleSchema.nullable(),
+  redisRole: UserRoleSchema.nullable(),
+  inSync: z.boolean(),
+  lastClerkSync: z.number().nullable(),
+  lastRedisSync: z.number().nullable(),
+  syncError: z.string().optional(),
+})
+
+export type RoleSyncStatus = z.infer<typeof RoleSyncStatusSchema>
+
+// Session Hook State
+export const SessionHookStateSchema = z.object({
+  role: UserRoleSchema.nullable(),
+  isLoading: z.boolean(),
+  error: z.string().nullable(),
+  lastRefresh: z.number(),
+  isStale: z.boolean(),
+  refreshCount: z.number(),
+})
+
+export type SessionHookState = z.infer<typeof SessionHookStateSchema>
+
+// Admin Bootstrap Request
+export const AdminBootstrapRequestSchema = z.object({
+  userEmail: z.string().email(),
+  targetRole: UserRoleSchema,
+  force: z.boolean().optional().default(false),
+  reason: z.string().optional(),
+})
+
+export type AdminBootstrapRequest = z.infer<typeof AdminBootstrapRequestSchema>
+
+// Admin Bootstrap Response
+export const AdminBootstrapResponseSchema = z.object({
+  success: z.boolean(),
+  userId: z.string().optional(),
+  previousRole: UserRoleSchema.nullable(),
+  newRole: UserRoleSchema,
+  clerkUpdated: z.boolean(),
+  redisUpdated: z.boolean(),
+  message: z.string(),
+  timestamp: z.number(),
+})
+
+export type AdminBootstrapResponse = z.infer<typeof AdminBootstrapResponseSchema>
+
+// Debug Session Response
+export const DebugSessionResponseSchema = z.object({
+  userId: z.string(),
+  userEmail: z.string(),
+  clerkData: z.object({
+    role: UserRoleSchema.nullable(),
+    publicMetadata: z.record(z.any()).optional(),
+    lastUpdated: z.number().nullable(),
+  }),
+  redisData: z.object({
+    cached: z.boolean(),
+    role: UserRoleSchema.nullable(),
+    lastSync: z.number().nullable(),
+    sessionData: RedisSessionDataSchema.nullable(),
+  }),
+  synchronization: z.object({
+    inSync: z.boolean(),
+    discrepancy: z.string().optional(),
+    recommendation: z.string().optional(),
+  }),
+  performance: z.object({
+    clerkLatency: z.number().optional(),
+    redisLatency: z.number().optional(),
+    totalLatency: z.number(),
+  }),
+  timestamp: z.number(),
+})
+
+export type DebugSessionResponse = z.infer<typeof DebugSessionResponseSchema>
+
+// Role Change Event for audit logging
+export const RoleChangeEventSchema = z.object({
+  userId: z.string(),
+  userEmail: z.string(),
+  previousRole: UserRoleSchema.nullable(),
+  newRole: UserRoleSchema,
+  source: z.enum(['clerk', 'redis', 'bootstrap', 'manual']),
+  triggeredBy: z.string(),
+  reason: z.string().optional(),
+  timestamp: z.number(),
+  ipAddress: z.string().optional(),
+  userAgent: z.string().optional(),
+})
+
+export type RoleChangeEvent = z.infer<typeof RoleChangeEventSchema>
+
+// Enhanced Permission Check with Redis support
+export interface HybridPermissionContext {
+  userId: string;
+  clerkRole?: UserRole;
+  cachedRole?: UserRole;
+  fallbackToClerk: boolean;
+  maxCacheAge: number;
+}
+
+// Redis Connection Status
+export const RedisConnectionStatusSchema = z.object({
+  connected: z.boolean(),
+  error: z.string().optional(),
+  latency: z.number().optional(),
+  lastTest: z.number(),
+  uptime: z.number().optional(),
+})
+
+export type RedisConnectionStatus = z.infer<typeof RedisConnectionStatusSchema>
+
+// Hybrid Auth Context for middleware
+export interface HybridAuthContext {
+  userId: string;
+  email: string;
+  role: UserRole | null;
+  source: 'clerk' | 'redis' | 'fallback';
+  confidence: number; // 0-1, how confident we are in the role
+  requiresSync: boolean;
+  lastSync?: number;
+}
+
+// Role Management Event Types
+export type RoleManagementEvent = 
+  | { type: 'role_assigned'; payload: RoleChangeEvent }
+  | { type: 'role_cached'; payload: { userId: string; role: UserRole; ttl: number } }
+  | { type: 'role_invalidated'; payload: { userId: string; reason: string } }
+  | { type: 'sync_failed'; payload: { userId: string; error: string } }
+  | { type: 'cache_miss'; payload: { userId: string; fallback: 'clerk' | 'default' } }
+  | { type: 'cache_hit'; payload: { userId: string; role: UserRole; age: number } }
+
+// Hook Options for useSessionRole
+export interface UseSessionRoleOptions {
+  refreshInterval?: number; // milliseconds, default 30000
+  maxStaleTime?: number; // milliseconds, default 60000
+  fallbackRole?: UserRole; // default role if everything fails
+  enableAutoRefresh?: boolean; // default true
+  onRoleChange?: (oldRole: UserRole | null, newRole: UserRole | null) => void;
+  onError?: (error: Error) => void;
+}

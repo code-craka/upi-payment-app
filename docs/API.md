@@ -18,63 +18,141 @@ Development: http://localhost:3000/api
 
 ## Authentication
 
-The system uses a hybrid authentication approach with **Redis-first session management** and Clerk fallback:
+The system uses a **hybrid authentication approach** combining **Clerk authentication** with **Upstash Redis caching** for instant role access and enhanced performance:
 
-### Session-Based Authentication (Recommended)
+### Hybrid Role Management
 
-Include the session token in the Authorization header:
+- **Clerk**: Source of truth for user roles and authentication  
+- **Upstash Redis**: High-performance cache layer with 30-second TTL  
+- **Middleware**: Edge-safe role validation with Redis-first, Clerk fallback  
+- **Real-time Updates**: Role changes apply instantly via automatic sync  
+- **Auto-Refresh**: React hooks refresh roles every 30 seconds
+
+### Authentication Flow
+
+1. **Clerk Authentication**: User signs in via Clerk
+2. **Role Caching**: Middleware caches user role in Redis (30s TTL)  
+3. **Route Protection**: Instant role checks via Redis cache
+4. **Auto-Sync**: Background sync ensures data consistency between systems
+
+### Admin Bootstrap API
+
+#### Assign User Role
 
 \`\`\`http
-Authorization: Bearer <session_token>
+POST /api/admin-bootstrap
 \`\`\`
 
-### Redis Session Management
+**Request Body:**
 
-- **Primary Storage**: Redis for instant role updates and high performance
-- **Fallback**: Clerk authentication when Redis is unavailable
-- **Auto-Refresh**: 30-day TTL with automatic extension on activity
-- **Real-time Updates**: Role changes apply immediately without logout
-
-### Session Endpoints
-
-#### Get Session Info
-\`\`\`http
-GET /api/session/refresh
-\`\`\`
-
-**Response:**
 \`\`\`json
 {
-  "success": true,
-  "data": {
-    "userId": "user_123",
-    "role": "admin",
-    "permissions": ["users:read", "users:write", "orders:read", "orders:write"],
-    "sessionSource": "redis",
-    "expiresAt": "2025-10-16T10:30:00Z",
-    "lastRefreshed": "2025-09-16T10:30:00Z"
-  }
+  "userEmail": "user@example.com",
+  "targetRole": "admin",
+  "reason": "Initial admin setup",
+  "force": false
 }
 \`\`\`
 
-#### Debug Session (Development Only)
+**Response:**
+
+\`\`\`json
+{
+  "success": true,
+  "userId": "user_123",
+  "previousRole": null,
+  "newRole": "admin",
+  "clerkUpdated": true,
+  "redisUpdated": true,
+  "message": "Successfully assigned role to admin",
+  "timestamp": 1726574400000
+}
+\`\`\`
+
+#### Get Bootstrap Statistics
+
+\`\`\`http
+GET /api/admin-bootstrap
+\`\`\`
+
+**Response:**
+
+\`\`\`json
+{
+  "success": true,
+  "stats": {
+    "admin": 2,
+    "merchant": 15,
+    "viewer": 45,
+    "total": 62,
+    "unassigned": 0,
+    "synced": 60,
+    "unsynced": 2
+  },
+  "syncHealth": {
+    "score": 97,
+    "synced": 60,
+    "unsynced": 2,
+    "total": 62
+  },
+  "canBootstrap": true,
+  "unsyncedUsers": ["user_456", "user_789"],
+  "timestamp": 1726574400000
+}
+\`\`\`
+
+### Session Debug API
+
+#### Debug Session (Development & Admin)
+
 \`\`\`http
 GET /api/debug/session
 \`\`\`
 
 **Response:**
+
 \`\`\`json
 {
-  "success": true,
-  "data": {
-    "clerkUser": { /* Clerk user object */ },
-    "redisSession": { /* Redis session data */ },
-    "effectiveRole": "admin",
-    "sessionSource": "redis",
-    "redisConnected": true,
-    "clerkConnected": true,
-    "permissionsCount": 25
-  }
+  "userId": "user_123",
+  "userEmail": "user@example.com",
+  "clerkData": {
+    "role": "admin",
+    "publicMetadata": {},
+    "lastUpdated": 1726574400000
+  },
+  "redisData": {
+    "cached": true,
+    "role": "admin",
+    "lastSync": 1726574400000,
+    "ttl": 28,
+    "sessionData": {}
+  },
+  "synchronization": {
+    "inSync": true,
+    "discrepancy": null,
+    "recommendation": "✅ Session is properly configured and roles match."
+  },
+  "performance": {
+    "clerkLatency": 150,
+    "redisLatency": 25,
+    "totalLatency": 175
+  },
+  "timestamp": 1726574400000
+}
+\`\`\`
+
+#### Manual Role Sync
+
+\`\`\`http
+POST /api/debug/session
+\`\`\`
+
+**Request Body:**
+
+\`\`\`json
+{
+  "action": "sync",
+  "force": true
 }
 \`\`\`
 

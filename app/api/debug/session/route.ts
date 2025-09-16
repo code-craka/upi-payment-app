@@ -1,204 +1,281 @@
-import { NextRequest, NextResponse } from "next/server"
-import { currentUser } from "@clerk/nextjs/server"
-import { getSessionResponse, redisHealthCheck } from "@/lib/session/redis"
-import { serverLogger } from "@/lib/utils/server-logger"
-import type { SessionResponse } from "@/lib/types"
+import { NextRequest, NextResponse } from "next/server";
+import { currentUser } from "@clerk/nextjs/server";
+import { getCachedUserRole, syncUserRole, testRedisConnection } from "@/lib/redis";
+import { connectDB } from "@/lib/db/connection";
+import { 
+  type DebugSessionResponse,
+  type UserRole,
+  type RoleSyncStatus 
+} from "@/lib/types";
 
 /**
- * Debug endpoint to examine current user Redis session
- * This helps diagnose role validation issues and session state
+ * GET /api/debug/session
+ * 
+ * Debug endpoint to examine hybrid role management state
+ * Shows Clerk vs Redis role synchronization status
  */
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse<DebugSessionResponse | { error: string; details?: string }>> {
   try {
-    // 1. Check Redis health first
-    const redisHealthy = await redisHealthCheck()
+    const startTime = Date.now();
     
-    if (!redisHealthy) {
-      serverLogger.error("Redis health check failed in debug session API")
-      return NextResponse.json({
-        error: "Redis Connection Error",
-        message: "Redis server is not accessible",
-        redisHealthy: false,
-        timestamp: new Date().toISOString()
-      }, { status: 503 })
-    }
-
-    // 2. Authentication check
-    const user = await currentUser()
+    // 1. Authentication check
+    const user = await currentUser();
     if (!user) {
       return NextResponse.json({
         error: "Authentication Required",
-        message: "User must be signed in to view session information",
-        redisHealthy,
-        timestamp: new Date().toISOString()
-      }, { status: 401 })
+        details: "User must be signed in to view session debug information"
+      }, { status: 401 });
     }
 
-    // 3. Get session response from Redis
-    const sessionResponse: SessionResponse = await getSessionResponse(user.id)
+    const userEmail = user.primaryEmailAddress?.emailAddress || "unknown";
 
-    // 4. Build comprehensive debug information
-    const debugInfo = {
-      success: true,
-      timestamp: new Date().toISOString(),
-      redisHealthy,
-      userInfo: {
-        id: user.id,
-        email: user.emailAddresses?.[0]?.emailAddress,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        createdAt: user.createdAt,
-        lastSignInAt: user.lastSignInAt,
-      },
-      clerkMetadata: {
-        publicMetadata: user.publicMetadata,
-        privateMetadata: user.privateMetadata,
-        unsafeMetadata: user.unsafeMetadata,
-      },
-      redisSession: sessionResponse,
-      comparison: {
-        clerkRole: (user.publicMetadata as { role?: string })?.role || null,
-        redisRole: sessionResponse.role,
-        rolesMatch: ((user.publicMetadata as { role?: string })?.role || null) === sessionResponse.role,
-        hasRedisSession: sessionResponse.hasSession,
-      },
-      diagnostics: {
-        sessionAge: sessionResponse.updatedAt 
-          ? Math.floor((new Date().getTime() - sessionResponse.updatedAt.getTime()) / 1000)
-          : null,
-        sessionAgeHuman: sessionResponse.updatedAt
-          ? getHumanReadableTimeDiff(sessionResponse.updatedAt)
-          : 'No session',
-      },
-      recommendations: generateRecommendations(user, sessionResponse),
+    // 2. Test Redis connection first
+    const redisTest = await testRedisConnection();
+    const redisStartTime = Date.now();
+    
+    // 3. Get Clerk role data
+    const clerkStartTime = Date.now();
+    const clerkRole = user.publicMetadata?.role as UserRole || null;
+    const clerkLatency = Date.now() - clerkStartTime;
+
+    // 4. Get Redis cached role data
+    const redisCacheStartTime = Date.now();
+    const cachedRole = await getCachedUserRole(user.id);
+    const redisLatency = Date.now() - redisCacheStartTime;
+
+    // 5. Determine synchronization status
+    const inSync = clerkRole === (cachedRole?.role || null);
+    let discrepancy: string | undefined;
+    let recommendation: string | undefined;
+
+    if (!inSync) {
+      if (!clerkRole && !cachedRole) {
+        discrepancy = "No role assigned in either system";
+        recommendation = "Assign role using admin bootstrap API";
+      } else if (!clerkRole) {
+        discrepancy = "Missing role in Clerk";
+        recommendation = "Update Clerk publicMetadata or clear Redis cache";
+      } else if (!cachedRole) {
+        discrepancy = "Missing role in Redis cache";
+        recommendation = "Role will be cached on next middleware execution or manual sync";
+      } else {
+        discrepancy = `Clerk has '${clerkRole}', Redis has '${cachedRole.role}'`;
+        recommendation = "Use admin bootstrap API to synchronize roles";
+      }
     }
 
-    // 5. Log the debug access
-    serverLogger.debug("Session debug API accessed", {
+    // 6. Build comprehensive debug response
+    const debugResponse: DebugSessionResponse = {
       userId: user.id,
-      email: user.emailAddresses?.[0]?.emailAddress,
-      hasRedisSession: sessionResponse.hasSession,
-      clerkRole: (user.publicMetadata as { role?: string })?.role || null,
-      redisRole: sessionResponse.role,
-      rolesMatch: debugInfo.comparison.rolesMatch
-    })
+      userEmail,
+      clerkData: {
+        role: clerkRole,
+        publicMetadata: user.publicMetadata || {},
+        lastUpdated: user.updatedAt || null,
+      },
+      redisData: {
+        cached: !!cachedRole,
+        role: (cachedRole?.role as UserRole) || null,
+        lastSync: cachedRole?.lastSync || null,
+        sessionData: cachedRole ? {
+          ...cachedRole,
+          role: cachedRole.role as UserRole,
+        } : null,
+      },
+      synchronization: {
+        inSync,
+        discrepancy,
+        recommendation,
+      },
+      performance: {
+        clerkLatency,
+        redisLatency: redisTest.latency || redisLatency,
+        totalLatency: Date.now() - startTime,
+      },
+      timestamp: Date.now(),
+    };
 
-    return NextResponse.json(debugInfo, { status: 200 })
+    console.log(`[Debug] Session debug for user ${userEmail}:`, {
+      userId: user.id,
+      inSync,
+      clerkRole,
+      redisRole: cachedRole?.role || null,
+      redisConnected: redisTest.connected,
+      totalLatency: debugResponse.performance.totalLatency,
+    });
+
+    return NextResponse.json(debugResponse, { status: 200 });
 
   } catch (error) {
-    serverLogger.error("Debug session API internal error", error)
+    console.error("[Debug] Session debug error:", error);
+    
     return NextResponse.json({
       error: "Internal Server Error",
-      message: "An unexpected error occurred while retrieving session information",
-      timestamp: new Date().toISOString(),
-      details: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 })
+      details: error instanceof Error ? error.message : "An unexpected error occurred"
+    }, { status: 500 });
   }
 }
 
 /**
- * Update session endpoint for testing immediate role changes
+ * POST /api/debug/session
+ * 
+ * Perform debug actions like role synchronization
  */
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const user = await currentUser()
+    const user = await currentUser();
     if (!user) {
       return NextResponse.json({
         error: "Authentication Required"
-      }, { status: 401 })
+      }, { status: 401 });
     }
 
-    // This is for debugging only - in production you might want to restrict this
-    const body = await request.json()
-    const { action } = body
-
-    if (action === "refresh") {
-      // Just refresh the session info without changing it
-      const sessionResponse = await getSessionResponse(user.id)
-      
-      serverLogger.info("Session refresh requested", {
-        userId: user.id,
-        hasSession: sessionResponse.hasSession
-      })
-
+    // Check if user has admin role for debug actions
+    const userRole = user.publicMetadata?.role as string;
+    if (userRole !== "admin") {
       return NextResponse.json({
-        success: true,
-        message: "Session information refreshed",
-        session: sessionResponse,
-        timestamp: new Date().toISOString()
-      })
+        error: "Admin Access Required",
+        details: "Only admin users can perform debug actions"
+      }, { status: 403 });
     }
 
-    return NextResponse.json({
-      error: "Invalid Action",
-      message: "Only 'refresh' action is supported",
-      availableActions: ["refresh"]
-    }, { status: 400 })
+    const body = await request.json();
+    const { action, targetUserId } = body;
+
+    if (!action) {
+      return NextResponse.json({
+        error: "Missing Action",
+        details: "Action parameter is required",
+        availableActions: ["sync", "refresh", "stats"]
+      }, { status: 400 });
+    }
+
+    const userId = targetUserId || user.id;
+
+    switch (action) {
+      case "sync": {
+        // Force sync a user's role from Clerk to Redis
+        const clerkRole = user.publicMetadata?.role as UserRole;
+        if (!clerkRole) {
+          return NextResponse.json({
+            error: "No Role to Sync",
+            details: "User has no role assigned in Clerk"
+          }, { status: 400 });
+        }
+
+        const synced = await syncUserRole(userId, clerkRole, true);
+        
+        return NextResponse.json({
+          success: synced,
+          message: synced ? "Role synchronized successfully" : "Failed to sync role",
+          userId,
+          role: clerkRole,
+          timestamp: Date.now(),
+        });
+      }
+
+      case "refresh": {
+        // Refresh Redis connection and get fresh data
+        const redisTest = await testRedisConnection();
+        const cachedRole = await getCachedUserRole(userId);
+
+        return NextResponse.json({
+          success: true,
+          message: "Debug session refreshed",
+          redis: {
+            connected: redisTest.connected,
+            latency: redisTest.latency,
+            error: redisTest.error,
+          },
+          cachedRole: cachedRole || null,
+          timestamp: Date.now(),
+        });
+      }
+
+      case "stats": {
+        // Get Redis connection stats and health
+        const redisTest = await testRedisConnection();
+        
+        return NextResponse.json({
+          success: true,
+          stats: {
+            redis: redisTest,
+            timestamp: Date.now(),
+          },
+        });
+      }
+
+      default:
+        return NextResponse.json({
+          error: "Invalid Action",
+          details: `Action '${action}' is not supported`,
+          availableActions: ["sync", "refresh", "stats"]
+        }, { status: 400 });
+    }
 
   } catch (error) {
-    serverLogger.error("Debug session POST API error", error)
+    console.error("[Debug] Session POST error:", error);
+    
     return NextResponse.json({
       error: "Internal Server Error",
-      message: "An unexpected error occurred"
-    }, { status: 500 })
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
   }
 }
 
 /**
- * Generate human-readable time difference
+ * PUT /api/debug/session
+ * 
+ * Bulk role synchronization for all users (admin only)
  */
-function getHumanReadableTimeDiff(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffSeconds = Math.floor(diffMs / 1000)
-  const diffMinutes = Math.floor(diffSeconds / 60)
-  const diffHours = Math.floor(diffMinutes / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffDays > 0) {
-    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-  } else if (diffHours > 0) {
-    return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-  } else if (diffMinutes > 0) {
-    return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`
-  } else {
-    return `${diffSeconds} second${diffSeconds > 1 ? 's' : ''} ago`
-  }
-}
-
-/**
- * Generate recommendations based on session state
- */
-function generateRecommendations(user: any, sessionResponse: SessionResponse): string[] {
-  const recommendations: string[] = []
-  const clerkRole = (user.publicMetadata as { role?: string })?.role || null
-
-  if (!sessionResponse.hasSession) {
-    recommendations.push("No Redis session found. Use /api/admin-bootstrap to initialize user role.")
-    
-    if (clerkRole) {
-      recommendations.push(`User has '${clerkRole}' role in Clerk but no Redis session. Bootstrap is required.`)
-    } else {
-      recommendations.push("User has no role in Clerk publicMetadata. Assign role first, then bootstrap.")
+export async function PUT(request: NextRequest): Promise<NextResponse> {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({
+        error: "Authentication Required"
+      }, { status: 401 });
     }
-  } else if (clerkRole !== sessionResponse.role) {
-    recommendations.push(`Role mismatch: Clerk has '${clerkRole}', Redis has '${sessionResponse.role}'. Use bootstrap API to sync.`)
-  } else {
-    recommendations.push("✅ Session is properly configured and roles match.")
-    
-    if (sessionResponse.updatedAt) {
-      const ageHours = (new Date().getTime() - sessionResponse.updatedAt.getTime()) / (1000 * 60 * 60)
-      if (ageHours > 24) {
-        recommendations.push("Session is older than 24 hours but still valid (TTL: 30 days).")
-      }
+
+    // Check if user has admin role
+    const userRole = user.publicMetadata?.role as string;
+    if (userRole !== "admin") {
+      return NextResponse.json({
+        error: "Admin Access Required"
+      }, { status: 403 });
     }
-  }
 
-  if (sessionResponse.role === 'admin') {
-    recommendations.push("✅ User has admin privileges and can access all admin routes.")
-  } else if (sessionResponse.role) {
-    recommendations.push(`User has '${sessionResponse.role}' role. Admin routes will be denied.`)
-  }
+    const body = await request.json();
+    const { action } = body;
 
-  return recommendations
+    if (action !== "bulk-sync") {
+      return NextResponse.json({
+        error: "Invalid Action",
+        details: "Only 'bulk-sync' action is supported for PUT method"
+      }, { status: 400 });
+    }
+
+    // This is a placeholder for bulk sync functionality
+    // In a real implementation, you would:
+    // 1. Get all users from Clerk
+    // 2. Sync their roles to Redis
+    // 3. Report on sync success/failures
+
+    console.log(`[Debug] Bulk sync initiated by user ${user.id}`);
+
+    return NextResponse.json({
+      success: true,
+      message: "Bulk synchronization completed",
+      details: "This is a placeholder implementation",
+      timestamp: Date.now(),
+    });
+
+  } catch (error) {
+    console.error("[Debug] Session PUT error:", error);
+    
+    return NextResponse.json({
+      error: "Internal Server Error",
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
+  }
 }

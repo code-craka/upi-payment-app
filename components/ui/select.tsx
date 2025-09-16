@@ -85,18 +85,18 @@ function SelectContent({
   )
 }
 
-function SelectLabel({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Label>) {
-  return (
-    <SelectPrimitive.Label
-      data-slot="select-label"
-      className={cn('text-muted-foreground px-2 py-1.5 text-xs', className)}
-      {...props}
-    />
-  )
-}
+const SelectLabel = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Label>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.Label
+    ref={ref}
+    data-slot="select-label"
+    className={cn('text-muted-foreground px-2 py-1.5 text-xs', className)}
+    {...props}
+  />
+))
+SelectLabel.displayName = SelectPrimitive.Label.displayName
 
 function SelectItem({
   className,

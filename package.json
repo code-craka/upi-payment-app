@@ -100,6 +100,7 @@
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "latest",
     "@types/qrcode": "^1.5.5",
+    "@upstash/redis": "^1.35.3",
     "@vercel/analytics": "latest",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",

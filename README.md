@@ -3,27 +3,27 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org)
 [![MongoDB](https://img.shields.io/badge/Database-MongoDB-green?style=for-the-badge&logo=mongodb)](https://mongodb.com)
-[![Redis](https://img.shields.io/badge/Cache-Redis-red?style=for-the-badge&logo=redis)](https://redis.io)
+[![Redis](https://img.shields.io/badge/Cache-Upstash_Redis-red?style=for-the-badge&logo=redis)](https://upstash.com)
 [![Clerk](https://img.shields.io/badge/Auth-Clerk-purple?style=for-the-badge&logo=clerk)](https://clerk.dev)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge)](http://makeapullrequest.com)
 
-> A comprehensive, enterprise-grade UPI payment management system with real-time role updates, Redis-based session management, and advanced security features.
+> A comprehensive, enterprise-grade UPI payment management system with **hybrid role management**, Upstash Redis caching, and enterprise-level security features.
 
 ---
 
 ## 🚀 **Overview**
 
-The UPI Admin Dashboard is a next-generation payment processing platform built with **Next.js 14**, featuring instant role updates, comprehensive audit logging, and enterprise-level security. Perfect for businesses requiring robust payment management with granular permission controls.
+The UPI Admin Dashboard is a next-generation payment processing platform built with **Next.js 14**, featuring **hybrid role management** with Upstash Redis, comprehensive audit logging, and enterprise-level security. Perfect for businesses requiring robust payment management with instant role updates.
 
 ### ✨ **Key Highlights**
 
-- 🔄 **Instant Role Updates** - Redis-powered session management eliminates sign-out/sign-in requirements
+- 🔄 **Hybrid Role Management** - Upstash Redis + Clerk with instant role updates (no sign-out required)
 - 🛡️ **Enterprise Security** - CSRF protection, rate limiting, and comprehensive audit trails
 - 📊 **Real-time Analytics** - Advanced payment insights with interactive dashboards
-- 🎯 **Role-based Access** - Granular permissions for admins, merchants, and viewers
-- ⚡ **High Performance** - Optimized with Redis caching and MongoDB indexing
+- 🎯 **Edge Performance** - Sub-50ms role validation globally with Redis-first caching
+- ⚡ **High Availability** - Automatic failover from Redis to Clerk for reliability
 - 🔍 **Full Audit Trail** - Complete activity tracking with IP and user context
 
 ---
@@ -37,7 +37,7 @@ The UPI Admin Dashboard is a next-generation payment processing platform built w
 | **Next.js** | Full-stack React framework | 14 (App Router) |
 | **TypeScript** | Type-safe development | 5.0+ |
 | **MongoDB** | Primary database | 5.0+ |
-| **Redis** | Session management & caching | 7.0+ |
+| **Upstash Redis** | Hybrid role management cache | Edge optimized |
 | **Clerk** | Authentication provider | Latest |
 | **TailwindCSS** | Styling framework | v4 |
 | **ShadCN/UI** | Component library | Latest |
@@ -71,11 +71,12 @@ graph TB
 - ✅ **Bulk Operations** - Batch payment processing
 
 ### **🔐 Authentication & Authorization**
-- ✅ **Instant Role Updates** - No logout required after role changes
-- ✅ **Redis Session Management** - High-performance session storage
-- ✅ **Clerk Integration** - Enterprise authentication with fallback
+- ✅ **Hybrid Role Management** - Upstash Redis (30s cache) + Clerk (source of truth)
+- ✅ **Instant Role Updates** - No logout required after role changes via Redis sync
+- ✅ **Edge Performance** - Global role validation in <50ms via Upstash Edge
+- ✅ **High Availability** - Automatic fallback to Clerk when Redis unavailable  
 - ✅ **Granular Permissions** - 25+ distinct permissions across roles
-- ✅ **Multi-factor Authentication** - Enhanced security options
+- ✅ **Multi-factor Authentication** - Enhanced security options via Clerk
 
 ### **📊 Admin Dashboard**
 - ✅ **Real-time Analytics** - Payment statistics and trends

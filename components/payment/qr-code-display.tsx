@@ -84,7 +84,7 @@ export function QRCodeDisplay({ upiString, amount, merchantName }: QRCodeDisplay
   return (
     <Card className="w-full max-w-xs mx-auto">
       <CardContent className="p-4 text-center space-y-4">
-        <canvas ref={canvasRef} className="border rounded-lg mx-auto" style={{ maxWidth: "200px", height: "auto" }} />
+        <canvas ref={canvasRef} className="border rounded-lg mx-auto max-w-[200px] h-auto" />
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Scan with any UPI app</p>
