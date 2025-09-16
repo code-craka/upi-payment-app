@@ -1,4 +1,5 @@
 import mongoose, { Schema, type Document } from "mongoose"
+import { mongooseSecurityPlugin, MONGOOSE_SECURITY_OPTIONS } from "@/lib/db/security"
 
 export interface UserDocument extends Document {
   clerkId: string
@@ -139,5 +140,8 @@ UserSchema.statics.getUserStats = function () {
     },
   ])
 }
+
+// Apply security plugin to prevent injection attacks
+UserSchema.plugin(mongooseSecurityPlugin)
 
 export const UserModel = mongoose.models.User || mongoose.model<UserDocument>("User", UserSchema)

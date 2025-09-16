@@ -1,5 +1,6 @@
 import mongoose, { Schema, type Document } from "mongoose"
 import type { Order } from "@/lib/types"
+import { mongooseSecurityPlugin, MONGOOSE_SECURITY_OPTIONS } from "@/lib/db/security"
 
 export interface OrderDocument
   extends Omit<Order, "id" | "createdAt" | "updatedAt" | "expiresAt" | "verifiedAt">,
@@ -168,5 +169,8 @@ OrderSchema.statics.markExpiredOrders = async function () {
   )
   return result.modifiedCount
 }
+
+// Apply security plugin to prevent injection attacks
+OrderSchema.plugin(mongooseSecurityPlugin)
 
 export const OrderModel = mongoose.models.Order || mongoose.model<OrderDocument>("Order", OrderSchema)
