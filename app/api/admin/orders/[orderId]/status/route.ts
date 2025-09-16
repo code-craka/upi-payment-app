@@ -11,7 +11,7 @@ const StatusUpdateSchema = z.object({
   adminNotes: z.string().optional(),
 })
 
-export async function PATCH(request: NextRequest, { params }: { params: { orderId: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   try {
     const user = await currentUser()
 
@@ -29,7 +29,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { orderI
 
     await connectDB()
 
-    const { orderId } = params
+    const { orderId } = await params
     const body = await request.json()
 
     const validatedData = StatusUpdateSchema.parse(body)
@@ -122,11 +122,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { orderI
     try {
       const user = await currentUser()
       if (user) {
+        const { orderId: paramOrderId } = await params
         await createAuditLogFromRequest(
           request,
           "admin_order_update_failed",
           "Order",
-          params.orderId,
+          paramOrderId,
           user.id,
           user.emailAddresses[0]?.emailAddress || "",
           {

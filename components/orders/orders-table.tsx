@@ -16,61 +16,77 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { MoreHorizontal, Search, Eye, CheckCircle, XCircle, Clock, Copy } from "lucide-react"
-import type { Order } from "@/lib/types"
+import type { OrderTable } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 
 // Mock data - replace with actual API calls
-const mockOrders: Order[] = [
+const mockOrders: OrderTable[] = [
   {
     _id: "1",
+    id: "1",
     orderId: "ORD-2024-001",
     amount: 1500,
+    description: "Payment to John's Store",
+    upiId: "john@paytm",
     merchantName: "John's Store",
     vpa: "john@paytm",
     status: "pending-verification",
     utr: "123456789012",
     createdBy: "user1",
     createdAt: new Date("2024-01-20T10:30:00"),
+    updatedAt: new Date("2024-01-20T10:30:00"),
     expiresAt: new Date("2024-01-20T10:39:00"),
     paymentPageUrl: "/pay/ORD-2024-001",
     upiDeepLink: "upi://pay?pa=john@paytm&pn=John's Store&am=1500",
   },
   {
     _id: "2",
+    id: "2",
     orderId: "ORD-2024-002",
     amount: 2500,
+    description: "Payment to Tech Solutions",
+    upiId: "tech@gpay",
     merchantName: "Tech Solutions",
     vpa: "tech@gpay",
     status: "completed",
     utr: "987654321098",
     createdBy: "user2",
     createdAt: new Date("2024-01-20T09:15:00"),
+    updatedAt: new Date("2024-01-20T09:15:00"),
     expiresAt: new Date("2024-01-20T09:24:00"),
     paymentPageUrl: "/pay/ORD-2024-002",
     upiDeepLink: "upi://pay?pa=tech@gpay&pn=Tech Solutions&am=2500",
   },
   {
     _id: "3",
+    id: "3",
     orderId: "ORD-2024-003",
     amount: 750,
+    description: "Payment to Coffee Shop",
+    upiId: "coffee@phonepe",
     merchantName: "Coffee Shop",
     vpa: "coffee@phonepe",
     status: "expired",
     createdBy: "user3",
     createdAt: new Date("2024-01-20T08:00:00"),
+    updatedAt: new Date("2024-01-20T08:00:00"),
     expiresAt: new Date("2024-01-20T08:09:00"),
     paymentPageUrl: "/pay/ORD-2024-003",
     upiDeepLink: "upi://pay?pa=coffee@phonepe&pn=Coffee Shop&am=750",
   },
   {
     _id: "4",
+    id: "4",
     orderId: "ORD-2024-004",
     amount: 3200,
+    description: "Payment to Electronics Hub",
+    upiId: "electronics@bhim",
     merchantName: "Electronics Hub",
     vpa: "electronics@bhim",
     status: "pending",
     createdBy: "user1",
     createdAt: new Date("2024-01-20T11:45:00"),
+    updatedAt: new Date("2024-01-20T11:45:00"),
     expiresAt: new Date("2024-01-20T11:54:00"),
     paymentPageUrl: "/pay/ORD-2024-004",
     upiDeepLink: "upi://pay?pa=electronics@bhim&pn=Electronics Hub&am=3200",
@@ -85,14 +101,14 @@ interface OrdersTableProps {
 export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [orders, setOrders] = useState<Order[]>(mockOrders)
+  const [orders, setOrders] = useState<OrderTable[]>(mockOrders)
   const { toast } = useToast()
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.merchantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.vpa.toLowerCase().includes(searchTerm.toLowerCase())
+      (order.merchantName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.vpa || "").toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = statusFilter === "all" || order.status === statusFilter
     const matchesUser = showAllOrders || order.createdBy === userId
@@ -139,7 +155,7 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
-      setOrders(orders.map((order) => (order._id === orderId ? { ...order, status: newStatus as any } : order)))
+      setOrders(orders.map((order) => (order._id === orderId || order.id === orderId ? { ...order, status: newStatus as any } : order)))
 
       toast({
         title: "Order status updated",
@@ -221,7 +237,7 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
           </TableHeader>
           <TableBody>
             {filteredOrders.map((order) => (
-              <TableRow key={order._id}>
+              <TableRow key={order._id || order.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     {order.orderId}
@@ -235,7 +251,7 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {order.vpa}
-                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(order.vpa, "UPI ID")}>
+                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(order.vpa || "", "UPI ID")}>
                       <Copy className="h-3 w-3" />
                     </Button>
                   </div>
@@ -278,21 +294,21 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
                         <>
                           <DropdownMenuLabel>Update Status</DropdownMenuLabel>
                           <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(order._id, "completed")}
+                            onClick={() => handleStatusUpdate(order._id || order.id, "completed")}
                             disabled={order.status === "completed"}
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Mark Completed
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(order._id, "failed")}
+                            onClick={() => handleStatusUpdate(order._id || order.id, "failed")}
                             disabled={order.status === "failed"}
                           >
                             <XCircle className="mr-2 h-4 w-4" />
                             Mark Failed
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(order._id, "pending-verification")}
+                            onClick={() => handleStatusUpdate(order._id || order.id, "pending-verification")}
                             disabled={order.status === "pending-verification"}
                           >
                             <Clock className="mr-2 h-4 w-4" />

@@ -15,8 +15,8 @@ export function useSafeUser(): SafeUser | null {
       firstName: user.firstName,
       lastName: user.lastName,
       role: (user.publicMetadata?.role as UserRole) || "viewer",
-      createdAt: new Date(user.createdAt),
-      updatedAt: new Date(user.updatedAt),
+      createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+      updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
     }
 
     return SafeUserSchema.parse(safeUser)

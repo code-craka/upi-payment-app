@@ -3,9 +3,7 @@ import { NextResponse } from "next/server"
 import { createSecurityMiddleware } from "@/lib/middleware/security"
 import { createCSRFMiddleware } from "@/lib/middleware/csrf"
 import { serverLogger } from "@/lib/utils/server-logger"
-import { currentUser } from "@clerk/nextjs/server"
-import { getCachedUserRole, syncUserRole, cacheUserRole } from "@/lib/redis"
-import type { UserRole, HybridAuthContext } from "@/lib/types"
+import type { UserRole } from "@/lib/types"
 
 // Define route matchers
 const isPublicRoute = createRouteMatcher([
@@ -37,75 +35,6 @@ const securityMiddleware = createSecurityMiddleware({
 
 const csrfMiddleware = createCSRFMiddleware()
 
-/**
- * Get hybrid auth context with Redis-first, Clerk fallback
- */
-async function getHybridAuthContext(userId: string): Promise<HybridAuthContext> {
-  const start = Date.now()
-  
-  try {
-    // First, try to get role from Redis cache
-    const cachedRole = await getCachedUserRole(userId)
-    
-    if (cachedRole && cachedRole.role && cachedRole.lastSync > Date.now() - 30000) {
-      // Fresh cache hit (less than 30 seconds old)
-      return {
-        userId,
-        email: "", // Will be populated later if needed
-        role: cachedRole.role as UserRole,
-        source: 'redis',
-        confidence: 0.9,
-        requiresSync: false,
-        lastSync: cachedRole.lastSync,
-      }
-    }
-    
-    // Cache miss or stale - fallback to Clerk
-    const user = await currentUser()
-    
-    if (!user) {
-      return {
-        userId,
-        email: "",
-        role: null,
-        source: 'fallback',
-        confidence: 0,
-        requiresSync: false,
-      }
-    }
-    
-    const clerkRole = user.publicMetadata?.role as UserRole
-    
-    // Sync role to Redis in background (non-blocking)
-    if (clerkRole) {
-      syncUserRole(userId, clerkRole).catch(error => {
-        serverLogger.error("Background role sync failed", error)
-      })
-    }
-    
-    return {
-      userId: user.id,
-      email: user.primaryEmailAddress?.emailAddress || "",
-      role: clerkRole || null,
-      source: 'clerk',
-      confidence: clerkRole ? 0.8 : 0.1,
-      requiresSync: !cachedRole || cachedRole.role !== clerkRole,
-    }
-    
-  } catch (error) {
-    serverLogger.error("Error getting hybrid auth context", error)
-    
-    return {
-      userId,
-      email: "",
-      role: null,
-      source: 'fallback',
-      confidence: 0,
-      requiresSync: true,
-    }
-  }
-}
-
 export default clerkMiddleware(async (auth, req) => {
   try {
     // Apply security middleware first
@@ -127,8 +56,9 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.next()
     }
 
-    // Get authentication details
-    const { userId, sessionClaims } = await auth()
+    // Get authentication details using the auth() from middleware context
+    const authObj = await auth()
+    const { userId, sessionClaims } = authObj
     
     // Redirect to sign-in if not authenticated
     if (!userId) {
@@ -138,15 +68,16 @@ export default clerkMiddleware(async (auth, req) => {
 
     // Admin route protection with hybrid role management
     if (isAdminRoute(req)) {
-      const authContext = await getHybridAuthContext(userId)
+      // Use simpler approach - get role directly from Clerk session claims first
+      const publicMetadata = sessionClaims?.publicMetadata as { role?: UserRole } | undefined
+      const role = publicMetadata?.role
       
-      // No role found anywhere
-      if (!authContext.role) {
+      if (!role) {
         serverLogger.middleware("No role found for admin route access", {
           pathname: req.nextUrl.pathname,
           userId,
-          source: authContext.source,
-          confidence: authContext.confidence
+          source: 'clerk',
+          confidence: 0
         })
         
         if (req.nextUrl.pathname.startsWith('/api/')) {
@@ -154,8 +85,7 @@ export default clerkMiddleware(async (auth, req) => {
             { 
               error: "Access Denied",
               message: "No role assigned. Please contact administrator.",
-              needsBootstrap: true,
-              source: authContext.source
+              needsBootstrap: true
             }, 
             { status: 403 }
           )
@@ -165,14 +95,12 @@ export default clerkMiddleware(async (auth, req) => {
       }
       
       // Check if user has admin role
-      if (authContext.role !== "admin") {
+      if (role !== "admin") {
         serverLogger.middleware("Access denied for admin route - insufficient role", {
           pathname: req.nextUrl.pathname,
           userId,
-          currentRole: authContext.role,
-          requiredRole: "admin",
-          source: authContext.source,
-          confidence: authContext.confidence
+          currentRole: role,
+          requiredRole: "admin"
         })
         
         if (req.nextUrl.pathname.startsWith('/api/')) {
@@ -181,8 +109,7 @@ export default clerkMiddleware(async (auth, req) => {
               error: "Access Denied",
               message: "Admin privileges required to access this resource",
               requiredRole: "admin",
-              currentRole: authContext.role,
-              source: authContext.source
+              currentRole: role
             }, 
             { status: 403 }
           )
@@ -191,24 +118,14 @@ export default clerkMiddleware(async (auth, req) => {
         return NextResponse.redirect(new URL("/unauthorized", req.url))
       }
 
-      // Log successful admin access with hybrid context
+      // Log successful admin access
       serverLogger.middleware("Admin access granted", {
         pathname: req.nextUrl.pathname,
         userId,
-        role: authContext.role,
-        source: authContext.source,
-        confidence: authContext.confidence,
-        requiresSync: authContext.requiresSync,
-        lastSync: authContext.lastSync
+        role
       })
       
-      // Add hybrid auth context to request headers for downstream consumption
-      const response = NextResponse.next()
-      response.headers.set('x-auth-source', authContext.source)
-      response.headers.set('x-auth-confidence', authContext.confidence.toString())
-      response.headers.set('x-auth-requires-sync', authContext.requiresSync.toString())
-      
-      return response
+      return NextResponse.next()
     }
 
     return NextResponse.next()

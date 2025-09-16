@@ -40,6 +40,28 @@ export const OrderSchema = z.object({
 
 export type Order = z.infer<typeof OrderSchema>
 
+// Extended Order type for payment pages with additional UI fields
+export const PaymentOrderSchema = OrderSchema.extend({
+  merchantName: z.string().optional(),
+  vpa: z.string().optional(),
+  upiDeepLink: z.string().optional(),
+  utr: z.string().optional(),
+})
+
+export type PaymentOrder = z.infer<typeof PaymentOrderSchema>
+
+// Extended Order type for table display with MongoDB _id and UI fields
+export const OrderTableSchema = OrderSchema.extend({
+  _id: z.string().optional(),
+  merchantName: z.string().optional(),
+  vpa: z.string().optional(),
+  upiDeepLink: z.string().optional(),
+  utr: z.string().optional(),
+  paymentPageUrl: z.string().optional(),
+})
+
+export type OrderTable = z.infer<typeof OrderTableSchema>
+
 export const AuditLogSchema = z.object({
   id: z.string(),
   action: z.string(),

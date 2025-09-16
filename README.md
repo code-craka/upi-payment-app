@@ -64,13 +64,18 @@ graph TB
 ## 🎯 **Features**
 
 ### **💳 Payment Management**
-- ✅ **Multi-UPI Support** - GPay, PhonePe, Paytm, BHIM integration
+
+- ✅ **UPI Deep Linking** - Direct app integration with PhonePe, Paytm, Google Pay, and generic UPI
+- ✅ **Mobile-First UI** - Responsive payment interface optimized for mobile devices
+- ✅ **Copy-to-Clipboard** - Easy amount and UPI ID copying for manual payments
+- ✅ **Countdown Timers** - Visual payment expiration with real-time countdown
+- ✅ **UTR Verification** - 12-digit UTR validation with secure submission
+- ✅ **Payment Status** - Real-time status updates with visual indicators
 - ✅ **Dynamic QR Codes** - Auto-generated payment QR codes
-- ✅ **UTR Verification** - Manual transaction verification system
-- ✅ **Payment Tracking** - Real-time status updates
-- ✅ **Bulk Operations** - Batch payment processing
+- ✅ **Payment Tracking** - Complete payment lifecycle management
 
 ### **🔐 Authentication & Authorization**
+
 - ✅ **Hybrid Role Management** - Upstash Redis (30s cache) + Clerk (source of truth)
 - ✅ **Instant Role Updates** - No logout required after role changes via Redis sync
 - ✅ **Edge Performance** - Global role validation in <50ms via Upstash Edge
@@ -79,6 +84,7 @@ graph TB
 - ✅ **Multi-factor Authentication** - Enhanced security options via Clerk
 
 ### **📊 Admin Dashboard**
+
 - ✅ **Real-time Analytics** - Payment statistics and trends
 - ✅ **User Management** - Role assignment and permission control
 - ✅ **Audit Log Viewer** - Comprehensive activity tracking
@@ -86,6 +92,7 @@ graph TB
 - ✅ **Security Settings** - CSRF, rate limiting configuration
 
 ### **🛡️ Security Features**
+
 - ✅ **CSRF Protection** - Token-based request validation
 - ✅ **Rate Limiting** - IP-based request throttling
 - ✅ **Input Sanitization** - XSS prevention with DOMPurify
@@ -94,7 +101,45 @@ graph TB
 
 ---
 
-## 🚀 **Quick Start**
+## � **Payment Interface Features**
+
+### **UPI Deep Linking**
+
+The payment interface features comprehensive UPI deep linking for seamless mobile payments:
+
+```typescript
+// Supported UPI Applications
+const upiApps = {
+  phonepe: 'phonepe://pay',
+  paytm: 'paytmmp://pay', 
+  gpay: 'tez://upi/pay',
+  upi: 'upi://pay'
+}
+
+// Auto-generated deep links with order data
+const deepLink = `${appScheme}?pa=${upiId}&pn=${merchantName}&am=${amount}&tr=${orderId}&cu=INR`
+```
+
+### **Payment Page Components**
+
+- **⏱️ Countdown Timer**: Visual blue boxes showing minutes:seconds remaining
+- **💰 Amount Display**: Large, clear amount with copy-to-clipboard functionality
+- **🆔 VPA Section**: UPI ID display with copy button for manual entry
+- **⚠️ Notice Section**: Important payment instructions and warnings
+- **📱 UPI App Selection**: Radio buttons with authentic app logos for selection
+- **📝 UTR Form**: Secure 12-digit UTR submission with validation
+- **🆘 Customer Support**: Contact information and help text
+
+### **Mobile-First Design**
+
+- **📱 Responsive Layout**: Optimized for mobile screens with proper touch targets
+- **🎨 Professional UI**: Clean, branded interface matching payment gateway standards
+- **⚡ Fast Loading**: Optimized images and minimal JavaScript for quick loading
+- **🔄 Real-time Updates**: Live countdown and status updates without page refresh
+
+---
+
+## �🚀 **Quick Start**
 
 ### **Prerequisites**
 
@@ -157,6 +202,7 @@ pnpm build
 ### **First-time Setup**
 
 1. **Create Admin User**
+
    ```bash
    curl -X POST http://localhost:3000/api/admin-bootstrap \
      -H "Content-Type: application/json" \
@@ -164,15 +210,16 @@ pnpm build
    ```
 
 2. **Verify Installation**
-   - Visit http://localhost:3000
+   - Visit <http://localhost:3000>
    - Sign in with your admin account
-   - Access admin dashboard at http://localhost:3000/admin
+   - Access admin dashboard at <http://localhost:3000/admin>
 
 ---
 
 ## 📖 **API Documentation**
 
 ### **Authentication Flow**
+
 ```typescript
 // Client-side session management
 import { useSessionRole } from '@/hooks/use-session-role'
@@ -286,19 +333,25 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ## 👥 **Team**
 
 ### **Author**
+
 **Sayem Abdullah Rihan**  
+
 - GitHub: [@code-craka](https://github.com/code-craka)
-- Email: hello@techsci.io
+- Email: <hello@techsci.io>
 - Role: Lead Developer & System Architect
 
 ### **Contributor**
+
 **Sajjadul Islam**  
+
 - Role: Frontend Development & UI/UX
 - Contributions: Component design, user experience optimization
 
 ### **Contact**
+
 For questions, support, or business inquiries:
-- 📧 **General**: hello@techsci.io
+
+- 📧 **General**: <hello@techsci.io>
 - 🐛 **Issues**: [GitHub Issues](https://github.com/code-craka/upi-payment-app/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/code-craka/upi-payment-app/discussions)
 

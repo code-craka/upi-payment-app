@@ -27,6 +27,15 @@ The UPI Admin Dashboard implements multiple layers of security to protect user d
 - **Session Encryption**: Secure session data with TLS encryption
 - **IP Address Tracking**: Location-based security monitoring
 
+### UPI Payment Security
+
+- **Deep Link Validation**: Secure UPI URL construction with parameter validation
+- **Amount Protection**: Immutable amount display with copy protection
+- **UTR Validation**: 12-digit UTR number format validation
+- **Transaction Timeout**: Automatic order expiration with countdown timer
+- **Payment Method Security**: Secure deep linking to verified UPI applications
+- **State Management**: Secure payment status transitions with audit logging
+
 ### Authentication & Authorization
 
 - **Clerk Integration**: Enterprise-grade authentication with MFA support

@@ -55,7 +55,7 @@ export function getClientIP(request: NextRequest): string {
     return realIP
   }
 
-  return request.ip || "unknown"
+  return (request as any).ip || "unknown"
 }
 
 export function rateLimit(

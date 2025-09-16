@@ -111,7 +111,7 @@ export function sanitizeSortParameter(sort: any): any {
     }
 
     // Only allow valid sort directions
-    if (!allowedSortValues.includes(direction)) {
+    if (!allowedSortValues.includes(direction as string)) {
       continue;
     }
 
@@ -264,7 +264,7 @@ export function validateDatabaseInput(req: any, res: any, next: any) {
  */
 export function mongooseSecurityPlugin(schema: any) {
   // Add pre-save middleware to sanitize data
-  schema.pre('save', function(next: any) {
+  schema.pre('save', function(this: any, next: any) {
     try {
       // Sanitize the document before saving
       const sanitized = sanitizeUserInput(this.toObject());
@@ -276,7 +276,7 @@ export function mongooseSecurityPlugin(schema: any) {
   });
 
   // Add pre-find middleware to sanitize queries
-  schema.pre(['find', 'findOne', 'findOneAndUpdate'], function(next: any) {
+  schema.pre(['find', 'findOne', 'findOneAndUpdate'], function(this: any, next: any) {
     try {
       // Sanitize the query
       const sanitizedQuery = sanitizeMongoQuery(this.getQuery());

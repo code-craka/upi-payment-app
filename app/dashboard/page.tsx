@@ -165,8 +165,8 @@ export default async function MerchantDashboard() {
     redirect("/sign-in")
   }
 
-  const userRole = sessionClaims?.metadata?.role as string
-  const userName = sessionClaims?.firstName || "User"
+  const userRole = (sessionClaims?.publicMetadata as { role?: string })?.role as string
+  const userName = (sessionClaims?.firstName as string) || "User"
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">

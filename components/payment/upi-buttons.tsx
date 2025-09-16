@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import Image from "next/image"
 
 interface UpiButtonsProps {
   upiDeepLink: string
@@ -16,29 +17,29 @@ export function UpiButtons({ upiDeepLink, onPaymentInitiated }: UpiButtonsProps)
       name: "Google Pay",
       scheme: "gpay://upi/pay",
       fallback: "https://pay.google.com/about/",
-      color: "bg-blue-600 hover:bg-blue-700",
-      icon: "🔵",
+      color: "bg-white hover:bg-gray-50 border border-gray-200",
+      logo: "/gpay-logo.png",
     },
     {
       name: "PhonePe",
       scheme: "phonepe://pay",
       fallback: "https://www.phonepe.com/",
-      color: "bg-purple-600 hover:bg-purple-700",
-      icon: "🟣",
+      color: "bg-white hover:bg-gray-50 border border-gray-200",
+      logo: "/phonepe-logo.webp",
     },
     {
       name: "Paytm",
       scheme: "paytmmp://pay",
       fallback: "https://paytm.com/",
-      color: "bg-blue-500 hover:bg-blue-600",
-      icon: "💙",
+      color: "bg-white hover:bg-gray-50 border border-gray-200",
+      logo: "/Paytm_logo.png",
     },
     {
-      name: "BHIM",
-      scheme: "bhim://pay",
-      fallback: "https://www.npci.org.in/what-we-do/bhim",
-      color: "bg-orange-600 hover:bg-orange-700",
-      icon: "🟠",
+      name: "UPI",
+      scheme: "upi://pay",
+      fallback: "https://www.npci.org.in/what-we-do/upi",
+      color: "bg-white hover:bg-gray-50 border border-gray-200",
+      logo: "/UPI_logo.svg.png",
     },
   ]
 
@@ -73,11 +74,19 @@ export function UpiButtons({ upiDeepLink, onPaymentInitiated }: UpiButtonsProps)
         <Button
           key={app.name}
           onClick={() => handleUpiAppClick(app)}
-          className={`${app.color} text-white flex items-center gap-2 h-12`}
-          variant="default"
+          className={`${app.color} flex flex-col items-center gap-2 h-16`}
+          variant="outline"
         >
-          <span className="text-lg">{app.icon}</span>
-          <span className="text-sm font-medium">{app.name}</span>
+          <div className="w-8 h-8 relative">
+            <Image
+              src={app.logo}
+              alt={app.name}
+              width={32}
+              height={32}
+              className="object-contain"
+            />
+          </div>
+          <span className="text-sm font-medium text-gray-700">{app.name}</span>
         </Button>
       ))}
     </div>

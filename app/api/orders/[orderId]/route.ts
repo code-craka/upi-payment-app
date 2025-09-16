@@ -5,12 +5,12 @@ import { OrderModel } from "@/lib/db/models/Order"
 import { AuditLogModel } from "@/lib/db/models/AuditLog"
 import { isOrderExpired } from "@/lib/utils/upi-utils"
 
-export async function GET(request: Request, { params }: { params: { orderId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ orderId: string }> }) {
   try {
     // Connect to database
     await connectDB()
     
-    const { orderId } = params
+    const { orderId } = await params
     const order = await OrderModel.findOne({ orderId })
 
     if (!order) {
@@ -63,7 +63,7 @@ export async function GET(request: Request, { params }: { params: { orderId: str
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: { orderId: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ orderId: string }> }) {
   try {
     // Connect to database
     await connectDB()
@@ -81,7 +81,7 @@ export async function PATCH(request: Request, { params }: { params: { orderId: s
       }, { status: 403 })
     }
 
-    const { orderId } = params
+    const { orderId } = await params
     const body = await request.json()
     const { status, notes } = body
 

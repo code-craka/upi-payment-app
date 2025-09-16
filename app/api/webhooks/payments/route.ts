@@ -203,7 +203,7 @@ async function handleOrderStatusUpdate(data: z.infer<typeof OrderStatusUpdateSch
 
 export async function POST(request: Request) {
   try {
-    const headersList = headers()
+    const headersList = await headers()
     const signature = headersList.get("x-webhook-signature") || headersList.get("signature") || ""
     const payload = await request.text()
 

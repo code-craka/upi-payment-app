@@ -13,12 +13,12 @@ const UtrSubmissionSchema = z.object({
   notes: z.string().max(500).optional(),
 })
 
-export async function POST(request: Request, { params }: { params: { orderId: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ orderId: string }> }) {
   try {
     // Connect to database
     await connectDB()
     
-    const { orderId } = params
+    const { orderId } = await params
     const body = await request.json()
     const validatedData = UtrSubmissionSchema.parse(body)
 

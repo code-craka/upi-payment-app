@@ -58,6 +58,18 @@ NEXTAUTH_SECRET=your-secure-secret-key
 CSRF_SECRET=your-csrf-secret-key
 ```
 
+#### UPI Payment Configuration
+```env
+# Payment Gateway Settings
+UPI_MERCHANT_ID=your-merchant-id
+UPI_MERCHANT_NAME=Your Store Name
+DEFAULT_UPI_ID=merchant@upi
+
+# Payment Interface Settings
+PAYMENT_TIMER_DURATION=540  # 9 minutes in seconds
+UTR_VALIDATION_LENGTH=12    # UTR number length
+```
+
 #### Optional: Redis Performance Tuning
 ```env
 REDIS_CACHE_TTL=30  # Role cache duration in seconds

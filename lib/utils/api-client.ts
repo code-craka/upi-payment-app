@@ -14,7 +14,7 @@ class APIClient {
       this.csrfToken = data.csrfToken
       this.csrfExpires = data.expires
 
-      return this.csrfToken
+      return this.csrfToken!
     } catch (error) {
       console.error("Failed to get CSRF token:", error)
       throw new Error("Failed to get CSRF token")

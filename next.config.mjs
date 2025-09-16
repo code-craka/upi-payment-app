@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Fix lockfile detection warning by setting explicit workspace root
+  outputFileTracingRoot: process.cwd(),
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -9,7 +11,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  async headers() {
+  headers() {
     return [
       {
         source: '/(.*)',

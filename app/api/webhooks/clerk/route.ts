@@ -111,7 +111,7 @@ async function handleUserDeleted(data: ClerkWebhookEvent['data']) {
 
 export async function POST(request: Request) {
   try {
-    const headersList = headers()
+    const headersList = await headers()
     const svixId = headersList.get("svix-id")
     const svixTimestamp = headersList.get("svix-timestamp")
     const svixSignature = headersList.get("svix-signature")

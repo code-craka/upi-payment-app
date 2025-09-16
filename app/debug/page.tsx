@@ -14,7 +14,7 @@ export default async function DebugPage() {
     NEXT_PUBLIC_APP_URL: !!process.env.NEXT_PUBLIC_APP_URL,
   }
 
-  const userRole = sessionClaims?.metadata?.role as string
+  const userRole = (sessionClaims?.publicMetadata as { role?: string })?.role as string
 
   return (
     <div className="container mx-auto p-6 space-y-6">

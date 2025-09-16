@@ -229,6 +229,8 @@ POST /api/orders
     "status": "pending",
     "paymentUrl": "<https://your-domain.com/pay/order_abc123>",
     "qrCode": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+    "upiId": "merchant@upi",
+    "merchantName": "Your Store Name",
     "expiresAt": "2024-12-15T10:30:00Z",
     "createdAt": "2024-12-15T10:21:00Z"
   }
@@ -291,6 +293,46 @@ POST /api/orders/{orderId}/utr
   }
 }
 \`\`\`
+
+## Payment Interface
+
+### UPI Deep Linking
+
+The payment interface supports direct deep linking to UPI applications for seamless payment experience:
+
+**Supported UPI Apps:**
+- **PhonePe**: `phonepe://pay?pa={upiId}&pn={merchantName}&am={amount}&tr={orderId}&cu=INR`
+- **Paytm**: `paytmmp://pay?pa={upiId}&pn={merchantName}&am={amount}&tr={orderId}&cu=INR`
+- **Google Pay**: `tez://upi/pay?pa={upiId}&pn={merchantName}&am={amount}&tr={orderId}&cu=INR`
+- **Generic UPI**: `upi://pay?pa={upiId}&pn={merchantName}&am={amount}&tr={orderId}&cu=INR`
+
+**Deep Link Parameters:**
+- `pa`: Payee Address (UPI ID)
+- `pn`: Payee Name (Merchant Name, URL encoded)
+- `am`: Amount
+- `tr`: Transaction Reference (Order ID)
+- `cu`: Currency (INR)
+
+**Implementation Features:**
+- Automatic app detection and selection
+- Radio button interface for UPI app selection
+- Real-time countdown timer
+- Copy-to-clipboard functionality for amount and UPI ID
+- UTR submission form with validation
+- Mobile-responsive design
+- Toast notifications for user feedback
+
+### Payment Page Features
+
+The payment interface includes:
+
+1. **Timer Section**: Countdown timer showing order expiry
+2. **Amount Section**: Displays amount with copy button
+3. **VPA/UPI Section**: Shows UPI ID with copy button
+4. **Notice Section**: Important payment instructions
+5. **UPI App Selection**: Radio buttons with logos for app selection
+6. **UTR Form**: Input field for UTR submission after payment
+7. **Customer Support**: Contact information for assistance
 
 ## Admin API
 

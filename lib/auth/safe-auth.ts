@@ -41,7 +41,7 @@ export async function requireRole(requiredRole: UserRole): Promise<SafeUser> {
 
 export function hasPermission(userRole: UserRole, permission: Permission): boolean {
   const rolePermissions = PERMISSIONS[userRole] || []
-  return rolePermissions.includes(permission as any) || userRole === "admin"
+  return (rolePermissions as readonly Permission[]).includes(permission) || userRole === "admin"
 }
 
 export async function requirePermission(permission: Permission): Promise<SafeUser> {

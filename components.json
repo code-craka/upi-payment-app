@@ -3,6 +3,9 @@
   "style": "new-york",
   "rsc": true,
   "tsx": true,
+  "registries": {
+    "@clerk": "https://clerk.com/r/{name}.json"
+  },
   "tailwind": {
     "config": "",
     "css": "app/globals.css",
