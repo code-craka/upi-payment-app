@@ -1,6 +1,6 @@
 {
   "name": "upi-admin-dashboard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Enterprise-grade UPI payment system with Redis-powered session management, real-time role updates, and comprehensive admin dashboard for payment processing, order management, and user administration.",
   "private": false,
   "author": {
