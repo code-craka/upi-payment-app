@@ -17,7 +17,7 @@ const clerk = createClerkClient({
 });
 
 /**
- * POST /api/admin-bootstrap
+ * POST /api/admin/bootstrap
  * 
  * Bootstrap admin users by assigning roles with dual-write to Clerk and Redis
  * This endpoint allows initial admin setup and role management
@@ -226,7 +226,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<AdminBoot
 }
 
 /**
- * GET /api/admin-bootstrap
+ * GET /api/admin/bootstrap
  * 
  * Get bootstrap status and hybrid role synchronization statistics
  */

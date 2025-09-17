@@ -321,6 +321,58 @@ export function useRolePermission(
 }
 
 /**
+ * Hook for requiring specific role access
+ * @param requiredRole - Role required for access
+ * @param options - Hook configuration options
+ * @returns Role check result and session data
+ */
+export function useRequireRole(
+  requiredRole: UserRole, 
+  options: UseSessionRoleOptions = {}
+) {
+  const sessionData = useSessionRole(options);
+  
+  const hasRequiredRole = sessionData.role && (
+    sessionData.role === requiredRole || 
+    sessionData.role === 'admin' // Admin has access to everything
+  );
+
+  return {
+    ...sessionData,
+    hasRequiredRole,
+    canAccess: hasRequiredRole,
+    hasSession: Boolean(sessionData.role),
+    loading: sessionData.isLoading,
+    permissions: [], // Will be implemented when permissions system is added
+  };
+}
+
+/**
+ * Hook for checking specific permissions
+ * @param requiredPermission - Permission required for access
+ * @param options - Hook configuration options
+ * @returns Permission check result and session data
+ */
+export function useRequirePermission(
+  requiredPermission: string,
+  options: UseSessionRoleOptions = {}
+) {
+  const sessionData = useSessionRole(options);
+  
+  // For now, only admin has all permissions
+  const hasRequiredPermission = sessionData.role === 'admin';
+
+  return {
+    ...sessionData,
+    hasRequiredPermission,
+    canAccess: hasRequiredPermission,
+    hasSession: Boolean(sessionData.role),
+    loading: sessionData.isLoading,
+    permissions: sessionData.role === 'admin' ? [requiredPermission] : [],
+  };
+}
+
+/**
  * Hook for admin-only functionality
  * 
  * @param options Hook configuration options

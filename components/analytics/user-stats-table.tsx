@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { formatCurrency } from "@/lib/utils"
 
 // Mock data for user statistics
 const userStats = [
@@ -70,14 +71,6 @@ const userStats = [
 ]
 
 export function UserStatsTable() {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
   const getSuccessRateBadge = (rate: number) => {
     if (rate >= 95) return <Badge className="bg-green-100 text-green-800">Excellent</Badge>
     if (rate >= 90) return <Badge className="bg-blue-100 text-blue-800">Good</Badge>

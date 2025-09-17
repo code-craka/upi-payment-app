@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { formatCurrency } from "@/lib/utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -176,13 +177,6 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
       title: "Copied to clipboard",
       description: `${label} has been copied to your clipboard.`,
     })
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-    }).format(amount)
   }
 
   return (

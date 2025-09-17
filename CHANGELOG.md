@@ -415,7 +415,7 @@ This release introduces a revolutionary session management system with Redis int
 ### 🔧 Technical Improvements
 
 #### Performance Optimizations
-- **Redis Caching** - 30-day session TTL with auto-refresh
+- **Redis Caching** - 30-second role TTL with auto-refresh
 - **Connection Pooling** - Optimized Redis client management
 - **Structured Logging** - Enhanced debugging and monitoring
 - **Error Resilience** - Comprehensive error handling and fallbacks
@@ -549,7 +549,7 @@ curl -X GET http://localhost:3000/api/debug/session
 
 4. **Frontend Integration**
    ```typescript
-   import { useSessionRole } from '@/hooks/use-session-role'
+   import { useSessionRole } from '@/hooks/useSessionRole'
    
    function MyComponent() {
      const { role, permissions } = useSessionRole()

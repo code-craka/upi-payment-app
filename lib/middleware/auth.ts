@@ -19,7 +19,7 @@ const defaultAuthConfig: AuthConfig = {
     "/sign-in(.*)",
     "/sign-up(.*)",
     "/pay(.*)",
-    "/api/admin-bootstrap",
+    "/api/admin/bootstrap",
     "/api/system-status",
     "/api/debug/user",
     "/api/debug/session-claims",

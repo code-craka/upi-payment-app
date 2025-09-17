@@ -12,7 +12,7 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/pay(.*)",
-  "/api/admin-bootstrap", // Allow bootstrap API for initial admin setup
+  "/api/admin/bootstrap", // Allow bootstrap API for initial admin setup
   "/api/system-status", // Allow system status API for diagnostics
   "/api/debug/user", // Allow debug user API for troubleshooting
   "/api/debug/session-claims", // Allow session claims debug API
@@ -44,7 +44,7 @@ const authMiddleware = createAuthMiddleware({
     "/sign-in(.*)",
     "/sign-up(.*)",
     "/pay(.*)",
-    "/api/admin-bootstrap",
+    "/api/admin/bootstrap",
     "/api/system-status",
     "/api/debug/user",
     "/api/debug/session-claims",

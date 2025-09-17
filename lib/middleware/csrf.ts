@@ -14,7 +14,7 @@ export function createCSRFMiddleware() {
     }
 
     // Skip CSRF for bootstrap API (for initial admin setup)
-    if (request.nextUrl.pathname === "/api/admin-bootstrap") {
+    if (request.nextUrl.pathname === "/api/admin/bootstrap") {
       return NextResponse.next()
     }
 

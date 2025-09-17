@@ -1,8 +1,13 @@
 # Graceful Degradation System Documentation
 
+> **⚠️ Status: Experimental/Unused**  
+> This documentation describes an experimental graceful degradation system that is currently **not actively used** in the production application. The current hybrid authentication system uses a simpler Redis + Clerk approach with basic circuit breaker patterns. This advanced system remains available for future implementation.
+
 ## Overview
 
-The Graceful Degradation System ensures the UPI Admin Dashboard remains operational during partial service outages while maintaining performance standards and user experience quality. The system implements comprehensive timeout management, circuit breaker patterns, fallback strategies, and performance monitoring with alerting.
+The Graceful Degradation System is an experimental framework designed to ensure the UPI Admin Dashboard remains operational during partial service outages while maintaining performance standards and user experience quality. The system implements comprehensive timeout management, circuit breaker patterns, fallback strategies, and performance monitoring with alerting.
+
+**Current Status**: The production application uses a simpler hybrid authentication system with basic Redis + Clerk integration and circuit breaker patterns. This advanced graceful degradation system is available but not currently implemented.
 
 ## Architecture Components
 

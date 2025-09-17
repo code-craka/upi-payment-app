@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { StatsCards } from "@/components/shared/stats-cards"
+import { formatCurrency } from "@/lib/utils"
 import { CreditCard, ShoppingCart, TrendingUp, Plus, Eye } from "lucide-react"
 
 // Mock data for merchant dashboard
@@ -23,13 +24,6 @@ const mockMerchantStats = {
 }
 
 function MerchantStatsCards() {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-    }).format(amount)
-  }
-
   const merchantMetrics = [
     {
       id: "payment-links",
@@ -108,13 +102,6 @@ function RecentOrders() {
         {status.replace("-", " ")}
       </span>
     )
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-    }).format(amount)
   }
 
   return (

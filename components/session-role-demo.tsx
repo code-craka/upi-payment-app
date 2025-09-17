@@ -1,6 +1,6 @@
 "use client"
 
-import { useSessionRole, useRequireRole, useRequirePermission } from '@/hooks/use-session-role'
+import { useSessionRole, useRequireRole, useRequirePermission } from '@/hooks/useSessionRole'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,14 +12,27 @@ import { useState } from 'react'
  * Demo component showing real-time role updates with the new session system
  */
 export function SessionRoleDemo() {
+  const sessionData = useSessionRole({ refreshInterval: 10000 }) // Refresh every 10 seconds for demo
   const { 
     role, 
-    permissions, 
-    hasSession, 
-    loading, 
+    isLoading: loading,
     error, 
-    refresh 
-  } = useSessionRole(10000) // Refresh every 10 seconds for demo
+    refresh,
+    isStale,
+    isAdmin,
+    lastRefresh,
+    refreshCount
+  } = sessionData;
+
+  // Mock permissions and session status based on role
+  const permissions = role === 'admin' 
+    ? ['view_audit_logs', 'manage_users', 'read_users', 'write_users'] 
+    : role === 'merchant' 
+    ? ['manage_orders', 'view_analytics'] 
+    : role === 'viewer' 
+    ? ['view_orders'] 
+    : [];
+  const hasSession = Boolean(role);
 
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -34,7 +47,7 @@ export function SessionRoleDemo() {
   const handleManualRefresh = async () => {
     setIsRefreshing(true)
     try {
-      await refresh()
+      await refresh(true)
     } catch (error) {
       console.error('Manual refresh failed:', error)
     } finally {
@@ -64,7 +77,7 @@ export function SessionRoleDemo() {
             Session Error
           </CardTitle>
           <CardDescription className="text-red-500">
-            {error.message}
+            {error}
           </CardDescription>
         </CardHeader>
         <CardContent>
