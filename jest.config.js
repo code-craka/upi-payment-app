@@ -3,14 +3,11 @@ const config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/__tests__'],
-  testMatch: [
-    '**/__tests__/**/*.test.(ts|js)',
-    '**/(test|spec)/**/*.test.(ts|js)'
-  ],
+  testMatch: ['**/__tests__/**/*.test.(ts|js)', '**/(test|spec)/**/*.test.(ts|js)'],
   transform: {
     '^.+\\.(ts|tsx)$': 'ts-jest',
   },
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts'],
@@ -28,8 +25,8 @@ const config = {
       branches: 70,
       functions: 70,
       lines: 70,
-      statements: 70
-    }
+      statements: 70,
+    },
   },
   testTimeout: 10000,
   verbose: true,

@@ -12,7 +12,7 @@ import {
   createCircuitBreaker,
   withCircuitBreaker,
   CircuitBreakerMonitoring,
-  getCircuitBreakerHealth
+  getCircuitBreakerHealth,
 } from '@/lib/redis/circuit-breaker-factory';
 import { CircuitBreakerError } from '@/lib/redis/persistent-circuit-breaker';
 
@@ -26,18 +26,15 @@ export async function basicCircuitBreakerExample() {
   });
 
   try {
-    const result = await circuitBreaker.execute(
-      async () => {
-        // Your Redis operation here
-        const redis = new Redis({
-          url: process.env.UPSTASH_REDIS_REST_URL!,
-          token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-        });
+    const result = await circuitBreaker.execute(async () => {
+      // Your Redis operation here
+      const redis = new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL!,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+      });
 
-        return await redis.get('some-key');
-      },
-      'fetch-payment-data'
-    );
+      return await redis.get('some-key');
+    }, 'fetch-payment-data');
 
     console.log('Operation successful:', result);
     return result;
@@ -104,7 +101,7 @@ export async function externalApiCircuitBreakerExample() {
       const response = await fetch('https://api.stripe.com/v1/payment_intents', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.STRIPE_SECRET_KEY}`,
+          Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -149,7 +146,7 @@ export const circuitBreakerProtectedRoute = withCircuitBreaker(
   {
     failureThreshold: 5,
     recoveryTimeout: 60000,
-  }
+  },
 );
 
 // Example 6: Monitoring and Health Checks
@@ -184,14 +181,14 @@ export async function customCircuitBreakerExample() {
       serviceName: 'custom-service',
       failureThreshold: 10,
       successThreshold: 5,
-      recoveryTimeout: 120000,     // 2 minutes
-      maxRecoveryTimeout: 600000,  // 10 minutes
+      recoveryTimeout: 120000, // 2 minutes
+      maxRecoveryTimeout: 600000, // 10 minutes
       backoffMultiplier: 2,
       backoffJitter: 0.2,
-      monitoringPeriod: 600000,    // 10 minutes
-      stateTtl: 3600000,           // 1 hour
-      metricsTtl: 86400000,        // 24 hours
-    }
+      monitoringPeriod: 600000, // 10 minutes
+      stateTtl: 3600000, // 1 hour
+      metricsTtl: 86400000, // 24 hours
+    },
   );
 
   try {
@@ -256,11 +253,11 @@ export async function batchOperationsExample() {
 
         return await redis.set(`user:${op.id}`, JSON.stringify(op.data));
       }, `batch-set-user-${op.id}`);
-    })
+    }),
   );
 
-  const successful = results.filter(r => r.status === 'fulfilled').length;
-  const failed = results.filter(r => r.status === 'rejected').length;
+  const successful = results.filter((r) => r.status === 'fulfilled').length;
+  const failed = results.filter((r) => r.status === 'rejected').length;
 
   console.log(`Batch operation results: ${successful} successful, ${failed} failed`);
 
@@ -281,7 +278,8 @@ export async function circuitBreakerWithRetryExample() {
         });
 
         // Simulate operation that might fail
-        if (Math.random() < 0.3) { // 30% chance of failure
+        if (Math.random() < 0.3) {
+          // 30% chance of failure
           throw new Error('Simulated failure');
         }
 
@@ -299,7 +297,7 @@ export async function circuitBreakerWithRetryExample() {
 
       // Wait before retry (exponential backoff)
       const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 }

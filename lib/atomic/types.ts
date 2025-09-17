@@ -5,11 +5,11 @@
  * with version control, conflict resolution, and comprehensive audit logging.
  */
 
-import { z } from "zod"
-import { UserRoleSchema } from "../types"
+import { z } from 'zod';
+import { UserRoleSchema } from '../types';
 
 // Import UserRole type from existing types
-export type UserRole = z.infer<typeof UserRoleSchema>
+export type UserRole = z.infer<typeof UserRoleSchema>;
 
 // ==========================================
 // ATOMIC ROLE UPDATE TYPES
@@ -21,7 +21,7 @@ export enum AtomicOperationType {
   ROLE_ASSIGN = 'role_assign',
   ROLE_REVOKE = 'role_revoke',
   ROLE_SYNC = 'role_sync',
-  ROLE_ROLLBACK = 'role_rollback'
+  ROLE_ROLLBACK = 'role_rollback',
 }
 
 // Version Control Schema
@@ -31,9 +31,9 @@ export const VersionControlSchema = z.object({
   lastModified: z.number(),
   modifiedBy: z.string(),
   checksum: z.string(), // SHA-256 hash of role data
-})
+});
 
-export type VersionControl = z.infer<typeof VersionControlSchema>
+export type VersionControl = z.infer<typeof VersionControlSchema>;
 
 // Atomic Role Update Request
 export const AtomicRoleUpdateRequestSchema = z.object({
@@ -44,9 +44,9 @@ export const AtomicRoleUpdateRequestSchema = z.object({
   metadata: z.record(z.any()).optional(),
   force: z.boolean().default(false), // Override version check
   timeout: z.number().default(30000), // Operation timeout in ms
-})
+});
 
-export type AtomicRoleUpdateRequest = z.infer<typeof AtomicRoleUpdateRequestSchema>
+export type AtomicRoleUpdateRequest = z.infer<typeof AtomicRoleUpdateRequestSchema>;
 
 // Atomic Role Update Response
 export const AtomicRoleUpdateResponseSchema = z.object({
@@ -64,14 +64,18 @@ export const AtomicRoleUpdateResponseSchema = z.object({
     redis: z.number().optional(),
     total: z.number(),
   }),
-  conflicts: z.array(z.object({
-    type: z.string(),
-    message: z.string(),
-    resolution: z.string(),
-  })).optional(),
-})
+  conflicts: z
+    .array(
+      z.object({
+        type: z.string(),
+        message: z.string(),
+        resolution: z.string(),
+      }),
+    )
+    .optional(),
+});
 
-export type AtomicRoleUpdateResponse = z.infer<typeof AtomicRoleUpdateResponseSchema>
+export type AtomicRoleUpdateResponse = z.infer<typeof AtomicRoleUpdateResponseSchema>;
 
 // Conflict Resolution Types
 export enum ConflictType {
@@ -79,7 +83,7 @@ export enum ConflictType {
   CONCURRENT_UPDATE = 'concurrent_update',
   STALE_DATA = 'stale_data',
   NETWORK_ERROR = 'network_error',
-  SERVICE_UNAVAILABLE = 'service_unavailable'
+  SERVICE_UNAVAILABLE = 'service_unavailable',
 }
 
 export const ConflictResolutionSchema = z.object({
@@ -88,9 +92,9 @@ export const ConflictResolutionSchema = z.object({
   resolution: z.enum(['retry', 'force', 'rollback', 'abort']),
   retryAfter: z.number().optional(),
   suggestedAction: z.string().optional(),
-})
+});
 
-export type ConflictResolution = z.infer<typeof ConflictResolutionSchema>
+export type ConflictResolution = z.infer<typeof ConflictResolutionSchema>;
 
 // Rollback Context
 export const RollbackContextSchema = z.object({
@@ -107,9 +111,9 @@ export const RollbackContextSchema = z.object({
     originalData: z.record(z.any()).optional(),
   }),
   timestamp: z.number(),
-})
+});
 
-export type RollbackContext = z.infer<typeof RollbackContextSchema>
+export type RollbackContext = z.infer<typeof RollbackContextSchema>;
 
 // Atomic Operation Context
 export const AtomicOperationContextSchema = z.object({
@@ -128,9 +132,9 @@ export const AtomicOperationContextSchema = z.object({
     redisStarted: z.boolean().default(false),
     redisCompleted: z.boolean().default(false),
   }),
-})
+});
 
-export type AtomicOperationContext = z.infer<typeof AtomicOperationContextSchema>
+export type AtomicOperationContext = z.infer<typeof AtomicOperationContextSchema>;
 
 // Enhanced Audit Log Entry
 export const AtomicAuditLogEntrySchema = z.object({
@@ -149,11 +153,13 @@ export const AtomicAuditLogEntrySchema = z.object({
   clerkUpdated: z.boolean(),
   redisUpdated: z.boolean(),
   conflicts: z.array(ConflictResolutionSchema).optional(),
-  error: z.object({
-    code: z.string().optional(),
-    message: z.string().optional(),
-    stack: z.string().optional(),
-  }).optional(),
+  error: z
+    .object({
+      code: z.string().optional(),
+      message: z.string().optional(),
+      stack: z.string().optional(),
+    })
+    .optional(),
   performance: z.object({
     clerkLatency: z.number().optional(),
     redisLatency: z.number().optional(),
@@ -165,9 +171,9 @@ export const AtomicAuditLogEntrySchema = z.object({
   userAgent: z.string().optional(),
   timestamp: z.number(),
   completedAt: z.number().optional(),
-})
+});
 
-export type AtomicAuditLogEntry = z.infer<typeof AtomicAuditLogEntrySchema>
+export type AtomicAuditLogEntry = z.infer<typeof AtomicAuditLogEntrySchema>;
 
 // Redis Lua Script Results
 export const LuaScriptResultSchema = z.object({
@@ -182,37 +188,52 @@ export const LuaScriptResultSchema = z.object({
   // Circuit breaker specific properties
   canProceed: z.boolean().optional(),
   circuitState: z.string().optional(),
-})
+});
 
-export type LuaScriptResult = z.infer<typeof LuaScriptResultSchema>
+export type LuaScriptResult = z.infer<typeof LuaScriptResultSchema>;
 
 // Dual-Write Transaction State
 export const DualWriteTransactionSchema = z.object({
   transactionId: z.string(),
   userId: z.string(),
-  state: z.enum(['initiated', 'clerk_updating', 'clerk_updated', 'redis_updating', 'redis_updated', 'committed', 'failed', 'rolled_back']),
-  clerkResult: z.object({
-    success: z.boolean(),
-    error: z.string().optional(),
-    latency: z.number().optional(),
-  }).optional(),
-  redisResult: z.object({
-    success: z.boolean(),
-    error: z.string().optional(),
-    latency: z.number().optional(),
-    version: z.number().optional(),
-  }).optional(),
-  rollbackResult: z.object({
-    success: z.boolean(),
-    error: z.string().optional(),
-    latency: z.number().optional(),
-  }).optional(),
+  state: z.enum([
+    'initiated',
+    'clerk_updating',
+    'clerk_updated',
+    'redis_updating',
+    'redis_updated',
+    'committed',
+    'failed',
+    'rolled_back',
+  ]),
+  clerkResult: z
+    .object({
+      success: z.boolean(),
+      error: z.string().optional(),
+      latency: z.number().optional(),
+    })
+    .optional(),
+  redisResult: z
+    .object({
+      success: z.boolean(),
+      error: z.string().optional(),
+      latency: z.number().optional(),
+      version: z.number().optional(),
+    })
+    .optional(),
+  rollbackResult: z
+    .object({
+      success: z.boolean(),
+      error: z.string().optional(),
+      latency: z.number().optional(),
+    })
+    .optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
   timeout: z.number(),
-})
+});
 
-export type DualWriteTransaction = z.infer<typeof DualWriteTransactionSchema>
+export type DualWriteTransaction = z.infer<typeof DualWriteTransactionSchema>;
 
 // Optimistic Locking Context
 export const OptimisticLockContextSchema = z.object({
@@ -224,9 +245,9 @@ export const OptimisticLockContextSchema = z.object({
   lockExpires: z.number().optional(),
   attempts: z.number().default(0),
   maxAttempts: z.number().default(5),
-})
+});
 
-export type OptimisticLockContext = z.infer<typeof OptimisticLockContextSchema>
+export type OptimisticLockContext = z.infer<typeof OptimisticLockContextSchema>;
 
 // Circuit Breaker Integration
 export const AtomicOperationCircuitBreakerSchema = z.object({
@@ -237,9 +258,9 @@ export const AtomicOperationCircuitBreakerSchema = z.object({
   state: z.enum(['closed', 'open', 'half_open']),
   lastFailure: z.number().optional(),
   consecutiveFailures: z.number().default(0),
-})
+});
 
-export type AtomicOperationCircuitBreaker = z.infer<typeof AtomicOperationCircuitBreakerSchema>
+export type AtomicOperationCircuitBreaker = z.infer<typeof AtomicOperationCircuitBreakerSchema>;
 
 // Monitoring and Metrics
 export const AtomicOperationMetricsSchema = z.object({
@@ -253,9 +274,9 @@ export const AtomicOperationMetricsSchema = z.object({
   conflictRate: z.number().default(0),
   rollbackRate: z.number().default(0),
   lastUpdated: z.number(),
-})
+});
 
-export type AtomicOperationMetrics = z.infer<typeof AtomicOperationMetricsSchema>
+export type AtomicOperationMetrics = z.infer<typeof AtomicOperationMetricsSchema>;
 
 // Error Recovery Strategy
 export const ErrorRecoveryStrategySchema = z.object({
@@ -263,22 +284,24 @@ export const ErrorRecoveryStrategySchema = z.object({
   maxRetries: z.number().default(3),
   backoffMultiplier: z.number().default(2),
   maxBackoffTime: z.number().default(30000),
-  retryCondition: z.enum(['network_error', 'service_unavailable', 'version_conflict', 'any']).default('any'),
-})
+  retryCondition: z
+    .enum(['network_error', 'service_unavailable', 'version_conflict', 'any'])
+    .default('any'),
+});
 
-export type ErrorRecoveryStrategy = z.infer<typeof ErrorRecoveryStrategySchema>
+export type ErrorRecoveryStrategy = z.infer<typeof ErrorRecoveryStrategySchema>;
 
 // ==========================================
 // UTILITY TYPES
 // ==========================================
 
 // Operation Result Union Type
-export type AtomicOperationResult<T = any> =
-  | { success: true; data: T; metadata?: Record<string, any> }
-  | { success: false; error: string; code?: string; retryable?: boolean }
+export type AtomicOperationResult<T = unknown> =
+  | { success: true; data: T; metadata?: Record<string, unknown> }
+  | { success: false; error: string; code?: string; retryable?: boolean };
 
 // Promise-based operation result
-export type AsyncAtomicOperationResult<T = any> = Promise<AtomicOperationResult<T>>
+export type AsyncAtomicOperationResult<T = unknown> = Promise<AtomicOperationResult<T>>;
 
 // Batch Operation Types
 export const BatchRoleUpdateRequestSchema = z.object({
@@ -286,26 +309,28 @@ export const BatchRoleUpdateRequestSchema = z.object({
   continueOnError: z.boolean().default(false),
   maxConcurrency: z.number().default(5),
   timeout: z.number().default(120000), // 2 minutes
-})
+});
 
-export type BatchRoleUpdateRequest = z.infer<typeof BatchRoleUpdateRequestSchema>
+export type BatchRoleUpdateRequest = z.infer<typeof BatchRoleUpdateRequestSchema>;
 
 export const BatchRoleUpdateResponseSchema = z.object({
   success: z.boolean(),
   totalOperations: z.number(),
   successfulOperations: z.number(),
   failedOperations: z.number(),
-  results: z.array(z.object({
-    userId: z.string(),
-    success: z.boolean(),
-    error: z.string().optional(),
-    result: AtomicRoleUpdateResponseSchema.optional(),
-  })),
+  results: z.array(
+    z.object({
+      userId: z.string(),
+      success: z.boolean(),
+      error: z.string().optional(),
+      result: AtomicRoleUpdateResponseSchema.optional(),
+    }),
+  ),
   totalLatency: z.number(),
   timestamp: z.number(),
-})
+});
 
-export type BatchRoleUpdateResponse = z.infer<typeof BatchRoleUpdateResponseSchema>
+export type BatchRoleUpdateResponse = z.infer<typeof BatchRoleUpdateResponseSchema>;
 
 // ==========================================
 // REDIS KEYS AND CONSTANTS
@@ -337,49 +362,49 @@ export const ATOMIC_REDIS_KEYS = {
   // Audit and rollback
   AUDIT_LOG: 'atomic:audit:log',
   ROLLBACK_DATA: (operationId: string) => `atomic:rollback:data:${operationId}`,
-} as const
+} as const;
 
 // TTL values for different data types
 export const ATOMIC_TTL = {
-  ROLE_DATA: 300,        // 5 minutes (matches existing ROLE_CACHE_TTL)
+  ROLE_DATA: 300, // 5 minutes (matches existing ROLE_CACHE_TTL)
   OPERATION_CONTEXT: 300, // 5 minutes
   TRANSACTION_STATE: 600, // 10 minutes
-  CONFLICT_LOG: 3600,    // 1 hour
+  CONFLICT_LOG: 3600, // 1 hour
   VERSION_HISTORY: 86400, // 24 hours
-  METRICS: 86400,        // 24 hours
-  AUDIT_LOG: 2592000,    // 30 days
-  ROLLBACK_DATA: 3600,   // 1 hour
-  LOCK: 30,              // 30 seconds
-} as const
+  METRICS: 86400, // 24 hours
+  AUDIT_LOG: 2592000, // 30 days
+  ROLLBACK_DATA: 3600, // 1 hour
+  LOCK: 30, // 30 seconds
+} as const;
 
 // ==========================================
 // ERROR TYPES
 // ==========================================
 
 export class AtomicOperationError extends Error {
-  public readonly code: string
-  public readonly operationId?: string
-  public readonly userId?: string
-  public readonly retryable: boolean
-  public readonly details?: any
+  public readonly code: string;
+  public readonly operationId?: string;
+  public readonly userId?: string;
+  public readonly retryable: boolean;
+  public readonly details?: Record<string, unknown>;
 
   constructor(
     message: string,
     code: string,
     options: {
-      operationId?: string
-      userId?: string
-      retryable?: boolean
-      details?: any
-    } = {}
+      operationId?: string;
+      userId?: string;
+      retryable?: boolean;
+      details?: Record<string, unknown>;
+    } = {},
   ) {
-    super(message)
-    this.name = 'AtomicOperationError'
-    this.code = code
-    this.operationId = options.operationId
-    this.userId = options.userId
-    this.retryable = options.retryable ?? false
-    this.details = options.details
+    super(message);
+    this.name = 'AtomicOperationError';
+    this.code = code;
+    this.operationId = options.operationId;
+    this.userId = options.userId;
+    this.retryable = options.retryable ?? false;
+    this.details = options.details;
   }
 
   static readonly CODES = {
@@ -393,5 +418,5 @@ export class AtomicOperationError extends Error {
     CIRCUIT_BREAKER_OPEN: 'CIRCUIT_BREAKER_OPEN',
     INVALID_REQUEST: 'INVALID_REQUEST',
     SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
-  } as const
+  } as const;
 }

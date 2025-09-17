@@ -31,7 +31,7 @@ global.fetch = jest.fn(() =>
     ok: true,
     json: () => Promise.resolve({}),
     text: () => Promise.resolve(''),
-  })
+  }),
 ) as any;
 
 // Mock crypto for Edge runtime compatibility

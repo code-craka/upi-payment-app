@@ -4,80 +4,82 @@
  */
 
 interface LogContext {
-  [key: string]: unknown
+  [key: string]: unknown;
 }
 
 class ServerLogger {
-  private isServer = typeof window === 'undefined'
+  private isServer = typeof window === 'undefined';
 
   info(message: string, context?: LogContext): void {
-    if (!this.isServer) return
-    
+    if (!this.isServer) return;
+
     if (context) {
       // eslint-disable-next-line no-console
-      console.log(`[INFO] ${message}`, context)
+      console.log(`[INFO] ${message}`, context);
     } else {
       // eslint-disable-next-line no-console
-      console.log(`[INFO] ${message}`)
+      console.log(`[INFO] ${message}`);
     }
   }
 
   warn(message: string, context?: LogContext): void {
-    if (!this.isServer) return
-    
+    if (!this.isServer) return;
+
     if (context) {
-      // eslint-disable-next-line no-console
-      console.warn(`[WARN] ${message}`, context)
+      console.warn(`[WARN] ${message}`, context);
     } else {
-      // eslint-disable-next-line no-console
-      console.warn(`[WARN] ${message}`)
+      console.warn(`[WARN] ${message}`);
     }
   }
 
   error(message: string, error?: Error | unknown, context?: LogContext): void {
-    if (!this.isServer) return
-    
-    const logData: Record<string, unknown> = {}
-    
+    if (!this.isServer) return;
+
+    const logData: Record<string, unknown> = {};
+
     if (error) {
       if (error instanceof Error) {
         logData.error = {
           name: error.name,
           message: error.message,
           stack: error.stack,
-        }
+        };
       } else {
-        logData.error = error
+        logData.error = error;
       }
     }
-    
+
     if (context) {
-      logData.context = context
+      logData.context = context;
     }
-    
+
     if (Object.keys(logData).length > 0) {
-      // eslint-disable-next-line no-console
-      console.error(`[ERROR] ${message}`, logData)
+      console.error(`[ERROR] ${message}`, logData);
     } else {
-      // eslint-disable-next-line no-console
-      console.error(`[ERROR] ${message}`)
+      console.error(`[ERROR] ${message}`);
     }
   }
 
   middleware(message: string, context?: LogContext): void {
-    if (!this.isServer) return
-    
+    if (!this.isServer) return;
+
     if (context) {
       // eslint-disable-next-line no-console
-      console.log(`[MIDDLEWARE] ${message}`, context)
+      console.log(`[MIDDLEWARE] ${message}`, context);
     } else {
       // eslint-disable-next-line no-console
-      console.log(`[MIDDLEWARE] ${message}`)
+      console.log(`[MIDDLEWARE] ${message}`);
     }
   }
 
-  audit(action: string, entityType: string, entityId: string, userId: string, context?: LogContext): void {
-    if (!this.isServer) return
+  audit(
+    action: string,
+    entityType: string,
+    entityId: string,
+    userId: string,
+    context?: LogContext,
+  ): void {
+    if (!this.isServer) return;
 
     const auditContext = {
       action,
@@ -85,24 +87,24 @@ class ServerLogger {
       entityId,
       userId,
       timestamp: new Date().toISOString(),
-      ...context
-    }
+      ...context,
+    };
 
     // eslint-disable-next-line no-console
-    console.log(`[AUDIT] ${action} on ${entityType}:${entityId} by user:${userId}`, auditContext)
+    console.log(`[AUDIT] ${action} on ${entityType}:${entityId} by user:${userId}`, auditContext);
   }
 
   debug(message: string, context?: LogContext): void {
-    if (!this.isServer || process.env.NODE_ENV !== 'development') return
-    
+    if (!this.isServer || process.env.NODE_ENV !== 'development') return;
+
     if (context) {
       // eslint-disable-next-line no-console
-      console.debug(`[DEBUG] ${message}`, context)
+      console.debug(`[DEBUG] ${message}`, context);
     } else {
       // eslint-disable-next-line no-console
-      console.debug(`[DEBUG] ${message}`)
+      console.debug(`[DEBUG] ${message}`);
     }
   }
 }
 
-export const serverLogger = new ServerLogger()
+export const serverLogger = new ServerLogger();

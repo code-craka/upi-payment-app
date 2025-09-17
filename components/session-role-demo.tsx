@@ -1,59 +1,60 @@
-"use client"
+'use client';
 
-import { useSessionRole, useRequireRole, useRequirePermission } from '@/hooks/useSessionRole'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, RefreshCw, Shield, User, CheckCircle, XCircle } from 'lucide-react'
-import { useState } from 'react'
+import { useSessionRole, useRequireRole, useRequirePermission } from '@/hooks/useSessionRole';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, RefreshCw, Shield, User, CheckCircle, XCircle } from 'lucide-react';
+import { useState } from 'react';
 
 /**
  * Demo component showing real-time role updates with the new session system
  */
 export function SessionRoleDemo() {
-  const sessionData = useSessionRole({ refreshInterval: 10000 }) // Refresh every 10 seconds for demo
-  const { 
-    role, 
+  const sessionData = useSessionRole({ refreshInterval: 10000 }); // Refresh every 10 seconds for demo
+  const {
+    role,
     isLoading: loading,
-    error, 
+    error,
     refresh,
     isStale,
     isAdmin,
     lastRefresh,
-    refreshCount
+    refreshCount,
   } = sessionData;
 
   // Mock permissions and session status based on role
-  const permissions = role === 'admin' 
-    ? ['view_audit_logs', 'manage_users', 'read_users', 'write_users'] 
-    : role === 'merchant' 
-    ? ['manage_orders', 'view_analytics'] 
-    : role === 'viewer' 
-    ? ['view_orders'] 
-    : [];
+  const permissions =
+    role === 'admin'
+      ? ['view_audit_logs', 'manage_users', 'read_users', 'write_users']
+      : role === 'merchant'
+        ? ['manage_orders', 'view_analytics']
+        : role === 'viewer'
+          ? ['view_orders']
+          : [];
   const hasSession = Boolean(role);
 
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Example role checks
-  const adminAccess = useRequireRole('admin')
-  const merchantAccess = useRequireRole('merchant')
-  
+  const adminAccess = useRequireRole('admin');
+  const merchantAccess = useRequireRole('merchant');
+
   // Example permission checks
-  const canViewAuditLogs = useRequirePermission('view_audit_logs')
-  const canManageUsers = useRequirePermission('manage_users')
+  const canViewAuditLogs = useRequirePermission('view_audit_logs');
+  const canManageUsers = useRequirePermission('manage_users');
 
   const handleManualRefresh = async () => {
-    setIsRefreshing(true)
+    setIsRefreshing(true);
     try {
-      await refresh(true)
+      await refresh(true);
     } catch (error) {
-      console.error('Manual refresh failed:', error)
+      console.error('Manual refresh failed:', error);
     } finally {
-      setIsRefreshing(false)
+      setIsRefreshing(false);
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -65,7 +66,7 @@ export function SessionRoleDemo() {
           </CardTitle>
         </CardHeader>
       </Card>
-    )
+    );
   }
 
   if (error) {
@@ -76,22 +77,20 @@ export function SessionRoleDemo() {
             <XCircle className="h-4 w-4" />
             Session Error
           </CardTitle>
-          <CardDescription className="text-red-500">
-            {error}
-          </CardDescription>
+          <CardDescription className="text-red-500">{error}</CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={handleManualRefresh} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className="mr-2 h-4 w-4" />
             Retry
           </Button>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
-    <div className="space-y-6 w-full max-w-4xl">
+    <div className="w-full max-w-4xl space-y-6">
       {/* Current Session Status */}
       <Card>
         <CardHeader>
@@ -106,16 +105,14 @@ export function SessionRoleDemo() {
               className="ml-auto"
             >
               {isRefreshing ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="mr-2 h-4 w-4" />
               )}
               Refresh
             </Button>
           </CardTitle>
-          <CardDescription>
-            Real-time session information with automatic updates
-          </CardDescription>
+          <CardDescription>Real-time session information with automatic updates</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
@@ -123,22 +120,22 @@ export function SessionRoleDemo() {
               <span className="font-medium">Status:</span>
               {hasSession ? (
                 <Badge variant="default" className="bg-green-100 text-green-800">
-                  <CheckCircle className="h-3 w-3 mr-1" />
+                  <CheckCircle className="mr-1 h-3 w-3" />
                   Active Session
                 </Badge>
               ) : (
                 <Badge variant="secondary" className="bg-red-100 text-red-800">
-                  <XCircle className="h-3 w-3 mr-1" />
+                  <XCircle className="mr-1 h-3 w-3" />
                   No Session
                 </Badge>
               )}
             </div>
-            
+
             {role && (
               <div className="flex items-center gap-2">
                 <span className="font-medium">Role:</span>
                 <Badge variant="outline" className="capitalize">
-                  <Shield className="h-3 w-3 mr-1" />
+                  <Shield className="mr-1 h-3 w-3" />
                   {role}
                 </Badge>
               </div>
@@ -148,7 +145,7 @@ export function SessionRoleDemo() {
           {permissions.length > 0 && (
             <div>
               <span className="font-medium">Permissions ({permissions.length}):</span>
-              <div className="flex flex-wrap gap-1 mt-2">
+              <div className="mt-2 flex flex-wrap gap-1">
                 {permissions.slice(0, 10).map((permission) => (
                   <Badge key={permission} variant="secondary" className="text-xs">
                     {permission.replace(/_/g, ' ')}
@@ -166,25 +163,23 @@ export function SessionRoleDemo() {
       </Card>
 
       {/* Role Access Demo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Admin Access</CardTitle>
           </CardHeader>
           <CardContent>
             {adminAccess.hasRequiredRole ? (
-              <Alert className="bg-green-50 border-green-200">
+              <Alert className="border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-700">
                   ✅ You have admin access
                 </AlertDescription>
               </Alert>
             ) : (
-              <Alert className="bg-red-50 border-red-200">
+              <Alert className="border-red-200 bg-red-50">
                 <XCircle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-700">
-                  ❌ Admin access denied
-                </AlertDescription>
+                <AlertDescription className="text-red-700">❌ Admin access denied</AlertDescription>
               </Alert>
             )}
           </CardContent>
@@ -196,14 +191,14 @@ export function SessionRoleDemo() {
           </CardHeader>
           <CardContent>
             {merchantAccess.hasRequiredRole ? (
-              <Alert className="bg-green-50 border-green-200">
+              <Alert className="border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-700">
                   ✅ You have merchant access
                 </AlertDescription>
               </Alert>
             ) : (
-              <Alert className="bg-red-50 border-red-200">
+              <Alert className="border-red-200 bg-red-50">
                 <XCircle className="h-4 w-4 text-red-600" />
                 <AlertDescription className="text-red-700">
                   ❌ Merchant access denied
@@ -215,21 +210,21 @@ export function SessionRoleDemo() {
       </div>
 
       {/* Permission Access Demo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">View Audit Logs</CardTitle>
           </CardHeader>
           <CardContent>
             {canViewAuditLogs.hasRequiredPermission ? (
-              <Alert className="bg-green-50 border-green-200">
+              <Alert className="border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-700">
                   ✅ Can view audit logs
                 </AlertDescription>
               </Alert>
             ) : (
-              <Alert className="bg-red-50 border-red-200">
+              <Alert className="border-red-200 bg-red-50">
                 <XCircle className="h-4 w-4 text-red-600" />
                 <AlertDescription className="text-red-700">
                   ❌ Cannot view audit logs
@@ -245,18 +240,14 @@ export function SessionRoleDemo() {
           </CardHeader>
           <CardContent>
             {canManageUsers.hasRequiredPermission ? (
-              <Alert className="bg-green-50 border-green-200">
+              <Alert className="border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-700">
-                  ✅ Can manage users
-                </AlertDescription>
+                <AlertDescription className="text-green-700">✅ Can manage users</AlertDescription>
               </Alert>
             ) : (
-              <Alert className="bg-red-50 border-red-200">
+              <Alert className="border-red-200 bg-red-50">
                 <XCircle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-700">
-                  ❌ Cannot manage users
-                </AlertDescription>
+                <AlertDescription className="text-red-700">❌ Cannot manage users</AlertDescription>
               </Alert>
             )}
           </CardContent>
@@ -277,5 +268,5 @@ export function SessionRoleDemo() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

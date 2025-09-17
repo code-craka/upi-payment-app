@@ -1,10 +1,10 @@
-import { auth } from "@clerk/nextjs/server"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { CheckCircle, XCircle, AlertCircle } from "lucide-react"
+import { auth } from '@clerk/nextjs/server';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 export default async function DebugPage() {
-  const { userId, sessionClaims } = await auth()
+  const { userId, sessionClaims } = await auth();
 
   const envVars = {
     MONGODB_URI: !!process.env.MONGODB_URI,
@@ -12,15 +12,17 @@ export default async function DebugPage() {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     CLERK_WEBHOOK_SECRET: !!process.env.CLERK_WEBHOOK_SECRET,
     NEXT_PUBLIC_APP_URL: !!process.env.NEXT_PUBLIC_APP_URL,
-  }
+  };
 
-  const userRole = (sessionClaims?.publicMetadata as { role?: string })?.role as string
+  const userRole = (sessionClaims?.publicMetadata as { role?: string })?.role as string;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto space-y-6 p-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold">System Debug Information</h1>
-        <p className="text-muted-foreground mt-2">Check system configuration and authentication status</p>
+        <p className="text-muted-foreground mt-2">
+          Check system configuration and authentication status
+        </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -33,18 +35,18 @@ export default async function DebugPage() {
             <CardDescription>Current user authentication information</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
               <span>User ID:</span>
-              <Badge variant={userId ? "default" : "destructive"}>
-                {userId ? "Authenticated" : "Not Authenticated"}
+              <Badge variant={userId ? 'default' : 'destructive'}>
+                {userId ? 'Authenticated' : 'Not Authenticated'}
               </Badge>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
               <span>User Role:</span>
-              <Badge variant={userRole ? "default" : "secondary"}>{userRole || "No Role"}</Badge>
+              <Badge variant={userRole ? 'default' : 'secondary'}>{userRole || 'No Role'}</Badge>
             </div>
             {userId && (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-muted-foreground text-sm">
                 <p>User ID: {userId}</p>
               </div>
             )}
@@ -57,19 +59,23 @@ export default async function DebugPage() {
               <AlertCircle className="h-5 w-5" />
               Environment Variables
             </CardTitle>
-            <CardDescription>Check if required environment variables are configured</CardDescription>
+            <CardDescription>
+              Check if required environment variables are configured
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {Object.entries(envVars).map(([key, value]) => (
-              <div key={key} className="flex justify-between items-center">
-                <span className="text-sm font-mono">{key}:</span>
+              <div key={key} className="flex items-center justify-between">
+                <span className="font-mono text-sm">{key}:</span>
                 <div className="flex items-center gap-2">
                   {value ? (
                     <CheckCircle className="h-4 w-4 text-green-600" />
                   ) : (
                     <XCircle className="h-4 w-4 text-red-600" />
                   )}
-                  <Badge variant={value ? "default" : "destructive"}>{value ? "Set" : "Missing"}</Badge>
+                  <Badge variant={value ? 'default' : 'destructive'}>
+                    {value ? 'Set' : 'Missing'}
+                  </Badge>
                 </div>
               </div>
             ))}
@@ -84,12 +90,18 @@ export default async function DebugPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {!userId && <p className="text-sm text-red-600">• Please sign in to test authentication</p>}
+            {!userId && (
+              <p className="text-sm text-red-600">• Please sign in to test authentication</p>
+            )}
             {!envVars.MONGODB_URI && (
-              <p className="text-sm text-red-600">• Configure MONGODB_URI in environment variables</p>
+              <p className="text-sm text-red-600">
+                • Configure MONGODB_URI in environment variables
+              </p>
             )}
             {!envVars.CLERK_SECRET_KEY && (
-              <p className="text-sm text-red-600">• Configure CLERK_SECRET_KEY in environment variables</p>
+              <p className="text-sm text-red-600">
+                • Configure CLERK_SECRET_KEY in environment variables
+              </p>
             )}
             {!envVars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && (
               <p className="text-sm text-red-600">
@@ -103,5 +115,5 @@ export default async function DebugPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

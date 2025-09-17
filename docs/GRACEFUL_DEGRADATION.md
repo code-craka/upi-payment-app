@@ -41,7 +41,7 @@ import { gracefulDegradation } from '@/lib/graceful-degradation/graceful-degrada
 const result = await gracefulDegradation.executeWithFallback(
   primaryOperation,
   [fallbackStrategy1, fallbackStrategy2],
-  { timeoutMs: 5000 }
+  { timeoutMs: 5000 },
 );
 ```
 
@@ -61,14 +61,11 @@ Promise.race patterns for timeout management with proper cleanup:
 import { withTimeoutAndDegradation } from '@/lib/graceful-degradation/timeout-wrappers';
 
 // Redis operation with timeout
-const result = await withTimeoutAndDegradation(
-  () => redis.get('key'),
-  { 
-    operationConfig: OPERATION_CONFIGS.REDIS_GET,
-    enableGracefulDegradation: true,
-    timeoutMessage: 'Redis operation timed out'
-  }
-);
+const result = await withTimeoutAndDegradation(() => redis.get('key'), {
+  operationConfig: OPERATION_CONFIGS.REDIS_GET,
+  enableGracefulDegradation: true,
+  timeoutMessage: 'Redis operation timed out',
+});
 ```
 
 **Key Features:**
@@ -91,7 +88,7 @@ await performanceMonitor.recordMetric({
   service: 'auth',
   duration: 150,
   success: true,
-  timestamp: new Date()
+  timestamp: new Date(),
 });
 ```
 
@@ -107,7 +104,10 @@ await performanceMonitor.recordMetric({
 Robust authentication fallback strategies:
 
 ```typescript
-import { getAuthContextWithFallbacks, shouldAllowOperation } from '@/lib/graceful-degradation/fallback-auth';
+import {
+  getAuthContextWithFallbacks,
+  shouldAllowOperation,
+} from '@/lib/graceful-degradation/fallback-auth';
 
 // Authenticate with fallbacks
 const authContext = await getAuthContextWithFallbacks(userId);
@@ -154,10 +154,10 @@ const result = await gracefulDegradation.executeWithFallback(
       name: 'cache-fallback',
       priority: 1,
       canRetry: false,
-      execute: () => getCachedResult()
-    }
+      execute: () => getCachedResult(),
+    },
   ],
-  { serviceName: 'primary-service' }
+  { serviceName: 'primary-service' },
 );
 ```
 
@@ -169,7 +169,7 @@ await performanceMonitor.setPerformanceBudget({
   operationName: 'api_response',
   budgetMs: 2000,
   warningThresholdMs: 1500,
-  criticalThresholdMs: 2500
+  criticalThresholdMs: 2500,
 });
 
 // Automatic violation tracking
@@ -185,7 +185,7 @@ fallbackAuth.configureDegradedMode({
   allowStaleData: true,
   maxStaleAgeMinutes: 30,
   allowReadOnlyMode: true,
-  cacheExtendedTTL: 3600
+  cacheExtendedTTL: 3600,
 });
 
 // Get authentication with fallbacks
@@ -274,7 +274,7 @@ PERFORMANCE_BUDGET_CACHE_GET=100
 // Configure timeout settings
 timeoutConfig.updateConfiguration({
   REDIS_GET: { timeout: 3000, retries: 2 },
-  CLERK_AUTH_CHECK: { timeout: 8000, retries: 1 }
+  CLERK_AUTH_CHECK: { timeout: 8000, retries: 1 },
 });
 
 // Configure performance budgets
@@ -282,14 +282,14 @@ await performanceMonitor.setPerformanceBudget({
   operationName: 'user_login',
   budgetMs: 1500,
   warningThresholdMs: 1000,
-  criticalThresholdMs: 2000
+  criticalThresholdMs: 2000,
 });
 
 // Configure degraded authentication mode
 fallbackAuth.configureDegradedMode({
   allowStaleData: true,
   maxStaleAgeMinutes: 15,
-  allowReadOnlyMode: true
+  allowReadOnlyMode: true,
 });
 ```
 
@@ -374,7 +374,7 @@ process.env.DEBUG_GRACEFUL_DEGRADATION = 'true';
 const cbStates = await Promise.all([
   redis.get('circuit_breaker:redis'),
   redis.get('circuit_breaker:clerk'),
-  redis.get('circuit_breaker:database')
+  redis.get('circuit_breaker:database'),
 ]);
 ```
 
@@ -400,28 +400,27 @@ export async function POST(request: NextRequest) {
   try {
     // Use graceful degradation for authentication
     const authContext = await getAuthContextWithFallbacks();
-    
+
     if (!shouldAllowOperation(authContext, 'write')) {
       return NextResponse.json({ error: 'Operation not allowed in current mode' }, { status: 403 });
     }
 
     // Use timeout wrapper for database operation
-    const result = await withTimeoutAndDegradation(
-      () => database.createOrder(orderData),
-      { 
-        operationConfig: OPERATION_CONFIGS.DATABASE_WRITE,
-        enableGracefulDegradation: true 
-      }
-    );
+    const result = await withTimeoutAndDegradation(() => database.createOrder(orderData), {
+      operationConfig: OPERATION_CONFIGS.DATABASE_WRITE,
+      enableGracefulDegradation: true,
+    });
 
     return NextResponse.json({ success: true, data: result });
-    
   } catch (error) {
     // Handle timeout or degradation errors
-    return NextResponse.json({ 
-      error: 'Service temporarily degraded',
-      retry: true 
-    }, { status: 503 });
+    return NextResponse.json(
+      {
+        error: 'Service temporarily degraded',
+        retry: true,
+      },
+      { status: 503 },
+    );
   }
 }
 ```

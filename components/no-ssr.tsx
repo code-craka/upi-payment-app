@@ -1,10 +1,10 @@
-"use client"
+'use client';
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from 'react';
 
 interface NoSSRProps {
-  children: React.ReactNode
-  fallback?: React.ReactNode
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
 }
 
 /**
@@ -12,15 +12,15 @@ interface NoSSRProps {
  * after initial hydration is complete
  */
 export function NoSSR({ children, fallback = null }: NoSSRProps) {
-  const [hasMounted, setHasMounted] = useState(false)
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    setHasMounted(true)
-  }, [])
+    setHasMounted(true);
+  }, []);
 
   if (!hasMounted) {
-    return <>{fallback}</>
+    return <>{fallback}</>;
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }

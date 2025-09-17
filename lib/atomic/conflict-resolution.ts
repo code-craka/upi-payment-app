@@ -5,17 +5,16 @@
  * to prevent concurrent update conflicts in the atomic role management system.
  */
 
-import { Redis } from '@upstash/redis'
+import { Redis } from '@upstash/redis';
 import {
   OptimisticLockContext,
   ConflictResolution,
   ConflictType,
   AtomicOperationError,
-  AtomicOperationType,
   ATOMIC_REDIS_KEYS,
-  ATOMIC_TTL
-} from './types'
-import { getAtomicRoleUpdateService } from './redis-scripts'
+  ATOMIC_TTL,
+} from './types';
+import { getAtomicRoleUpdateService } from './redis-scripts';
 
 /**
  * Conflict Resolution Strategies
@@ -25,19 +24,19 @@ export enum ConflictResolutionStrategy {
   RETRY_WITH_BACKOFF = 'retry_with_backoff',
   FORCE_UPDATE = 'force_update',
   MERGE_CHANGES = 'merge_changes',
-  USER_INTERVENTION = 'user_intervention'
+  USER_INTERVENTION = 'user_intervention',
 }
 
 /**
  * Optimistic Locking Configuration
  */
 export interface OptimisticLockingConfig {
-  maxRetries: number
-  baseBackoffMs: number
-  maxBackoffMs: number
-  backoffMultiplier: number
-  conflictResolutionStrategy: ConflictResolutionStrategy
-  lockTimeoutMs: number
+  maxRetries: number;
+  baseBackoffMs: number;
+  maxBackoffMs: number;
+  backoffMultiplier: number;
+  conflictResolutionStrategy: ConflictResolutionStrategy;
+  lockTimeoutMs: number;
 }
 
 /**
@@ -49,24 +48,21 @@ const DEFAULT_CONFIG: OptimisticLockingConfig = {
   maxBackoffMs: 5000,
   backoffMultiplier: 2,
   conflictResolutionStrategy: ConflictResolutionStrategy.RETRY_WITH_BACKOFF,
-  lockTimeoutMs: ATOMIC_TTL.LOCK
-}
+  lockTimeoutMs: ATOMIC_TTL.LOCK,
+};
 
 /**
  * Conflict Resolution and Optimistic Locking Service
  */
 export class ConflictResolutionService {
-  private redis: Redis
-  private atomicService: ReturnType<typeof getAtomicRoleUpdateService>
-  private config: OptimisticLockingConfig
+  private redis: Redis;
+  private atomicService: ReturnType<typeof getAtomicRoleUpdateService>;
+  private config: OptimisticLockingConfig;
 
-  constructor(
-    redis: Redis,
-    config: Partial<OptimisticLockingConfig> = {}
-  ) {
-    this.redis = redis
-    this.atomicService = getAtomicRoleUpdateService(redis)
-    this.config = { ...DEFAULT_CONFIG, ...config }
+  constructor(redis: Redis, config: Partial<OptimisticLockingConfig> = {}) {
+    this.redis = redis;
+    this.atomicService = getAtomicRoleUpdateService(redis);
+    this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
   /**
@@ -75,11 +71,11 @@ export class ConflictResolutionService {
   async executeWithOptimisticLock<T>(
     userId: string,
     operation: (context: OptimisticLockContext) => Promise<T>,
-    expectedVersion?: number
+    expectedVersion?: number,
   ): Promise<T> {
-            const lockId = crypto.randomUUID()
-    let attempt = 0
-    let lastError: Error | null = null
+    const lockId = crypto.randomUUID();
+    let attempt = 0;
+    let lastError: Error | null = null;
 
     while (attempt <= this.config.maxRetries) {
       try {
@@ -90,34 +86,30 @@ export class ConflictResolutionService {
           lockAcquired: false,
           lockId,
           attempts: attempt,
-          maxAttempts: this.config.maxRetries
-        }
+          maxAttempts: this.config.maxRetries,
+        };
 
         // Try to acquire optimistic lock
         const lockResult = await this.atomicService.acquireOptimisticLock(
           userId,
           expectedVersion || 0,
-          30 // Lock TTL is hardcoded in Lua script
-        )
+          30, // Lock TTL is hardcoded in Lua script
+        );
 
         if (!lockResult.success) {
           if (lockResult.conflict) {
             // Handle version conflict
-            const resolution = await this.resolveConflict(
-              userId,
-              lockResult,
-              attempt
-            )
+            const resolution = await this.resolveConflict(userId, lockResult, attempt);
 
             if (resolution.resolution === 'retry') {
-              attempt++
-              await this.delay(this.calculateBackoff(attempt))
-              continue
+              attempt++;
+              await this.delay(this.calculateBackoff(attempt));
+              continue;
             } else if (resolution.resolution === 'force') {
               // Force update by ignoring version
-              expectedVersion = undefined
-              attempt++
-              continue
+              expectedVersion = undefined;
+              attempt++;
+              continue;
             } else {
               throw new AtomicOperationError(
                 `Conflict resolution failed: ${resolution.message}`,
@@ -125,54 +117,52 @@ export class ConflictResolutionService {
                 {
                   userId,
                   retryable: false,
-                  details: resolution
-                }
-              )
+                  details: resolution,
+                },
+              );
             }
           } else {
             throw new AtomicOperationError(
               'Failed to acquire lock',
               AtomicOperationError.CODES.LOCK_ACQUISITION_FAILED,
-              { userId, retryable: true }
-            )
+              { userId, retryable: true },
+            );
           }
         }
 
         // Lock acquired successfully
-        lockContext.lockAcquired = true
-        lockContext.currentVersion = lockResult.version
-        lockContext.lockExpires = Date.now() + this.config.lockTimeoutMs
+        lockContext.lockAcquired = true;
+        lockContext.currentVersion = lockResult.version;
+        lockContext.lockExpires = Date.now() + this.config.lockTimeoutMs;
 
         try {
           // Execute the operation
-          const result = await operation(lockContext)
+          const result = await operation(lockContext);
 
           // Release lock
-          await this.atomicService.releaseOptimisticLock(userId)
+          await this.atomicService.releaseOptimisticLock(userId);
 
-          return result
-
+          return result;
         } catch (operationError) {
           // Release lock on operation failure
-          await this.atomicService.releaseOptimisticLock(userId)
-          throw operationError
+          await this.atomicService.releaseOptimisticLock(userId);
+          throw operationError;
         }
-
       } catch (error) {
-        lastError = error as Error
-        attempt++
+        lastError = error as Error;
+        attempt++;
 
         if (attempt > this.config.maxRetries) {
-          break
+          break;
         }
 
         // Check if error is retryable
         if (!(error instanceof AtomicOperationError) || !error.retryable) {
-          break
+          break;
         }
 
         // Apply backoff delay
-        await this.delay(this.calculateBackoff(attempt))
+        await this.delay(this.calculateBackoff(attempt));
       }
     }
 
@@ -186,10 +176,10 @@ export class ConflictResolutionService {
         details: {
           lastError: lastError?.message,
           attempts: attempt,
-          maxRetries: this.config.maxRetries
-        }
-      }
-    )
+          maxRetries: this.config.maxRetries,
+        },
+      },
+    );
   }
 
   /**
@@ -197,11 +187,11 @@ export class ConflictResolutionService {
    */
   private async resolveConflict(
     userId: string,
-    lockResult: any,
-    attempt: number
+    lockResult: { currentVersion?: number; expectedVersion?: number; [key: string]: unknown },
+    attempt: number,
   ): Promise<ConflictResolution> {
-    const currentVersion = lockResult.currentVersion || 0
-    const expectedVersion = lockResult.expectedVersion || 0
+    const currentVersion = lockResult.currentVersion || 0;
+    const expectedVersion = lockResult.expectedVersion || 0;
 
     switch (this.config.conflictResolutionStrategy) {
       case ConflictResolutionStrategy.FAIL_FAST:
@@ -209,8 +199,8 @@ export class ConflictResolutionService {
           type: ConflictType.VERSION_MISMATCH,
           message: `Version conflict: expected ${expectedVersion}, got ${currentVersion}`,
           resolution: 'abort',
-          suggestedAction: 'Refresh data and retry manually'
-        }
+          suggestedAction: 'Refresh data and retry manually',
+        };
 
       case ConflictResolutionStrategy.RETRY_WITH_BACKOFF:
         if (attempt < this.config.maxRetries) {
@@ -219,15 +209,15 @@ export class ConflictResolutionService {
             message: `Version conflict detected, retrying (${attempt + 1}/${this.config.maxRetries})`,
             resolution: 'retry',
             retryAfter: this.calculateBackoff(attempt + 1),
-            suggestedAction: 'Automatic retry with backoff'
-          }
+            suggestedAction: 'Automatic retry with backoff',
+          };
         } else {
           return {
             type: ConflictType.VERSION_MISMATCH,
             message: `Version conflict: max retries exceeded`,
             resolution: 'abort',
-            suggestedAction: 'Manual intervention required'
-          }
+            suggestedAction: 'Manual intervention required',
+          };
         }
 
       case ConflictResolutionStrategy.FORCE_UPDATE:
@@ -235,8 +225,8 @@ export class ConflictResolutionService {
           type: ConflictType.VERSION_MISMATCH,
           message: `Version conflict: forcing update`,
           resolution: 'force',
-          suggestedAction: 'Update will proceed despite version conflict'
-        }
+          suggestedAction: 'Update will proceed despite version conflict',
+        };
 
       case ConflictResolutionStrategy.MERGE_CHANGES:
         // For role updates, merging doesn't make sense - use force or retry
@@ -244,24 +234,24 @@ export class ConflictResolutionService {
           type: ConflictType.VERSION_MISMATCH,
           message: `Version conflict: merge not applicable for role updates`,
           resolution: 'force',
-          suggestedAction: 'Forcing update as merge is not applicable'
-        }
+          suggestedAction: 'Forcing update as merge is not applicable',
+        };
 
       case ConflictResolutionStrategy.USER_INTERVENTION:
         return {
           type: ConflictType.VERSION_MISMATCH,
           message: `Version conflict: user intervention required`,
           resolution: 'abort',
-          suggestedAction: 'Please resolve conflict manually'
-        }
+          suggestedAction: 'Please resolve conflict manually',
+        };
 
       default:
         return {
           type: ConflictType.VERSION_MISMATCH,
           message: `Version conflict: unknown resolution strategy`,
           resolution: 'abort',
-          suggestedAction: 'Contact administrator'
-        }
+          suggestedAction: 'Contact administrator',
+        };
     }
   }
 
@@ -269,17 +259,18 @@ export class ConflictResolutionService {
    * Calculate backoff delay with jitter
    */
   private calculateBackoff(attempt: number): number {
-    const baseDelay = this.config.baseBackoffMs * Math.pow(this.config.backoffMultiplier, attempt - 1)
-    const jitter = Math.random() * 0.1 * baseDelay // 10% jitter
-    const delay = Math.min(baseDelay + jitter, this.config.maxBackoffMs)
-    return Math.floor(delay)
+    const baseDelay =
+      this.config.baseBackoffMs * Math.pow(this.config.backoffMultiplier, attempt - 1);
+    const jitter = Math.random() * 0.1 * baseDelay; // 10% jitter
+    const delay = Math.min(baseDelay + jitter, this.config.maxBackoffMs);
+    return Math.floor(delay);
   }
 
   /**
    * Delay execution for backoff
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -287,15 +278,15 @@ export class ConflictResolutionService {
    */
   async checkForConflicts(
     userId: string,
-    expectedVersion?: number
+    expectedVersion?: number,
   ): Promise<{
-    hasConflict: boolean
-    currentVersion?: number
-    expectedVersion?: number
-    recommendation: ConflictResolution
+    hasConflict: boolean;
+    currentVersion?: number;
+    expectedVersion?: number;
+    recommendation: ConflictResolution;
   }> {
     try {
-      const roleData = await this.atomicService.getRoleDataWithIntegrity(userId)
+      const roleData = await this.atomicService.getRoleDataWithIntegrity(userId);
 
       if (!roleData) {
         return {
@@ -306,9 +297,9 @@ export class ConflictResolutionService {
             type: ConflictType.VERSION_MISMATCH,
             message: 'No existing data',
             resolution: 'retry',
-            suggestedAction: 'Proceed with operation'
-          }
-        }
+            suggestedAction: 'Proceed with operation',
+          },
+        };
       }
 
       if (expectedVersion !== undefined && roleData.version !== expectedVersion) {
@@ -316,17 +307,17 @@ export class ConflictResolutionService {
           userId,
           {
             currentVersion: roleData.version,
-            expectedVersion
+            expectedVersion,
           },
-          0
-        )
+          0,
+        );
 
         return {
           hasConflict: true,
           currentVersion: roleData.version,
           expectedVersion,
-          recommendation
-        }
+          recommendation,
+        };
       }
 
       return {
@@ -337,21 +328,20 @@ export class ConflictResolutionService {
           type: ConflictType.VERSION_MISMATCH,
           message: 'No conflict detected',
           resolution: 'retry',
-          suggestedAction: 'Proceed with operation'
-        }
-      }
-
+          suggestedAction: 'Proceed with operation',
+        },
+      };
     } catch (error) {
-      console.error('[ConflictResolution] Conflict check failed:', error)
+      console.error('[ConflictResolution] Conflict check failed:', error);
       return {
         hasConflict: false,
         recommendation: {
           type: ConflictType.SERVICE_UNAVAILABLE,
           message: 'Unable to check for conflicts',
           resolution: 'abort',
-          suggestedAction: 'Retry operation later'
-        }
-      }
+          suggestedAction: 'Retry operation later',
+        },
+      };
     }
   }
 
@@ -359,42 +349,44 @@ export class ConflictResolutionService {
    * Batch conflict detection for multiple users
    */
   async checkBatchConflicts(
-    userVersionPairs: Array<{ userId: string; expectedVersion?: number }>
+    userVersionPairs: Array<{ userId: string; expectedVersion?: number }>,
   ): Promise<{
-    hasConflicts: boolean
+    hasConflicts: boolean;
     conflicts: Array<{
-      userId: string
-      currentVersion: number
-      expectedVersion?: number
-      resolution: ConflictResolution
-    }>
-    safeToProceed: boolean
+      userId: string;
+      currentVersion: number;
+      expectedVersion?: number;
+      resolution: ConflictResolution;
+    }>;
+    safeToProceed: boolean;
   }> {
-    const conflicts = []
+    const conflicts = [];
 
     for (const pair of userVersionPairs) {
-      const check = await this.checkForConflicts(pair.userId, pair.expectedVersion)
+      const check = await this.checkForConflicts(pair.userId, pair.expectedVersion);
 
       if (check.hasConflict) {
         conflicts.push({
           userId: pair.userId,
           currentVersion: check.currentVersion || 0,
           expectedVersion: pair.expectedVersion,
-          resolution: check.recommendation
-        })
+          resolution: check.recommendation,
+        });
       }
     }
 
-    const hasConflicts = conflicts.length > 0
-    const safeToProceed = !hasConflicts || conflicts.every(c =>
-      c.resolution.resolution === 'force' || c.resolution.resolution === 'retry'
-    )
+    const hasConflicts = conflicts.length > 0;
+    const safeToProceed =
+      !hasConflicts ||
+      conflicts.every(
+        (c) => c.resolution.resolution === 'force' || c.resolution.resolution === 'retry',
+      );
 
     return {
       hasConflicts,
       conflicts,
-      safeToProceed
-    }
+      safeToProceed,
+    };
   }
 
   /**
@@ -402,11 +394,11 @@ export class ConflictResolutionService {
    */
   async forceUnlock(userId: string): Promise<boolean> {
     try {
-      await this.atomicService.releaseOptimisticLock(userId)
-      return true
+      await this.atomicService.releaseOptimisticLock(userId);
+      return true;
     } catch (error) {
-      console.error('[ConflictResolution] Force unlock failed:', error)
-      return false
+      console.error('[ConflictResolution] Force unlock failed:', error);
+      return false;
     }
   }
 
@@ -414,83 +406,81 @@ export class ConflictResolutionService {
    * Get lock status for a user
    */
   async getLockStatus(userId: string): Promise<{
-    isLocked: boolean
-    lockId?: string
-    expiresAt?: number
-    ttl?: number
+    isLocked: boolean;
+    lockId?: string;
+    expiresAt?: number;
+    ttl?: number;
   }> {
     try {
-      const lockKey = ATOMIC_REDIS_KEYS.OPERATION_LOCK(userId)
-      const lockData = await this.redis.get(lockKey)
+      const lockKey = ATOMIC_REDIS_KEYS.OPERATION_LOCK(userId);
+      const lockData = await this.redis.get(lockKey);
 
       if (!lockData) {
-        return { isLocked: false }
+        return { isLocked: false };
       }
 
-      const ttl = await this.redis.ttl(lockKey)
+      const ttl = await this.redis.ttl(lockKey);
 
       return {
         isLocked: true,
         lockId: lockData as string,
-        expiresAt: Date.now() + (ttl * 1000),
-        ttl
-      }
-
+        expiresAt: Date.now() + ttl * 1000,
+        ttl,
+      };
     } catch (error) {
-      console.error('[ConflictResolution] Failed to get lock status:', error)
-      return { isLocked: false }
+      console.error('[ConflictResolution] Failed to get lock status:', error);
+      return { isLocked: false };
     }
   }
 
   /**
    * Clean up stale locks
    */
-  async cleanupStaleLocks(maxAgeMs = 300000): Promise<number> {
+  async cleanupStaleLocks(_maxAgeMs = 300000): Promise<number> {
     // This would require scanning all lock keys, which is expensive
     // For now, return 0 as locks have TTL
-    console.warn('[ConflictResolution] Cleanup of stale locks not implemented')
-    return 0
+    console.warn('[ConflictResolution] Cleanup of stale locks not implemented');
+    return 0;
   }
 
   /**
    * Get conflict statistics
    */
-  async getConflictStats(timeRangeMs = 3600000): Promise<{
-    totalConflicts: number
-    conflictsByType: Record<ConflictType, number>
-    averageResolutionTime: number
-    successRate: number
+  async getConflictStats(_timeRangeMs = 3600000): Promise<{
+    totalConflicts: number;
+    conflictsByType: Record<ConflictType, number>;
+    averageResolutionTime: number;
+    successRate: number;
   }> {
     try {
-      const conflictLogKey = ATOMIC_REDIS_KEYS.CONFLICT_LOG('stats')
-      const statsData = await this.redis.get(conflictLogKey)
+      const conflictLogKey = ATOMIC_REDIS_KEYS.CONFLICT_LOG('stats');
+      const statsData = await this.redis.get(conflictLogKey);
 
       if (!statsData) {
         return {
           totalConflicts: 0,
           conflictsByType: {} as Record<ConflictType, number>,
           averageResolutionTime: 0,
-          successRate: 0
-        }
+          successRate: 0,
+        };
       }
 
-      const stats = JSON.parse(statsData as string)
+      const stats = JSON.parse(statsData as string);
 
       return {
         totalConflicts: stats.totalConflicts || 0,
         conflictsByType: stats.conflictsByType || {},
         averageResolutionTime: stats.averageResolutionTime || 0,
-        successRate: stats.successRate || 0
-      }
-
+        successRate: stats.successRate || 0,
+      };
     } catch (error) {
-      console.error('[ConflictResolution] Failed to get conflict stats:', error)
+      console.error('[ConflictResolution] Failed to get conflict stats:', error);
       return {
         totalConflicts: 0,
         conflictsByType: {} as Record<ConflictType, number>,
         averageResolutionTime: 0,
-        successRate: 0
-      }
+        successRate: 0,
+      };
     }
   }
 
@@ -498,29 +488,29 @@ export class ConflictResolutionService {
    * Update configuration
    */
   updateConfig(newConfig: Partial<OptimisticLockingConfig>): void {
-    this.config = { ...this.config, ...newConfig }
+    this.config = { ...this.config, ...newConfig };
   }
 
   /**
    * Get current configuration
    */
   getConfig(): OptimisticLockingConfig {
-    return { ...this.config }
+    return { ...this.config };
   }
 }
 
 // Export singleton instance
-let conflictResolutionService: ConflictResolutionService | null = null
+let conflictResolutionService: ConflictResolutionService | null = null;
 
 export function getConflictResolutionService(
   redis: Redis,
-  config?: Partial<OptimisticLockingConfig>
+  config?: Partial<OptimisticLockingConfig>,
 ): ConflictResolutionService {
   if (!conflictResolutionService) {
-    conflictResolutionService = new ConflictResolutionService(redis, config)
+    conflictResolutionService = new ConflictResolutionService(redis, config);
   }
-  return conflictResolutionService
+  return conflictResolutionService;
 }
 
 // Export utilities
-export { DEFAULT_CONFIG as defaultConflictResolutionConfig }
+export { DEFAULT_CONFIG as defaultConflictResolutionConfig };

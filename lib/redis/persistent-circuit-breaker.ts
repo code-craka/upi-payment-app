@@ -15,33 +15,33 @@ import { Redis } from '@upstash/redis';
 
 // Circuit Breaker States
 export enum CircuitState {
-  CLOSED = 'CLOSED',       // Normal operation
-  OPEN = 'OPEN',           // Circuit is open, failing fast
-  HALF_OPEN = 'HALF_OPEN'  // Testing if service recovered
+  CLOSED = 'CLOSED', // Normal operation
+  OPEN = 'OPEN', // Circuit is open, failing fast
+  HALF_OPEN = 'HALF_OPEN', // Testing if service recovered
 }
 
 // Circuit Breaker Configuration
 export interface PersistentCircuitBreakerConfig {
   // Failure thresholds
-  failureThreshold: number;      // Failures before opening circuit
-  successThreshold: number;      // Successes needed in half-open state
+  failureThreshold: number; // Failures before opening circuit
+  successThreshold: number; // Successes needed in half-open state
 
   // Timeouts
-  recoveryTimeout: number;       // Base time before recovery attempt (ms)
-  maxRecoveryTimeout: number;    // Maximum recovery timeout (ms)
-  monitoringPeriod: number;      // Time window for failure tracking (ms)
+  recoveryTimeout: number; // Base time before recovery attempt (ms)
+  maxRecoveryTimeout: number; // Maximum recovery timeout (ms)
+  monitoringPeriod: number; // Time window for failure tracking (ms)
 
   // Exponential backoff
-  backoffMultiplier: number;     // Multiplier for exponential backoff
-  backoffJitter: number;         // Jitter factor (0-1)
+  backoffMultiplier: number; // Multiplier for exponential backoff
+  backoffJitter: number; // Jitter factor (0-1)
 
   // Redis configuration
-  stateTtl: number;              // TTL for circuit state in Redis (ms)
-  metricsTtl: number;            // TTL for metrics in Redis (ms)
+  stateTtl: number; // TTL for circuit state in Redis (ms)
+  metricsTtl: number; // TTL for metrics in Redis (ms)
 
   // Service identification
-  serviceName: string;           // Name of the service being protected
-  instanceId?: string;           // Optional instance identifier
+  serviceName: string; // Name of the service being protected
+  instanceId?: string; // Optional instance identifier
 }
 
 // Circuit Breaker State Data
@@ -74,13 +74,13 @@ export interface CircuitBreakerMetrics {
 const DEFAULT_CONFIG: PersistentCircuitBreakerConfig = {
   failureThreshold: 5,
   successThreshold: 3,
-  recoveryTimeout: 30000,     // 30 seconds
+  recoveryTimeout: 30000, // 30 seconds
   maxRecoveryTimeout: 300000, // 5 minutes
-  monitoringPeriod: 300000,   // 5 minutes
+  monitoringPeriod: 300000, // 5 minutes
   backoffMultiplier: 2,
   backoffJitter: 0.1,
-  stateTtl: 600000,           // 10 minutes
-  metricsTtl: 86400000,       // 24 hours
+  stateTtl: 600000, // 10 minutes
+  metricsTtl: 86400000, // 24 hours
   serviceName: 'redis-service',
 };
 
@@ -97,10 +97,7 @@ export class PersistentCircuitBreaker {
   private redis: Redis;
   private localCache: Map<string, { data: any; expires: number }> = new Map();
 
-  constructor(
-    redis: Redis,
-    config: Partial<PersistentCircuitBreakerConfig> = {}
-  ) {
+  constructor(redis: Redis, config: Partial<PersistentCircuitBreakerConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.redis = redis;
 
@@ -113,15 +110,15 @@ export class PersistentCircuitBreaker {
   /**
    * Execute an operation with circuit breaker protection
    */
-  async execute<T>(
-    operation: () => Promise<T>,
-    operationName?: string
-  ): Promise<T> {
+  async execute<T>(operation: () => Promise<T>, operationName?: string): Promise<T> {
     const startTime = Date.now();
 
     try {
       // Get current state
       const state = await this.getState();
+      
+      // Update last known state for sync access
+      this.lastKnownState = state.state;
 
       // Check if circuit should allow the operation
       if (!this.shouldAllowRequest(state)) {
@@ -129,7 +126,7 @@ export class PersistentCircuitBreaker {
         throw new CircuitBreakerError(
           'Circuit breaker is OPEN',
           CircuitBreakerError.CODE_CIRCUIT_OPEN,
-          { state: state.state, lastFailureTime: state.lastFailureTime }
+          { state: state.state, lastFailureTime: state.lastFailureTime },
         );
       }
 
@@ -140,7 +137,6 @@ export class PersistentCircuitBreaker {
       await this.recordSuccess(operationName, Date.now() - startTime);
 
       return result;
-
     } catch (error) {
       // Record failure (but not for circuit breaker errors)
       if (!(error instanceof CircuitBreakerError)) {
@@ -194,7 +190,6 @@ export class PersistentCircuitBreaker {
       });
 
       return state;
-
     } catch (error) {
       console.warn('[CircuitBreaker] Failed to get state from Redis, using fallback:', error);
 
@@ -229,7 +224,6 @@ export class PersistentCircuitBreaker {
         data: newState,
         expires: Date.now() + 5000,
       });
-
     } catch (error) {
       console.error('[CircuitBreaker] Failed to set state in Redis:', error);
       // Continue with local state only
@@ -305,7 +299,7 @@ export class PersistentCircuitBreaker {
   private async recordFailure(
     operationName?: string,
     latency?: number,
-    error?: any
+    error?: any,
   ): Promise<void> {
     try {
       await this.updateStateWithScript('failure', operationName, latency, error);
@@ -333,7 +327,7 @@ export class PersistentCircuitBreaker {
     type: 'success' | 'failure',
     operationName?: string,
     latency?: number,
-    error?: any
+    error?: any,
   ): Promise<void> {
     const stateKey = getStateKey(this.config.serviceName);
     const lockKey = getLockKey(this.config.serviceName);
@@ -418,16 +412,13 @@ export class PersistentCircuitBreaker {
     try {
       const result = await this.redis.eval(
         luaScript,
-        [
-          stateKey,
-          lockKey
-        ],
+        [stateKey, lockKey],
         [
           type,
           Date.now().toString(),
           this.config.failureThreshold.toString(),
-          this.config.successThreshold.toString()
-        ]
+          this.config.successThreshold.toString(),
+        ],
       );
 
       // Update local cache
@@ -438,7 +429,6 @@ export class PersistentCircuitBreaker {
           expires: Date.now() + 5000,
         });
       }
-
     } catch (error) {
       console.error('[CircuitBreaker] Lua script execution failed:', error);
       // Fallback to simple state update
@@ -460,8 +450,10 @@ export class PersistentCircuitBreaker {
         currentState.consecutiveFailures = 0;
         currentState.lastSuccessTime = now;
 
-        if (currentState.state === CircuitState.HALF_OPEN &&
-            currentState.consecutiveSuccesses >= this.config.successThreshold) {
+        if (
+          currentState.state === CircuitState.HALF_OPEN &&
+          currentState.consecutiveSuccesses >= this.config.successThreshold
+        ) {
           currentState.state = CircuitState.CLOSED;
           currentState.failures = 0;
           currentState.recoveryAttempts = 0;
@@ -473,8 +465,10 @@ export class PersistentCircuitBreaker {
         currentState.consecutiveSuccesses = 0;
         currentState.lastFailureTime = now;
 
-        if (currentState.state === CircuitState.CLOSED &&
-            currentState.consecutiveFailures >= this.config.failureThreshold) {
+        if (
+          currentState.state === CircuitState.CLOSED &&
+          currentState.consecutiveFailures >= this.config.failureThreshold
+        ) {
           currentState.state = CircuitState.CLOSED;
           currentState.lastStateChange = now;
         } else if (currentState.state === CircuitState.HALF_OPEN) {
@@ -485,7 +479,6 @@ export class PersistentCircuitBreaker {
       }
 
       await this.setState(currentState);
-
     } catch (error) {
       console.error('[CircuitBreaker] Fallback state update failed:', error);
     }
@@ -496,7 +489,7 @@ export class PersistentCircuitBreaker {
    */
   private async updateMetrics(
     type: 'success' | 'failure' | 'timeout',
-    latency?: number
+    latency?: number,
   ): Promise<void> {
     try {
       const metricsKey = getMetricsKey(this.config.serviceName);
@@ -548,12 +541,7 @@ export class PersistentCircuitBreaker {
         return cjson.encode(metrics)
       `;
 
-      await this.redis.eval(
-        luaScript,
-        [metricsKey],
-        [type, Date.now().toString()]
-      );
-
+      await this.redis.eval(luaScript, [metricsKey], [type, Date.now().toString()]);
     } catch (error) {
       console.error('[CircuitBreaker] Failed to update metrics:', error);
     }
@@ -582,7 +570,6 @@ export class PersistentCircuitBreaker {
       }
 
       return JSON.parse(metricsData as string) as CircuitBreakerMetrics;
-
     } catch (error) {
       console.error('[CircuitBreaker] Failed to get metrics:', error);
       return {
@@ -695,6 +682,53 @@ export class PersistentCircuitBreaker {
       metrics,
       lastUpdated: Date.now(),
     };
+  }
+
+  /**
+   * Get current state as string (for test compatibility)
+   * @deprecated Use getCurrentState() instead
+   */
+  getStateSync(): CircuitState {
+    // This is a synchronous method for backward compatibility with tests
+    // In real usage, use getCurrentState() which is async and more reliable
+    return this.lastKnownState || CircuitState.CLOSED;
+  }
+
+  /**
+   * Get status information (for test compatibility)
+   */
+  async getStatus(): Promise<{
+    state: CircuitState;
+    failures: number;
+    successes: number;
+    lastFailure?: number | null;
+    lastSuccess?: number | null;
+    uptime: number;
+    availability: number;
+  }> {
+    const state = await this.getState();
+    const metrics = await this.getMetrics();
+    
+    return {
+      state: state.state,
+      failures: state.failures,
+      successes: state.successes,
+      lastFailure: state.lastFailureTime,
+      lastSuccess: state.lastSuccessTime,
+      uptime: metrics?.uptime || 0,
+      availability: metrics?.availability || 100,
+    };
+  }
+
+  private lastKnownState: CircuitState = CircuitState.CLOSED;
+
+  private async updateLastKnownState(): Promise<void> {
+    try {
+      const state = await this.getState();
+      this.lastKnownState = state.state;
+    } catch (error) {
+      // Keep the last known state if we can't fetch current state
+    }
   }
 }
 

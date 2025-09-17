@@ -1,10 +1,10 @@
-"use client"
+'use client';
 
-import React from "react"
-import { ThemeProvider } from "@/components/theme-provider"
+import React from 'react';
+import { ThemeProvider } from '@/components/theme-provider';
 
 interface ClientProvidersProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 /**
@@ -14,13 +14,8 @@ interface ClientProvidersProps {
  */
 export function ClientProviders({ children }: ClientProvidersProps) {
   return (
-    <ThemeProvider 
-      attribute="class" 
-      defaultTheme="system" 
-      enableSystem 
-      disableTransitionOnChange
-    >
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       {children}
     </ThemeProvider>
-  )
+  );
 }

@@ -1,6 +1,6 @@
 /**
  * Dashboard API Tests
- * 
+ *
  * Tests the comprehensive dashboard API endpoint for analytics,
  * user stats, recent activity, and system health metrics.
  */
@@ -59,21 +59,23 @@ const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin
 const mockOrderModel = OrderModel as jest.Mocked<typeof OrderModel>;
 const mockUserModel = UserModel as jest.Mocked<typeof UserModel>;
 const mockAuditLogModel = AuditLogModel as jest.Mocked<typeof AuditLogModel>;
-const mockTestRedisConnection = testRedisConnection as jest.MockedFunction<typeof testRedisConnection>;
+const mockTestRedisConnection = testRedisConnection as jest.MockedFunction<
+  typeof testRedisConnection
+>;
 
 describe('Dashboard API', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Default successful auth
     mockRequireAdmin.mockResolvedValue({
-      user: { id: 'admin-user', role: 'admin' }
+      user: { id: 'admin-user', role: 'admin' },
     });
-    
+
     // Default Redis health check
     mockTestRedisConnection.mockResolvedValue({
       connected: true,
-      latency: 5
+      latency: 5,
     });
   });
 
@@ -85,9 +87,9 @@ describe('Dashboard API', () => {
     it('should return comprehensive dashboard data for admin users', async () => {
       // Mock order analytics
       mockOrderModel.aggregate.mockResolvedValueOnce([
-        { totalRevenue: 150000, totalOrders: 250, avgOrderValue: 600 }
+        { totalRevenue: 150000, totalOrders: 250, avgOrderValue: 600 },
       ]);
-      
+
       // Mock daily revenue trend (last 7 days)
       mockOrderModel.aggregate.mockResolvedValueOnce([
         { _id: '2024-01-01', revenue: 20000, orders: 30 },
@@ -99,7 +101,7 @@ describe('Dashboard API', () => {
         { _id: 'admin', count: 5 },
         { _id: 'merchant', count: 45 },
       ]);
-      
+
       mockUserModel.countDocuments.mockResolvedValueOnce(50);
 
       // Mock recent activity
@@ -111,9 +113,9 @@ describe('Dashboard API', () => {
             action: 'user_role_updated',
             userId: 'user-123',
             timestamp: new Date('2024-01-01T10:00:00Z'),
-            metadata: { oldRole: 'merchant', newRole: 'admin' }
-          }
-        ] as any)
+            metadata: { oldRole: 'merchant', newRole: 'admin' },
+          },
+        ] as any),
       } as any);
 
       const request = new NextRequest('http://localhost:3000/api/dashboard', {
@@ -137,36 +139,36 @@ describe('Dashboard API', () => {
             date: expect.any(String),
             revenue: expect.any(Number),
             orders: expect.any(Number),
-          })
+          }),
         ]),
         userStats: {
           totalUsers: 50,
           roleDistribution: expect.objectContaining({
             admin: 5,
             merchant: 45,
-          })
+          }),
         },
         recentActivity: expect.arrayContaining([
           expect.objectContaining({
             action: 'user_role_updated',
             timestamp: expect.any(String),
-          })
+          }),
         ]),
         systemHealth: expect.objectContaining({
           database: expect.objectContaining({
-            status: expect.any(String)
+            status: expect.any(String),
           }),
           redis: expect.objectContaining({
             status: expect.any(String),
             latency: expect.any(Number),
-          })
-        })
+          }),
+        }),
       });
     });
 
     it('should handle authentication failure', async () => {
       mockRequireAdmin.mockResolvedValueOnce({
-        error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
       });
 
       const request = new NextRequest('http://localhost:3000/api/dashboard', {
@@ -181,14 +183,14 @@ describe('Dashboard API', () => {
     it('should filter data based on user role (merchant vs admin)', async () => {
       // Mock merchant user
       mockRequireAdmin.mockResolvedValueOnce({
-        user: { id: 'merchant-user', role: 'merchant' }
+        user: { id: 'merchant-user', role: 'merchant' },
       });
 
       // Mock merchant-specific data
       mockOrderModel.aggregate.mockResolvedValueOnce([
-        { totalRevenue: 25000, totalOrders: 50, avgOrderValue: 500 }
+        { totalRevenue: 25000, totalOrders: 50, avgOrderValue: 500 },
       ]);
-      
+
       mockOrderModel.aggregate.mockResolvedValueOnce([
         { _id: '2024-01-01', revenue: 5000, orders: 10 },
       ]);
@@ -228,7 +230,7 @@ describe('Dashboard API', () => {
       // Mock Redis failure
       mockTestRedisConnection.mockResolvedValueOnce({
         connected: false,
-        error: 'Connection timeout'
+        error: 'Connection timeout',
       });
 
       // Other operations succeed
@@ -240,7 +242,7 @@ describe('Dashboard API', () => {
       mockAuditLogModel.find.mockReturnValueOnce({
         sort: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
-        select: jest.fn().mockResolvedValueOnce([] as any)
+        select: jest.fn().mockResolvedValueOnce([] as any),
       } as any);
 
       const request = new NextRequest('http://localhost:3000/api/dashboard', {
@@ -267,7 +269,7 @@ describe('Dashboard API', () => {
 
       // Mock previous period data for growth calculation
       mockOrderModel.aggregate.mockResolvedValueOnce([
-        { totalRevenue: 80000 } // Previous period revenue
+        { totalRevenue: 80000 }, // Previous period revenue
       ]);
 
       mockUserModel.aggregate.mockResolvedValueOnce([]);
@@ -275,7 +277,7 @@ describe('Dashboard API', () => {
       mockAuditLogModel.find.mockReturnValueOnce({
         sort: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
-        select: jest.fn().mockResolvedValueOnce([] as any)
+        select: jest.fn().mockResolvedValueOnce([] as any),
       } as any);
 
       const request = new NextRequest('http://localhost:3000/api/dashboard', {
@@ -286,7 +288,7 @@ describe('Dashboard API', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      
+
       // Revenue growth should be 25% ((100000 - 80000) / 80000 * 100)
       expect(data.analytics.revenueGrowth).toBeCloseTo(25, 1);
     });
@@ -297,14 +299,14 @@ describe('Dashboard API', () => {
         .mockResolvedValueOnce([{ totalRevenue: 50000, totalOrders: 75, avgOrderValue: 667 }])
         .mockResolvedValueOnce([{ _id: '2024-01-01', revenue: 10000, orders: 15 }])
         .mockResolvedValueOnce([{ totalRevenue: 40000 }]);
-      
+
       mockUserModel.aggregate.mockResolvedValueOnce([{ _id: 'admin', count: 2 }]);
       mockUserModel.countDocuments.mockResolvedValueOnce(25);
-      
+
       mockAuditLogModel.find.mockReturnValueOnce({
         sort: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
-        select: jest.fn().mockResolvedValueOnce([] as any)
+        select: jest.fn().mockResolvedValueOnce([] as any),
       } as any);
 
       const startTime = Date.now();
@@ -317,7 +319,7 @@ describe('Dashboard API', () => {
       const endTime = Date.now();
 
       expect(response.status).toBe(200);
-      
+
       // Should complete relatively quickly due to parallel execution
       const duration = endTime - startTime;
       expect(duration).toBeLessThan(1000); // Less than 1 second for mocked operations
@@ -344,18 +346,21 @@ describe('Dashboard API', () => {
         .mockResolvedValueOnce([{ totalRevenue: 1000, totalOrders: 10, avgOrderValue: 100 }])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([{ totalRevenue: 800 }]);
-      
+
       mockUserModel.aggregate.mockResolvedValueOnce([]);
       mockUserModel.countDocuments.mockResolvedValueOnce(0);
       mockAuditLogModel.find.mockReturnValueOnce({
         sort: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
-        select: jest.fn().mockResolvedValueOnce([] as any)
+        select: jest.fn().mockResolvedValueOnce([] as any),
       } as any);
 
-      const request = new NextRequest('http://localhost:3000/api/dashboard?timeRange=7d&includeDetails=true', {
-        method: 'GET',
-      });
+      const request = new NextRequest(
+        'http://localhost:3000/api/dashboard?timeRange=7d&includeDetails=true',
+        {
+          method: 'GET',
+        },
+      );
 
       const response = await GET(request);
 
@@ -371,20 +376,24 @@ describe('Dashboard API', () => {
         .mockResolvedValue([{ totalRevenue: 1000, totalOrders: 10, avgOrderValue: 100 }])
         .mockResolvedValue([])
         .mockResolvedValue([{ totalRevenue: 800 }]);
-      
+
       mockUserModel.aggregate.mockResolvedValue([]);
       mockUserModel.countDocuments.mockResolvedValue(0);
       mockAuditLogModel.find.mockReturnValue({
         sort: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
-        select: jest.fn().mockResolvedValue([] as any)
+        select: jest.fn().mockResolvedValue([] as any),
       } as any);
 
-      const requests = Array(10).fill(null).map(() =>
-        GET(new NextRequest('http://localhost:3000/api/dashboard', {
-          method: 'GET',
-        }))
-      );
+      const requests = Array(10)
+        .fill(null)
+        .map(() =>
+          GET(
+            new NextRequest('http://localhost:3000/api/dashboard', {
+              method: 'GET',
+            }),
+          ),
+        );
 
       const responses = await Promise.all(requests);
 
@@ -396,8 +405,8 @@ describe('Dashboard API', () => {
 
     it('should implement proper timeout handling', async () => {
       // Mock a slow database operation
-      mockOrderModel.aggregate.mockImplementationOnce(() => 
-        new Promise((resolve) => setTimeout(() => resolve([] as any), 5000)) as any
+      mockOrderModel.aggregate.mockImplementationOnce(
+        () => new Promise((resolve) => setTimeout(() => resolve([] as any), 5000)) as any,
       );
 
       const request = new NextRequest('http://localhost:3000/api/dashboard', {
@@ -411,7 +420,7 @@ describe('Dashboard API', () => {
       // Should timeout and return error within reasonable time
       const duration = endTime - startTime;
       expect(duration).toBeLessThan(10000); // Less than 10 seconds
-      
+
       if (response.status === 500) {
         const data = await response.json();
         expect(data.error).toBeDefined();

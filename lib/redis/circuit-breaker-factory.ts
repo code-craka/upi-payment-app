@@ -11,7 +11,7 @@ import {
   PersistentCircuitBreakerConfig,
   CircuitBreakerError,
   CircuitState,
-  defaultCircuitBreakerConfig
+  defaultCircuitBreakerConfig,
 } from './persistent-circuit-breaker';
 
 // Global circuit breaker registry for singleton instances
@@ -23,7 +23,7 @@ const circuitBreakerRegistry = new Map<string, PersistentCircuitBreaker>();
 export function getCircuitBreaker(
   serviceName: string,
   redis: Redis,
-  config?: Partial<PersistentCircuitBreakerConfig>
+  config?: Partial<PersistentCircuitBreakerConfig>,
 ): PersistentCircuitBreaker {
   const key = `${serviceName}:${redis.constructor.name}`;
 
@@ -45,7 +45,7 @@ export function getCircuitBreaker(
  */
 export function createCircuitBreaker(
   serviceName: string,
-  config?: Partial<PersistentCircuitBreakerConfig>
+  config?: Partial<PersistentCircuitBreakerConfig>,
 ): PersistentCircuitBreaker {
   // Get Redis instance from environment
   const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
@@ -76,10 +76,7 @@ export class RedisCircuitBreakerWrapper {
   /**
    * Execute Redis operation with circuit breaker protection
    */
-  async execute<T>(
-    operation: () => Promise<T>,
-    operationName?: string
-  ): Promise<T> {
+  async execute<T>(operation: () => Promise<T>, operationName?: string): Promise<T> {
     return this.circuitBreaker.execute(operation, operationName);
   }
 
@@ -173,7 +170,7 @@ export const CircuitBreakers = {
 export function withCircuitBreaker(
   handler: (req: Request, context?: any) => Promise<Response>,
   serviceName: string = 'api-route',
-  config?: Partial<PersistentCircuitBreakerConfig>
+  config?: Partial<PersistentCircuitBreakerConfig>,
 ) {
   const circuitBreaker = createCircuitBreaker(serviceName, config);
 
@@ -193,18 +190,17 @@ export function withCircuitBreaker(
               'Content-Type': 'application/json',
               'Retry-After': '60',
             },
-          }
+          },
         );
       }
 
       // Execute the handler with circuit breaker protection
       const result = await circuitBreaker.execute(
         () => handler(req, context),
-        `${req.method} ${new URL(req.url).pathname}`
+        `${req.method} ${new URL(req.url).pathname}`,
       );
 
       return result;
-
     } catch (error) {
       if (error instanceof CircuitBreakerError) {
         return new Response(
@@ -219,7 +215,7 @@ export function withCircuitBreaker(
               'Content-Type': 'application/json',
               'Retry-After': '60',
             },
-          }
+          },
         );
       }
 
@@ -260,29 +256,32 @@ export async function getCircuitBreakerHealth(): Promise<{
           service,
           health: {
             status: 'unhealthy' as const,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          }
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
         };
       }
-    })
+    }),
   );
 
-  const serviceHealth = healthChecks.reduce((acc, result) => {
-    if (result.status === 'fulfilled') {
-      acc[result.value.service] = result.value.health;
-    } else {
-      acc.unknown = { status: 'unhealthy', error: result.reason };
-    }
-    return acc;
-  }, {} as Record<string, any>);
+  const serviceHealth = healthChecks.reduce(
+    (acc, result) => {
+      if (result.status === 'fulfilled') {
+        acc[result.value.service] = result.value.health;
+      } else {
+        acc.unknown = { status: 'unhealthy', error: result.reason };
+      }
+      return acc;
+    },
+    {} as Record<string, any>,
+  );
 
   // Determine overall health
   const unhealthyCount = Object.values(serviceHealth).filter(
-    (h: any) => h.status === 'unhealthy'
+    (h: any) => h.status === 'unhealthy',
   ).length;
 
   const degradedCount = Object.values(serviceHealth).filter(
-    (h: any) => h.status === 'degraded'
+    (h: any) => h.status === 'degraded',
   ).length;
 
   let overall: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
@@ -317,20 +316,23 @@ export const CircuitBreakerMonitoring = {
           return {
             service,
             metrics: null,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? error.message : 'Unknown error',
           };
         }
-      })
+      }),
     );
 
-    return metrics.reduce((acc, result) => {
-      if (result.status === 'fulfilled') {
-        acc[result.value.service] = result.value;
-      } else {
-        acc.unknown = { error: result.reason };
-      }
-      return acc;
-    }, {} as Record<string, any>);
+    return metrics.reduce(
+      (acc, result) => {
+        if (result.status === 'fulfilled') {
+          acc[result.value.service] = result.value;
+        } else {
+          acc.unknown = { error: result.reason };
+        }
+        return acc;
+      },
+      {} as Record<string, any>,
+    );
   },
 
   /**
@@ -347,13 +349,13 @@ export const CircuitBreakerMonitoring = {
           return {
             service,
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? error.message : 'Unknown error',
           };
         }
-      })
+      }),
     );
 
-    return results.map(result => {
+    return results.map((result) => {
       if (result.status === 'fulfilled') {
         return result.value;
       } else {

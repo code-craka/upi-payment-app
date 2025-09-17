@@ -1,11 +1,11 @@
-import { toDataURL } from 'qrcode'
+import { toDataURL } from 'qrcode';
 
 export interface UPIPaymentData {
-  payeeAddress: string
-  payeeName: string
-  amount: number
-  transactionNote: string
-  transactionRef?: string
+  payeeAddress: string;
+  payeeName: string;
+  amount: number;
+  transactionNote: string;
+  transactionRef?: string;
 }
 
 /**
@@ -13,18 +13,18 @@ export interface UPIPaymentData {
  * Format: upi://pay?pa=<payee_address>&pn=<payee_name>&am=<amount>&tn=<transaction_note>&tr=<transaction_ref>
  */
 export function generateUPIString(data: UPIPaymentData): string {
-  const params = new URLSearchParams()
-  
-  params.set('pa', data.payeeAddress) // Payee Address (UPI ID)
-  params.set('pn', data.payeeName) // Payee Name
-  params.set('am', data.amount.toString()) // Amount
-  params.set('tn', data.transactionNote) // Transaction Note
-  
+  const params = new URLSearchParams();
+
+  params.set('pa', data.payeeAddress); // Payee Address (UPI ID)
+  params.set('pn', data.payeeName); // Payee Name
+  params.set('am', data.amount.toString()); // Amount
+  params.set('tn', data.transactionNote); // Transaction Note
+
   if (data.transactionRef) {
-    params.set('tr', data.transactionRef) // Transaction Reference
+    params.set('tr', data.transactionRef); // Transaction Reference
   }
-  
-  return `upi://pay?${params.toString()}`
+
+  return `upi://pay?${params.toString()}`;
 }
 
 /**
@@ -41,28 +41,32 @@ export async function generateQRCode(upiString: string): Promise<string> {
         light: '#FFFFFF',
       },
       width: 300,
-    })
-    
-    return qrCodeDataUrl
+    });
+
+    return qrCodeDataUrl;
   } catch (error) {
-    console.error('Error generating QR code:', error)
-    throw new Error('Failed to generate QR code')
+    console.error('Error generating QR code:', error);
+    throw new Error('Failed to generate QR code');
   }
 }
 
 /**
  * Generate deep links for popular UPI apps
  */
-export function generateUPIDeepLinks(upiString: string) {
-  const encodedUPI = encodeURIComponent(upiString)
-  
+export function generateUPIDeepLinks(upiString: string): {
+  gpay: string;
+  phonepe: string;
+  paytm: string;
+  bhim: string;
+  generic: string;
+} {
   return {
     gpay: `tez://upi/pay?${upiString.replace('upi://pay?', '')}`,
     phonepe: `phonepe://pay?${upiString.replace('upi://pay?', '')}`,
     paytm: `paytmmp://pay?${upiString.replace('upi://pay?', '')}`,
     bhim: `bhim://pay?${upiString.replace('upi://pay?', '')}`,
     generic: upiString,
-  }
+  };
 }
 
 /**
@@ -70,45 +74,50 @@ export function generateUPIDeepLinks(upiString: string) {
  * UTR format: 12-digit alphanumeric string
  */
 export function validateUTR(utr: string): boolean {
-  const utrPattern = /^[A-Z0-9]{12}$/
-  return utrPattern.test(utr.toUpperCase())
+  const utrPattern = /^[A-Z0-9]{12}$/;
+  return utrPattern.test(utr.toUpperCase());
 }
 
 /**
  * Generate order ID with timestamp and random suffix
  */
 export function generateOrderId(): string {
-  const timestamp = Date.now().toString(36)
-  const random = Math.random().toString(36).substring(2, 8)
-  return `ord_${timestamp}_${random}`
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  return `ord_${timestamp}_${random}`;
 }
 
 /**
  * Calculate expiration time based on minutes from now
  */
 export function calculateExpirationTime(minutes: number): Date {
-  return new Date(Date.now() + minutes * 60 * 1000)
+  return new Date(Date.now() + minutes * 60 * 1000);
 }
 
 /**
  * Check if order is expired
  */
 export function isOrderExpired(expiresAt: Date): boolean {
-  return new Date() > expiresAt
+  return new Date() > expiresAt;
 }
 
 /**
  * Get payment timeout from environment or default
  */
 export function getPaymentTimeout(): number {
-  const timeout = process.env.DEFAULT_PAYMENT_TIMEOUT
-  return timeout ? parseInt(timeout, 10) : 540000 // 9 minutes default
+  const timeout = process.env.DEFAULT_PAYMENT_TIMEOUT;
+  return timeout ? parseInt(timeout, 10) : 540000; // 9 minutes default
 }
 
 /**
  * Get UPI configuration from environment
  */
-export function getUPIConfig() {
+export function getUPIConfig(): {
+  upiId: string;
+  merchantName: string;
+  merchantCode: string;
+  enabledApps: Record<string, boolean>;
+} {
   return {
     upiId: process.env.UPI_ID || 'merchant@paytm',
     merchantName: process.env.MERCHANT_NAME || 'UPI Payment System',
@@ -119,5 +128,5 @@ export function getUPIConfig() {
       paytm: process.env.ENABLE_PAYTM === 'true',
       bhim: process.env.ENABLE_BHIM === 'true',
     },
-  }
+  };
 }

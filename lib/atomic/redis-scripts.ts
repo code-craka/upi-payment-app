@@ -5,23 +5,22 @@
  * conflict detection, optimistic locking, and rollback capabilities.
  */
 
-import { Redis } from '@upstash/redis'
-import { createHash } from 'crypto'
+import { Redis } from '@upstash/redis';
+import { createHash } from 'crypto';
 import {
   AtomicOperationType,
-  ConflictType,
   LuaScriptResult,
   AtomicOperationError,
   ATOMIC_REDIS_KEYS,
-  ATOMIC_TTL
-} from './types'
+  ATOMIC_TTL,
+} from './types';
 
 /**
  * Generate SHA-256 checksum for role data integrity
  */
-function generateChecksum(data: Record<string, any>): string {
-  const content = JSON.stringify(data, Object.keys(data).sort())
-  return createHash('sha256').update(content).digest('hex')
+function generateChecksum(data: Record<string, unknown>): string {
+  const content = JSON.stringify(data, Object.keys(data).sort());
+  return createHash('sha256').update(content).digest('hex');
 }
 
 /**
@@ -114,7 +113,7 @@ const ATOMIC_ROLE_UPDATE_SCRIPT = `
     checksum = checksum,
     conflict = false
   })
-`
+`;
 
 /**
  * Lua script for optimistic locking with conflict detection
@@ -172,7 +171,7 @@ const OPTIMISTIC_LOCK_SCRIPT = `
     lockId = lock_id,
     lockExpires = redis.call('ttl', lock_key)
   })
-`
+`;
 
 /**
  * Lua script for transaction rollback
@@ -225,7 +224,7 @@ const ROLLBACK_SCRIPT = `
     rolledBack = true,
     restoredVersion = rollback.version
   })
-`
+`;
 
 /**
  * Lua script for batch conflict detection
@@ -262,7 +261,7 @@ const BATCH_CONFLICT_CHECK_SCRIPT = `
     conflictCount = conflict_count,
     conflicts = conflicts
   })
-`
+`;
 
 /**
  * Lua script for circuit breaker state management
@@ -342,7 +341,7 @@ const CIRCUIT_BREAKER_SCRIPT = `
     canProceed = state.state == 'CLOSED',
     metrics = metrics
   })
-`
+`;
 
 /**
  * Atomic Role Update Service
@@ -350,23 +349,23 @@ const CIRCUIT_BREAKER_SCRIPT = `
  * Provides methods for executing atomic role operations using Redis Lua scripts
  */
 export class AtomicRoleUpdateService {
-  private redis: Redis
-  private scripts: Map<string, string> = new Map()
+  private redis: Redis;
+  private scripts: Map<string, string> = new Map();
 
   constructor(redis: Redis) {
-    this.redis = redis
-    this.initializeScripts()
+    this.redis = redis;
+    this.initializeScripts();
   }
 
   /**
    * Initialize Lua scripts
    */
   private initializeScripts(): void {
-    this.scripts.set('atomic_update', ATOMIC_ROLE_UPDATE_SCRIPT)
-    this.scripts.set('optimistic_lock', OPTIMISTIC_LOCK_SCRIPT)
-    this.scripts.set('rollback', ROLLBACK_SCRIPT)
-    this.scripts.set('batch_conflict_check', BATCH_CONFLICT_CHECK_SCRIPT)
-    this.scripts.set('circuit_breaker', CIRCUIT_BREAKER_SCRIPT)
+    this.scripts.set('atomic_update', ATOMIC_ROLE_UPDATE_SCRIPT);
+    this.scripts.set('optimistic_lock', OPTIMISTIC_LOCK_SCRIPT);
+    this.scripts.set('rollback', ROLLBACK_SCRIPT);
+    this.scripts.set('batch_conflict_check', BATCH_CONFLICT_CHECK_SCRIPT);
+    this.scripts.set('circuit_breaker', CIRCUIT_BREAKER_SCRIPT);
   }
 
   /**
@@ -377,16 +376,16 @@ export class AtomicRoleUpdateService {
     newRole: string,
     expectedVersion?: number,
     force = false,
-    ttl = ATOMIC_TTL.ROLE_DATA
+    ttl = ATOMIC_TTL.ROLE_DATA,
   ): Promise<LuaScriptResult> {
     try {
-      const script = this.scripts.get('atomic_update')!
+      const script = this.scripts.get('atomic_update')!;
       const keys = [
         ATOMIC_REDIS_KEYS.ROLE_DATA(userId),
         ATOMIC_REDIS_KEYS.ROLE_VERSION(userId),
         ATOMIC_REDIS_KEYS.ROLE_CHECKSUM(userId),
-        ATOMIC_REDIS_KEYS.OPERATION_LOCK(userId)
-      ]
+        ATOMIC_REDIS_KEYS.OPERATION_LOCK(userId),
+      ];
 
       const args = [
         userId,
@@ -394,23 +393,22 @@ export class AtomicRoleUpdateService {
         expectedVersion?.toString() || '',
         force.toString(),
         Date.now().toString(),
-        ttl.toString()
-      ]
+        ttl.toString(),
+      ];
 
-      const result = await this.redis.eval(script, keys, args)
-      return JSON.parse(result as string) as LuaScriptResult
-
+      const result = await this.redis.eval(script, keys, args);
+      return JSON.parse(result as string) as LuaScriptResult;
     } catch (error) {
-      console.error('[AtomicRoleUpdate] Script execution failed:', error)
+      console.error('[AtomicRoleUpdate] Script execution failed:', error);
       throw new AtomicOperationError(
         'Atomic role update failed',
         AtomicOperationError.CODES.REDIS_UPDATE_FAILED,
         {
           userId,
           retryable: true,
-          details: { error: error instanceof Error ? error.message : 'Unknown error' }
-        }
-      )
+          details: { error: error instanceof Error ? error.message : 'Unknown error' },
+        },
+      );
     }
   }
 
@@ -420,37 +418,32 @@ export class AtomicRoleUpdateService {
   async acquireOptimisticLock(
     userId: string,
     expectedVersion?: number,
-    lockTtl = ATOMIC_TTL.LOCK
+    lockTtl = ATOMIC_TTL.LOCK,
   ): Promise<LuaScriptResult> {
     try {
-      const script = this.scripts.get('optimistic_lock')!
-      const lockId = `lock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      const script = this.scripts.get('optimistic_lock')!;
+      const lockId = `lock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       const keys = [
         ATOMIC_REDIS_KEYS.ROLE_VERSION(userId),
-        ATOMIC_REDIS_KEYS.OPERATION_LOCK(userId)
-      ]
+        ATOMIC_REDIS_KEYS.OPERATION_LOCK(userId),
+      ];
 
-      const args = [
-        expectedVersion?.toString() || '',
-        lockId,
-        lockTtl.toString()
-      ]
+      const args = [expectedVersion?.toString() || '', lockId, lockTtl.toString()];
 
-      const result = await this.redis.eval(script, keys, args)
-      return JSON.parse(result as string) as LuaScriptResult
-
+      const result = await this.redis.eval(script, keys, args);
+      return JSON.parse(result as string) as LuaScriptResult;
     } catch (error) {
-      console.error('[AtomicRoleUpdate] Lock acquisition failed:', error)
+      console.error('[AtomicRoleUpdate] Lock acquisition failed:', error);
       throw new AtomicOperationError(
         'Failed to acquire optimistic lock',
         AtomicOperationError.CODES.LOCK_ACQUISITION_FAILED,
         {
           userId,
           retryable: true,
-          details: { error: error instanceof Error ? error.message : 'Unknown error' }
-        }
-      )
+          details: { error: error instanceof Error ? error.message : 'Unknown error' },
+        },
+      );
     }
   }
 
@@ -459,35 +452,31 @@ export class AtomicRoleUpdateService {
    */
   async releaseOptimisticLock(userId: string): Promise<void> {
     try {
-      await this.redis.del(ATOMIC_REDIS_KEYS.OPERATION_LOCK(userId))
+      await this.redis.del(ATOMIC_REDIS_KEYS.OPERATION_LOCK(userId));
     } catch (error) {
-      console.error('[AtomicRoleUpdate] Lock release failed:', error)
+      console.error('[AtomicRoleUpdate] Lock release failed:', error);
     }
   }
 
   /**
    * Execute rollback operation
    */
-  async executeRollback(
-    userId: string,
-    operationId: string
-  ): Promise<LuaScriptResult> {
+  async executeRollback(userId: string, operationId: string): Promise<LuaScriptResult> {
     try {
-      const script = this.scripts.get('rollback')!
-      const rollbackKey = ATOMIC_REDIS_KEYS.ROLLBACK_DATA(operationId)
+      const script = this.scripts.get('rollback')!;
+      const rollbackKey = ATOMIC_REDIS_KEYS.ROLLBACK_DATA(operationId);
 
       const keys = [
         ATOMIC_REDIS_KEYS.ROLE_DATA(userId),
         ATOMIC_REDIS_KEYS.ROLE_VERSION(userId),
         ATOMIC_REDIS_KEYS.ROLE_CHECKSUM(userId),
-        rollbackKey
-      ]
+        rollbackKey,
+      ];
 
-      const result = await this.redis.eval(script, keys, [])
-      return JSON.parse(result as string) as LuaScriptResult
-
+      const result = await this.redis.eval(script, keys, []);
+      return JSON.parse(result as string) as LuaScriptResult;
     } catch (error) {
-      console.error('[AtomicRoleUpdate] Rollback failed:', error)
+      console.error('[AtomicRoleUpdate] Rollback failed:', error);
       throw new AtomicOperationError(
         'Rollback operation failed',
         AtomicOperationError.CODES.ROLLBACK_FAILED,
@@ -495,9 +484,9 @@ export class AtomicRoleUpdateService {
           userId,
           operationId,
           retryable: false,
-          details: { error: error instanceof Error ? error.message : 'Unknown error' }
-        }
-      )
+          details: { error: error instanceof Error ? error.message : 'Unknown error' },
+        },
+      );
     }
   }
 
@@ -505,26 +494,25 @@ export class AtomicRoleUpdateService {
    * Check for conflicts in batch operations
    */
   async checkBatchConflicts(
-    userVersionPairs: Array<{ userId: string; expectedVersion?: number }>
+    userVersionPairs: Array<{ userId: string; expectedVersion?: number }>,
   ): Promise<LuaScriptResult> {
     try {
-      const script = this.scripts.get('batch_conflict_check')!
-      const keys = userVersionPairs.map(pair => ATOMIC_REDIS_KEYS.ROLE_VERSION(pair.userId))
-      const args = userVersionPairs.map(pair => pair.expectedVersion?.toString() || '')
+      const script = this.scripts.get('batch_conflict_check')!;
+      const keys = userVersionPairs.map((pair) => ATOMIC_REDIS_KEYS.ROLE_VERSION(pair.userId));
+      const args = userVersionPairs.map((pair) => pair.expectedVersion?.toString() || '');
 
-      const result = await this.redis.eval(script, keys, args)
-      return JSON.parse(result as string) as LuaScriptResult
-
+      const result = await this.redis.eval(script, keys, args);
+      return JSON.parse(result as string) as LuaScriptResult;
     } catch (error) {
-      console.error('[AtomicRoleUpdate] Batch conflict check failed:', error)
+      console.error('[AtomicRoleUpdate] Batch conflict check failed:', error);
       throw new AtomicOperationError(
         'Batch conflict check failed',
         AtomicOperationError.CODES.SERVICE_UNAVAILABLE,
         {
           retryable: true,
-          details: { error: error instanceof Error ? error.message : 'Unknown error' }
-        }
-      )
+          details: { error: error instanceof Error ? error.message : 'Unknown error' },
+        },
+      );
     }
   }
 
@@ -535,35 +523,34 @@ export class AtomicRoleUpdateService {
     operationType: AtomicOperationType,
     success: boolean,
     latency: number,
-    failureThreshold = 5
+    failureThreshold = 5,
   ): Promise<LuaScriptResult> {
     try {
-      const script = this.scripts.get('circuit_breaker')!
+      const script = this.scripts.get('circuit_breaker')!;
       const keys = [
         ATOMIC_REDIS_KEYS.CIRCUIT_BREAKER(operationType),
-        ATOMIC_REDIS_KEYS.METRICS(operationType)
-      ]
+        ATOMIC_REDIS_KEYS.METRICS(operationType),
+      ];
 
       const args = [
         operationType,
         success.toString(),
         latency.toString(),
         failureThreshold.toString(),
-        Date.now().toString()
-      ]
+        Date.now().toString(),
+      ];
 
-      const result = await this.redis.eval(script, keys, args)
-      return JSON.parse(result as string) as LuaScriptResult
-
+      const result = await this.redis.eval(script, keys, args);
+      return JSON.parse(result as string) as LuaScriptResult;
     } catch (error) {
-      console.error('[AtomicRoleUpdate] Circuit breaker check failed:', error)
+      console.error('[AtomicRoleUpdate] Circuit breaker check failed:', error);
       // Return default state if circuit breaker fails
       return {
         success: true,
         conflict: false,
         canProceed: true,
-        circuitState: 'CLOSED'
-      }
+        circuitState: 'CLOSED',
+      };
     }
   }
 
@@ -574,21 +561,17 @@ export class AtomicRoleUpdateService {
     operationId: string,
     userId: string,
     rollbackData: {
-      roleData?: string
-      version?: number
-      checksum?: string
-      ttl: number
-    }
+      roleData?: string;
+      version?: number;
+      checksum?: string;
+      ttl: number;
+    },
   ): Promise<void> {
     try {
-      const rollbackKey = ATOMIC_REDIS_KEYS.ROLLBACK_DATA(operationId)
-      await this.redis.setex(
-        rollbackKey,
-        ATOMIC_TTL.ROLLBACK_DATA,
-        JSON.stringify(rollbackData)
-      )
+      const rollbackKey = ATOMIC_REDIS_KEYS.ROLLBACK_DATA(operationId);
+      await this.redis.setex(rollbackKey, ATOMIC_TTL.ROLLBACK_DATA, JSON.stringify(rollbackData));
     } catch (error) {
-      console.error('[AtomicRoleUpdate] Failed to store rollback data:', error)
+      console.error('[AtomicRoleUpdate] Failed to store rollback data:', error);
     }
   }
 
@@ -596,40 +579,39 @@ export class AtomicRoleUpdateService {
    * Get current role data with integrity check
    */
   async getRoleDataWithIntegrity(userId: string): Promise<{
-    data: any
-    version: number
-    checksum: string
-    isValid: boolean
+    data: Record<string, unknown>;
+    version: number;
+    checksum: string;
+    isValid: boolean;
   } | null> {
     try {
       const [roleData, version, checksum] = await Promise.all([
         this.redis.get(ATOMIC_REDIS_KEYS.ROLE_DATA(userId)),
         this.redis.get(ATOMIC_REDIS_KEYS.ROLE_VERSION(userId)),
-        this.redis.get(ATOMIC_REDIS_KEYS.ROLE_CHECKSUM(userId))
-      ])
+        this.redis.get(ATOMIC_REDIS_KEYS.ROLE_CHECKSUM(userId)),
+      ]);
 
       if (!roleData || !version || !checksum) {
-        return null
+        return null;
       }
 
-      const data = JSON.parse(roleData as string)
-      const currentVersion = parseInt(version as string)
-      const storedChecksum = checksum as string
+      const data = JSON.parse(roleData as string);
+      const currentVersion = parseInt(version as string);
+      const storedChecksum = checksum as string;
 
       // Verify integrity
-      const calculatedChecksum = generateChecksum(data)
-      const isValid = calculatedChecksum === storedChecksum
+      const calculatedChecksum = generateChecksum(data);
+      const isValid = calculatedChecksum === storedChecksum;
 
       return {
         data,
         version: currentVersion,
         checksum: storedChecksum,
-        isValid
-      }
-
+        isValid,
+      };
     } catch (error) {
-      console.error('[AtomicRoleUpdate] Failed to get role data:', error)
-      return null
+      console.error('[AtomicRoleUpdate] Failed to get role data:', error);
+      return null;
     }
   }
 
@@ -638,31 +620,29 @@ export class AtomicRoleUpdateService {
    */
   async cleanupOperation(userId: string, operationId?: string): Promise<void> {
     try {
-      const keysToDelete = [
-        ATOMIC_REDIS_KEYS.OPERATION_LOCK(userId)
-      ]
+      const keysToDelete = [ATOMIC_REDIS_KEYS.OPERATION_LOCK(userId)];
 
       if (operationId) {
-        keysToDelete.push(ATOMIC_REDIS_KEYS.ROLLBACK_DATA(operationId))
+        keysToDelete.push(ATOMIC_REDIS_KEYS.ROLLBACK_DATA(operationId));
       }
 
       if (keysToDelete.length > 0) {
-        await this.redis.del(...keysToDelete)
+        await this.redis.del(...keysToDelete);
       }
     } catch (error) {
-      console.error('[AtomicRoleUpdate] Cleanup failed:', error)
+      console.error('[AtomicRoleUpdate] Cleanup failed:', error);
     }
   }
 }
 
 // Export singleton instance
-let atomicRoleUpdateService: AtomicRoleUpdateService | null = null
+let atomicRoleUpdateService: AtomicRoleUpdateService | null = null;
 
 export function getAtomicRoleUpdateService(redis: Redis): AtomicRoleUpdateService {
   if (!atomicRoleUpdateService) {
-    atomicRoleUpdateService = new AtomicRoleUpdateService(redis)
+    atomicRoleUpdateService = new AtomicRoleUpdateService(redis);
   }
-  return atomicRoleUpdateService
+  return atomicRoleUpdateService;
 }
 
 // Export scripts for testing
@@ -671,5 +651,5 @@ export {
   OPTIMISTIC_LOCK_SCRIPT,
   ROLLBACK_SCRIPT,
   BATCH_CONFLICT_CHECK_SCRIPT,
-  CIRCUIT_BREAKER_SCRIPT
-}
+  CIRCUIT_BREAKER_SCRIPT,
+};

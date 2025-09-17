@@ -1,15 +1,15 @@
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatCurrency } from "@/lib/utils"
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatCurrency } from '@/lib/utils';
 import {
   OrderTrendsChart,
   StatusDistributionChart,
   UserPerformanceChart,
   HourlyActivityChart,
-} from "@/components/analytics/analytics-charts"
-import { UserStatsTable } from "@/components/analytics/user-stats-table"
-import { TrendingUp, Users, DollarSign, Activity } from "lucide-react"
+} from '@/components/analytics/analytics-charts';
+import { UserStatsTable } from '@/components/analytics/user-stats-table';
+import { TrendingUp, Users, DollarSign, Activity } from 'lucide-react';
 
 // Mock summary stats
 const summaryStats = {
@@ -21,7 +21,7 @@ const summaryStats = {
   successRateChange: 2.1,
   totalTransactions: 1292,
   transactionGrowth: 8.5,
-}
+};
 
 function SummaryCards() {
   return (
@@ -29,11 +29,11 @@ function SummaryCards() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <DollarSign className="text-muted-foreground h-4 w-4" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(summaryStats.totalRevenue)}</div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             <span className="text-green-600">+{summaryStats.revenueGrowth}%</span> from last month
           </p>
         </CardContent>
@@ -42,11 +42,11 @@ function SummaryCards() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <Users className="text-muted-foreground h-4 w-4" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{summaryStats.totalUsers}</div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             <span className="text-green-600">+{summaryStats.userGrowth}%</span> from last month
           </p>
         </CardContent>
@@ -55,12 +55,13 @@ function SummaryCards() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Avg Success Rate</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <TrendingUp className="text-muted-foreground h-4 w-4" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{summaryStats.avgSuccessRate}%</div>
-          <p className="text-xs text-muted-foreground">
-            <span className="text-green-600">+{summaryStats.successRateChange}%</span> from last month
+          <p className="text-muted-foreground text-xs">
+            <span className="text-green-600">+{summaryStats.successRateChange}%</span> from last
+            month
           </p>
         </CardContent>
       </Card>
@@ -68,17 +69,18 @@ function SummaryCards() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-          <Activity className="h-4 w-4 text-muted-foreground" />
+          <Activity className="text-muted-foreground h-4 w-4" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{summaryStats.totalTransactions}</div>
-          <p className="text-xs text-muted-foreground">
-            <span className="text-green-600">+{summaryStats.transactionGrowth}%</span> from last month
+          <p className="text-muted-foreground text-xs">
+            <span className="text-green-600">+{summaryStats.transactionGrowth}%</span> from last
+            month
           </p>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 export default function AnalyticsPage() {
@@ -106,5 +108,5 @@ export default function AnalyticsPage() {
         <UserStatsTable />
       </div>
     </div>
-  )
+  );
 }

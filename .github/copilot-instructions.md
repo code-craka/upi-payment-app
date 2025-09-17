@@ -6,7 +6,7 @@ Enterprise-grade UPI payment system with **hybrid authentication architecture** 
 
 ### Core Technology Stack
 
-- **Framework**: Next.js 14 with App Router (never use pages/ or _app.tsx)
+- **Framework**: Next.js 14 with App Router (never use pages/ or \_app.tsx)
 - **Authentication**: Hybrid Clerk + Upstash Redis with 30-second TTL caching
 - **Database**: MongoDB with Mongoose ODM and optimized indexes
 - **Cache Layer**: Upstash Redis for role caching and circuit breaker state
@@ -22,9 +22,9 @@ Enterprise-grade UPI payment system with **hybrid authentication architecture** 
 ### Authentication Architecture Pattern
 
 ```typescript
-import { getHybridAuthContext, getCachedUserRole } from "@/lib/auth/hybrid-auth";
-import { RedisCircuitBreaker } from "@/lib/circuit-breaker";
-import { currentUser } from "@clerk/nextjs/server";
+import { getHybridAuthContext, getCachedUserRole } from '@/lib/auth/hybrid-auth';
+import { RedisCircuitBreaker } from '@/lib/circuit-breaker';
+import { currentUser } from '@clerk/nextjs/server';
 
 // Hybrid authentication: Redis-first, Clerk fallback
 const authContext = await getHybridAuthContext(userId);
@@ -58,19 +58,18 @@ async function updateUserRole(userId: string, newRole: string) {
     redis.call('setex', KEYS[1], 30, ARGV[1])
     return version
   `;
-  
+
   try {
     // 1. Update Clerk (source of truth)
     await clerkClient.users.updateUser(userId, {
-      publicMetadata: { role: newRole }
+      publicMetadata: { role: newRole },
     });
-    
+
     // 2. Update Redis cache atomically
     await redis.eval(luaScript, 2, `role:${userId}`, `role_version:${userId}`, newRole);
-    
+
     // 3. Audit logging
     await auditLog('role_updated', { userId, newRole, timestamp: Date.now() });
-    
   } catch (error) {
     // Implement rollback strategy
     await handleRoleUpdateFailure(userId, newRole, error);
@@ -89,29 +88,32 @@ async function updateUserRole(userId: string, newRole: string) {
 export class ServerlessCircuitBreaker {
   private async getState(): Promise<CircuitState> {
     const state = await redis.get('circuit_breaker:redis');
-    return state ? JSON.parse(state) : { 
-      failures: 0, 
-      state: 'CLOSED', 
-      lastFailure: 0 
-    };
+    return state
+      ? JSON.parse(state)
+      : {
+          failures: 0,
+          state: 'CLOSED',
+          lastFailure: 0,
+        };
   }
-  
+
   private async updateState(newState: CircuitState): Promise<void> {
     await redis.setex('circuit_breaker:redis', 300, JSON.stringify(newState));
   }
-  
+
   async execute<T>(operation: () => Promise<T>): Promise<T> {
     const state = await this.getState();
-    
+
     if (state.state === 'OPEN') {
-      if (Date.now() - state.lastFailure > 60000) { // 1 minute timeout
+      if (Date.now() - state.lastFailure > 60000) {
+        // 1 minute timeout
         state.state = 'HALF_OPEN';
         await this.updateState(state);
       } else {
         throw new Error('Circuit breaker is OPEN');
       }
     }
-    
+
     try {
       const result = await operation();
       if (state.state === 'HALF_OPEN') {
@@ -142,18 +144,21 @@ export async function verifyClerkWebhook(request: Request) {
   const webhook = new Webhook(process.env.CLERK_WEBHOOK_SECRET!);
   const payload = await request.text();
   const headers = Object.fromEntries(request.headers.entries());
-  
+
   try {
     const event = webhook.verify(payload, headers);
     return event;
   } catch (error) {
     // Log to dead letter queue
-    await redis.lpush('webhook:dlq', JSON.stringify({
-      payload,
-      error: error.message,
-      timestamp: Date.now(),
-      headers
-    }));
+    await redis.lpush(
+      'webhook:dlq',
+      JSON.stringify({
+        payload,
+        error: error.message,
+        timestamp: Date.now(),
+        headers,
+      }),
+    );
     throw new Error('Invalid webhook signature');
   }
 }
@@ -163,17 +168,17 @@ export async function verifyClerkWebhook(request: Request) {
 
 ```typescript
 // Handle failed webhook processing
-export async function handleWebhookFailure(
-  event: WebhookEvent, 
-  error: Error
-) {
-  await redis.lpush('webhook:dlq', JSON.stringify({
-    event,
-    error: error.message,
-    timestamp: Date.now(),
-    retryCount: 0
-  }));
-  
+export async function handleWebhookFailure(event: WebhookEvent, error: Error) {
+  await redis.lpush(
+    'webhook:dlq',
+    JSON.stringify({
+      event,
+      error: error.message,
+      timestamp: Date.now(),
+      retryCount: 0,
+    }),
+  );
+
   // Alert if DLQ size exceeds threshold
   const dlqSize = await redis.llen('webhook:dlq');
   if (dlqSize > 10) {
@@ -195,35 +200,38 @@ export async function GET() {
     checkDatabase(),
     checkRedisWithLatency(),
     checkClerkConnectivity(),
-    validateCacheHitRatio()
+    validateCacheHitRatio(),
   ]);
-  
+
   const results = checks.map((check, index) => ({
     service: ['database', 'redis', 'clerk', 'cache'][index],
     status: check.status === 'fulfilled' ? 'healthy' : 'unhealthy',
-    details: check.status === 'fulfilled' ? check.value : check.reason
+    details: check.status === 'fulfilled' ? check.value : check.reason,
   }));
-  
-  const overallHealth = results.every(r => r.status === 'healthy');
-  
-  return NextResponse.json({
-    status: overallHealth ? 'healthy' : 'degraded',
-    services: results,
-    timestamp: new Date().toISOString()
-  }, { 
-    status: overallHealth ? 200 : 503 
-  });
+
+  const overallHealth = results.every((r) => r.status === 'healthy');
+
+  return NextResponse.json(
+    {
+      status: overallHealth ? 'healthy' : 'degraded',
+      services: results,
+      timestamp: new Date().toISOString(),
+    },
+    {
+      status: overallHealth ? 200 : 503,
+    },
+  );
 }
 
 async function checkRedisWithLatency() {
   const start = performance.now();
   await redis.ping();
   const latency = performance.now() - start;
-  
+
   return {
     connected: true,
     latency: `${latency.toFixed(2)}ms`,
-    status: latency < 100 ? 'optimal' : 'slow'
+    status: latency < 100 ? 'optimal' : 'slow',
   };
 }
 ```
@@ -239,16 +247,16 @@ export async function trackCacheHit(key: string, hit: boolean) {
 
 export async function getCacheStats() {
   const date = new Date().toISOString().split('T')[0];
-  const hits = await redis.get(`cache:hits:${date}`) || '0';
-  const misses = await redis.get(`cache:misses:${date}`) || '0';
-  
+  const hits = (await redis.get(`cache:hits:${date}`)) || '0';
+  const misses = (await redis.get(`cache:misses:${date}`)) || '0';
+
   const hitRatio = parseInt(hits) / (parseInt(hits) + parseInt(misses));
-  
+
   // Alert if cache hit ratio drops below 60%
   if (hitRatio < 0.6) {
     await sendAlert('Low cache hit ratio', { ratio: hitRatio });
   }
-  
+
   return { hits: parseInt(hits), misses: parseInt(misses), ratio: hitRatio };
 }
 ```
@@ -260,8 +268,8 @@ export async function getCacheStats() {
 ### Enhanced Database Operations
 
 ```typescript
-import { connectDB } from "@/lib/db/connection";
-import { getCachedUserRole } from "@/lib/auth/hybrid-auth";
+import { connectDB } from '@/lib/db/connection';
+import { getCachedUserRole } from '@/lib/auth/hybrid-auth';
 
 // Database operations with caching layer
 export class UserService {
@@ -271,16 +279,16 @@ export class UserService {
     if (cachedRole) {
       return { userId, role: cachedRole, cached: true };
     }
-    
+
     // Fallback to database
     await connectDB();
     const user = await UserModel.findById(userId);
-    
+
     // Cache the result
     if (user?.role) {
       await cacheUserRole(userId, user.role, 30);
     }
-    
+
     return { ...user, cached: false };
   }
 }
@@ -301,9 +309,9 @@ await AuditLogModel.create({
     newRole,
     cacheHit: cachedRole !== null,
     latency: `${performanceMetrics.totalLatency}ms`,
-    source: cachedRole ? 'redis' : 'clerk'
+    source: cachedRole ? 'redis' : 'clerk',
   },
-  timestamp: new Date()
+  timestamp: new Date(),
 });
 ```
 
@@ -316,30 +324,30 @@ await AuditLogModel.create({
 ```typescript
 export async function POST(request: NextRequest) {
   const circuitBreaker = new ServerlessCircuitBreaker();
-  
+
   try {
     // 1. Hybrid authentication with circuit breaker
-    const authContext = await circuitBreaker.execute(() => 
-      getHybridAuthContext(request)
-    );
-    
+    const authContext = await circuitBreaker.execute(() => getHybridAuthContext(request));
+
     if (!authContext.authenticated) {
-      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     // 2. Role validation from cache or Clerk
     const userRole = await getUserRoleWithFallback(authContext.userId);
     if (!hasPermission(userRole, 'required_permission')) {
-      await auditLog('permission_denied', { 
-        userId: authContext.userId, 
+      await auditLog('permission_denied', {
+        userId: authContext.userId,
         permission: 'required_permission',
-        source: authContext.source 
+        source: authContext.source,
       });
-      return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
     // 3. Request validation with Zod
-    const schema = z.object({ /* schema definition */ });
+    const schema = z.object({
+      /* schema definition */
+    });
     const validatedData = schema.parse(await request.json());
 
     // 4. Database operations with monitoring
@@ -363,49 +371,57 @@ export async function POST(request: NextRequest) {
       metadata: {
         dbLatency: `${dbLatency.toFixed(2)}ms`,
         authSource: authContext.source,
-        cacheHit: authContext.cached
-      }
+        cacheHit: authContext.cached,
+      },
     });
 
     // 7. Performance monitoring
     if (dbLatency > 1000) {
-      await sendAlert('Slow database operation', { 
-        operation: 'performOperation', 
-        latency: dbLatency 
+      await sendAlert('Slow database operation', {
+        operation: 'performOperation',
+        latency: dbLatency,
       });
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      data: result,
-      performance: {
-        authLatency: authContext.latency,
-        dbLatency: `${dbLatency.toFixed(2)}ms`
-      }
-    }, { status: 200 });
-
+    return NextResponse.json(
+      {
+        success: true,
+        data: result,
+        performance: {
+          authLatency: authContext.latency,
+          dbLatency: `${dbLatency.toFixed(2)}ms`,
+        },
+      },
+      { status: 200 },
+    );
   } catch (error) {
     // Enhanced error handling with context
     console.error('Operation failed:', {
       error: error.message,
       stack: error.stack,
       userId: authContext?.userId,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     // Circuit breaker may have triggered
     if (error.message.includes('Circuit breaker is OPEN')) {
-      return NextResponse.json({
-        error: "Service temporarily unavailable",
-        retryAfter: 60
-      }, { status: 503 });
+      return NextResponse.json(
+        {
+          error: 'Service temporarily unavailable',
+          retryAfter: 60,
+        },
+        { status: 503 },
+      );
     }
 
-    return NextResponse.json({
-      error: "Operation failed",
-      details: error instanceof Error ? error.message : "Unknown error",
-      requestId: crypto.randomUUID()
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'Operation failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        requestId: crypto.randomUUID(),
+      },
+      { status: 500 },
+    );
   }
 }
 ```
@@ -421,13 +437,13 @@ export async function POST(request: NextRequest) {
 import { useHybridRole } from '@/hooks/useHybridRole';
 
 export function RoleAwareDashboard() {
-  const { 
-    role, 
-    isLoading, 
-    isAdmin, 
-    cacheHit, 
+  const {
+    role,
+    isLoading,
+    isAdmin,
+    cacheHit,
     refresh,
-    latency 
+    latency
   } = useHybridRole({
     refreshInterval: 30000, // 30 seconds
     onRoleChange: (oldRole, newRole) => {
@@ -437,7 +453,7 @@ export function RoleAwareDashboard() {
   });
 
   if (isLoading) return <LoadingSpinner />;
-  
+
   return (
     <div>
       <AdminPanel visible={isAdmin} />
@@ -458,7 +474,7 @@ import { useEffect, useState } from 'react';
 
 export function HybridAuthProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
-  
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -486,7 +502,7 @@ export function HybridAuthProvider({ children }: { children: React.ReactNode }) 
 // Enhanced payment flow with audit trails
 export async function createPaymentOrder(orderData: CreateOrderRequest) {
   const orderId = crypto.randomUUID();
-  
+
   try {
     // 1. Create order with timeout
     const order = await OrderModel.create({
@@ -494,7 +510,7 @@ export async function createPaymentOrder(orderData: CreateOrderRequest) {
       orderId,
       status: 'pending',
       expiresAt: new Date(Date.now() + 540000), // 9 minutes
-      createdAt: new Date()
+      createdAt: new Date(),
     });
 
     // 2. Generate secure QR code
@@ -503,7 +519,7 @@ export async function createPaymentOrder(orderData: CreateOrderRequest) {
       payeeName: process.env.MERCHANT_NAME,
       amount: orderData.amount,
       transactionRef: orderId,
-      currency: 'INR'
+      currency: 'INR',
     });
 
     // 3. Cache order data for quick access
@@ -518,21 +534,20 @@ export async function createPaymentOrder(orderData: CreateOrderRequest) {
       metadata: {
         amount: orderData.amount,
         customerEmail: orderData.customerInfo.email,
-        expiresAt: order.expiresAt
-      }
+        expiresAt: order.expiresAt,
+      },
     });
 
     return {
       orderId,
       paymentUrl: `/pay/${orderId}`,
       qrCode: qrData,
-      expiresAt: order.expiresAt
+      expiresAt: order.expiresAt,
     };
-
   } catch (error) {
-    await auditLog('payment_order_failed', { 
-      error: error.message, 
-      orderData 
+    await auditLog('payment_order_failed', {
+      error: error.message,
+      orderData,
     });
     throw error;
   }
@@ -592,17 +607,17 @@ hooks/
 ```typescript
 // Rollback strategy for dual-write failures
 async function handleDualWriteFailure(
-  operation: string, 
-  clerkSuccess: boolean, 
+  operation: string,
+  clerkSuccess: boolean,
   redisSuccess: boolean,
-  context: any
+  context: any,
 ) {
   if (clerkSuccess && !redisSuccess) {
     // Clerk succeeded, Redis failed - log for manual sync
-    await auditLog('redis_sync_failed', { 
-      operation, 
+    await auditLog('redis_sync_failed', {
+      operation,
       context,
-      requiresManualSync: true 
+      requiresManualSync: true,
     });
     // Don't rollback Clerk - it's source of truth
   } else if (!clerkSuccess && redisSuccess) {

@@ -1,6 +1,6 @@
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import { AuditLogsViewer } from "@/components/admin/audit-logs-viewer"
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
+import { AuditLogsViewer } from '@/components/admin/audit-logs-viewer';
 
 export default function AuditLogsPage() {
   return (
@@ -13,5 +13,5 @@ export default function AuditLogsPage() {
 
       <AuditLogsViewer />
     </div>
-  )
+  );
 }

@@ -101,7 +101,7 @@ export class HealthCheckService {
   private circuitBreaker: RedisCircuitBreaker;
   private alerts: Map<string, HealthAlert> = new Map();
   private lastHealthCheck: HealthStatus | null = null;
-  private healthCheckIntervals: Map<string, NodeJS.Timeout> = new Map();
+  private healthCheckIntervals: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private serviceHealthCache: Map<string, HealthCheckResult> = new Map();
 
   private constructor(config?: Partial<HealthCheckConfig>) {
@@ -188,8 +188,8 @@ export class HealthCheckService {
     });
 
     // Determine overall health
-    const unhealthyServices = services.filter(s => s.status === 'unhealthy');
-    const degradedServices = services.filter(s => s.status === 'degraded');
+    const unhealthyServices = services.filter((s) => s.status === 'unhealthy');
+    const degradedServices = services.filter((s) => s.status === 'degraded');
 
     let overall: 'healthy' | 'degraded' | 'unhealthy';
     if (unhealthyServices.length > 0) {
@@ -209,8 +209,8 @@ export class HealthCheckService {
       uptime: process.uptime(),
       timestamp: Date.now(),
       alerts,
-      degradedServices: degradedServices.map(s => s.service),
-      unhealthyServices: unhealthyServices.map(s => s.service),
+      degradedServices: degradedServices.map((s) => s.service),
+      unhealthyServices: unhealthyServices.map((s) => s.service),
     };
 
     this.lastHealthCheck = healthStatus;
@@ -262,8 +262,7 @@ export class HealthCheckService {
         details: {
           connected: result.connected,
           latency: `${latency.toFixed(2)}ms`,
-          status: status === 'healthy' ? 'optimal' :
-                  status === 'degraded' ? 'slow' : 'unhealthy',
+          status: status === 'healthy' ? 'optimal' : status === 'degraded' ? 'slow' : 'unhealthy',
         },
       };
     } catch (error) {
@@ -336,8 +335,8 @@ export class HealthCheckService {
         lastChecked: startTime,
         details: {
           latency: `${latency.toFixed(2)}ms`,
-          status: status === 'healthy' ? 'responsive' :
-                  status === 'degraded' ? 'slow' : 'unresponsive',
+          status:
+            status === 'healthy' ? 'responsive' : status === 'degraded' ? 'slow' : 'unresponsive',
         },
       };
     } catch (error) {
@@ -392,7 +391,7 @@ export class HealthCheckService {
         };
       })();
 
-      const result = await Promise.race([dbTestPromise, timeoutPromise]) as {
+      const result = (await Promise.race([dbTestPromise, timeoutPromise])) as {
         connected: boolean;
         collectionsCount: number;
         databaseName: string;
@@ -419,8 +418,7 @@ export class HealthCheckService {
           collectionsCount: result.collectionsCount,
           databaseName: result.databaseName,
           latency: `${latency.toFixed(2)}ms`,
-          status: status === 'healthy' ? 'optimal' :
-                  status === 'degraded' ? 'slow' : 'unhealthy',
+          status: status === 'healthy' ? 'optimal' : status === 'degraded' ? 'slow' : 'unhealthy',
         },
       };
     } catch (error) {
@@ -472,7 +470,7 @@ export class HealthCheckService {
         };
       })();
 
-      const result = await Promise.race([cacheTestPromise, timeoutPromise]) as {
+      const result = (await Promise.race([cacheTestPromise, timeoutPromise])) as {
         operational: boolean;
         metrics: CacheMetrics;
       };
@@ -498,8 +496,12 @@ export class HealthCheckService {
           hitRatio: result.metrics.hitRatio,
           totalRequests: result.metrics.totalRequests,
           averageLatency: `${result.metrics.averageLatency.toFixed(2)}ms`,
-          status: status === 'healthy' ? 'optimal' :
-                  status === 'degraded' ? 'low_hit_ratio' : 'unhealthy',
+          status:
+            status === 'healthy'
+              ? 'optimal'
+              : status === 'degraded'
+                ? 'low_hit_ratio'
+                : 'unhealthy',
         },
       };
     } catch (error) {
@@ -521,13 +523,13 @@ export class HealthCheckService {
     try {
       // Get cache statistics from Redis
       const date = new Date().toISOString().split('T')[0];
-      const hits = await redis.get(`cache:hits:${date}`) || '0';
-      const misses = await redis.get(`cache:misses:${date}`) || '0';
+      const hits = (await redis.get(`cache:hits:${date}`)) || '0';
+      const misses = (await redis.get(`cache:misses:${date}`)) || '0';
       const totalRequests = parseInt(hits as string) + parseInt(misses as string);
       const hitRatio = totalRequests > 0 ? parseInt(hits as string) / totalRequests : 0;
 
       // Get average latency (simplified - in production you'd track this)
-      const avgLatency = await redis.get('cache:avg_latency') || '50';
+      const avgLatency = (await redis.get('cache:avg_latency')) || '50';
 
       return {
         hits: parseInt(hits as string),
@@ -563,7 +565,7 @@ export class HealthCheckService {
       if (service.status !== 'healthy') {
         // Check cooldown period
         const lastAlert = this.alerts.get(alertKey);
-        if (lastAlert && (Date.now() - lastAlert.timestamp) < this.config.alerting.alertCooldown) {
+        if (lastAlert && Date.now() - lastAlert.timestamp < this.config.alerting.alertCooldown) {
           continue;
         }
 
@@ -602,8 +604,9 @@ export class HealthCheckService {
 
     // Clean up old alerts
     if (this.alerts.size > this.config.alerting.maxAlerts) {
-      const sortedAlerts = Array.from(this.alerts.entries())
-        .sort(([, a], [, b]) => b.timestamp - a.timestamp);
+      const sortedAlerts = Array.from(this.alerts.entries()).sort(
+        ([, a], [, b]) => b.timestamp - a.timestamp,
+      );
 
       const alertsToRemove = sortedAlerts.slice(this.config.alerting.maxAlerts);
       alertsToRemove.forEach(([key]) => this.alerts.delete(key));
@@ -625,7 +628,7 @@ export class HealthCheckService {
           source: 'health-service',
           metadata: {
             overall: healthStatus.overall,
-            services: healthStatus.services.map(s => ({
+            services: healthStatus.services.map((s) => ({
               service: s.service,
               status: s.status,
               latency: s.latency,
@@ -634,7 +637,7 @@ export class HealthCheckService {
             unhealthyServices: healthStatus.unhealthyServices,
             alertsCount: healthStatus.alerts.length,
           },
-        }
+        },
       );
     } catch (error) {
       console.error('Failed to log health check:', error);
@@ -659,8 +662,7 @@ export class HealthCheckService {
    * Get all active alerts
    */
   getActiveAlerts(): HealthAlert[] {
-    return Array.from(this.alerts.values())
-      .sort((a, b) => b.timestamp - a.timestamp);
+    return Array.from(this.alerts.values()).sort((a, b) => b.timestamp - a.timestamp);
   }
 
   /**
@@ -779,7 +781,7 @@ export class HealthCheckService {
    * Stop scheduled health checks
    */
   stopScheduledChecks(): void {
-    this.healthCheckIntervals.forEach(interval => {
+    this.healthCheckIntervals.forEach((interval) => {
       clearInterval(interval);
     });
     this.healthCheckIntervals.clear();

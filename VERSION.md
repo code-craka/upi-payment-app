@@ -284,6 +284,7 @@ GET /api/version
 ```
 
 **Response:**
+
 ```json
 {
   "version": "1.0.0",

@@ -1,6 +1,6 @@
 /**
  * Production Error Recovery System
- * 
+ *
  * Comprehensive error recovery system with automatic retry, circuit breaker integration,
  * incident response workflows, and automated recovery actions for production failures.
  */
@@ -78,13 +78,16 @@ export interface IncidentResponse {
 
 export interface SystemHealthStatus {
   overall: 'healthy' | 'degraded' | 'critical' | 'down';
-  services: Record<string, {
-    status: 'healthy' | 'degraded' | 'critical' | 'down';
-    latency?: number;
-    errorRate?: number;
-    lastCheck: number;
-    details?: Record<string, unknown>;
-  }>;
+  services: Record<
+    string,
+    {
+      status: 'healthy' | 'degraded' | 'critical' | 'down';
+      latency?: number;
+      errorRate?: number;
+      lastCheck: number;
+      details?: Record<string, unknown>;
+    }
+  >;
   activeIncidents: IncidentResponse[];
   systemMetrics: {
     totalRequests: number;
@@ -100,13 +103,13 @@ class ProductionErrorRecoverySystem {
   private config: ErrorRecoveryConfig;
   private activeIncidents: Map<string, IncidentResponse> = new Map();
   private recoveryActions: Map<string, RecoveryAction> = new Map();
-  private healthCheckTimer?: NodeJS.Timeout;
+  private healthCheckTimer?: ReturnType<typeof setTimeout>;
   private metrics = {
     totalErrors: 0,
     successfulRecoveries: 0,
     failedRecoveries: 0,
     escalations: 0,
-    averageRecoveryTime: 0
+    averageRecoveryTime: 0,
   };
 
   private constructor(config: Partial<ErrorRecoveryConfig> = {}) {
@@ -118,7 +121,7 @@ class ProductionErrorRecoverySystem {
       circuitBreakerIntegration: config.circuitBreakerIntegration ?? true,
       enableAutomaticRecovery: config.enableAutomaticRecovery ?? true,
       incidentEscalationTimeoutMs: config.incidentEscalationTimeoutMs ?? 300000, // 5 minutes
-      healthCheckIntervalMs: config.healthCheckIntervalMs ?? 30000 // 30 seconds
+      healthCheckIntervalMs: config.healthCheckIntervalMs ?? 30000, // 30 seconds
     };
 
     this.initializeRecoveryActions();
@@ -165,8 +168,7 @@ class ProductionErrorRecoverySystem {
       }
 
       const recoveryTime = Date.now() - startTime;
-      this.metrics.averageRecoveryTime = 
-        (this.metrics.averageRecoveryTime + recoveryTime) / 2;
+      this.metrics.averageRecoveryTime = (this.metrics.averageRecoveryTime + recoveryTime) / 2;
 
       // Create incident if recovery failed and severity is high
       if (!recoveryResult.success && this.shouldCreateIncident(context, recoveryResult)) {
@@ -174,12 +176,11 @@ class ProductionErrorRecoverySystem {
         recoveryResult.escalationRequired = true;
         recoveryResult.metadata = {
           ...recoveryResult.metadata,
-          incidentId: incident.incidentId
+          incidentId: incident.incidentId,
         };
       }
 
       return recoveryResult;
-
     } catch (error) {
       console.error('Error recovery system failure:', error);
       this.metrics.failedRecoveries++;
@@ -187,7 +188,7 @@ class ProductionErrorRecoverySystem {
       return {
         success: false,
         message: `Recovery system failure: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        escalationRequired: true
+        escalationRequired: true,
       };
     }
   }
@@ -197,7 +198,7 @@ class ProductionErrorRecoverySystem {
    */
   public async executeRetryWithBackoff<T>(
     operation: () => Promise<T>,
-    context: ErrorContext
+    context: ErrorContext,
   ): Promise<T> {
     let lastError: Error;
     const maxAttempts = this.config.maxRetries + 1; // Include initial attempt
@@ -210,10 +211,9 @@ class ProductionErrorRecoverySystem {
         } else {
           return await operation();
         }
-
       } catch (error) {
         lastError = error as Error;
-        
+
         // Log retry attempt
         await this.logRetryAttempt(context, attempt, error as Error);
 
@@ -225,11 +225,11 @@ class ProductionErrorRecoverySystem {
         // Calculate delay with exponential backoff
         const delay = Math.min(
           this.config.baseDelayMs * Math.pow(this.config.backoffMultiplier, attempt - 1),
-          this.config.maxDelayMs
+          this.config.maxDelayMs,
         );
 
         // Add jitter to prevent thundering herd
-        const jitteredDelay = delay + (Math.random() * delay * 0.1);
+        const jitteredDelay = delay + Math.random() * delay * 0.1;
 
         await this.sleep(jitteredDelay);
       }
@@ -243,14 +243,14 @@ class ProductionErrorRecoverySystem {
    * Create incident for high-severity failures
    */
   public async createIncident(
-    context: ErrorContext, 
-    recoveryResult?: RecoveryResult
+    context: ErrorContext,
+    recoveryResult?: RecoveryResult,
   ): Promise<IncidentResponse> {
     const incidentId = `incident_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // Determine severity based on error context
     const severity = this.determineSeverity(context);
-    
+
     // Assess impact
     const impactAssessment = await this.assessImpact(context);
 
@@ -262,22 +262,24 @@ class ProductionErrorRecoverySystem {
       description: `Error in ${context.service} service during ${context.operation}: ${context.error.message}`,
       affectedServices: [context.service],
       recoveryActions: await this.getRecommendedRecoveryActions(context),
-      timeline: [{
-        timestamp: Date.now(),
-        action: 'Incident detected and created',
-        actor: 'system',
-        result: 'Incident created successfully'
-      }],
+      timeline: [
+        {
+          timestamp: Date.now(),
+          action: 'Incident detected and created',
+          actor: 'system',
+          result: 'Incident created successfully',
+        },
+      ],
       escalationLevel: 0,
-      impactAssessment
+      impactAssessment,
     };
 
     // Store incident
     this.activeIncidents.set(incidentId, incident);
-    
+
     // Persist to Redis
     await this.persistIncident(incident);
-    
+
     // Send initial alert
     await this.sendIncidentAlert(incident, 'created');
 
@@ -287,7 +289,7 @@ class ProductionErrorRecoverySystem {
     }
 
     this.metrics.escalations++;
-    
+
     return incident;
   }
 
@@ -300,7 +302,7 @@ class ProductionErrorRecoverySystem {
       userIds?: string[];
       forceSync?: boolean;
       validateConsistency?: boolean;
-    } = {}
+    } = {},
   ): Promise<{
     success: boolean;
     syncedUsers: number;
@@ -308,7 +310,7 @@ class ProductionErrorRecoverySystem {
     inconsistencies?: Array<{ userId: string; clerkRole: string; redisRole: string }>;
   }> {
     const correlationId = `manual_sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     try {
       await this.logManualSyncStart(correlationId, syncType, options);
 
@@ -318,8 +320,8 @@ class ProductionErrorRecoverySystem {
 
       if (syncType === 'full_sync' || syncType === 'clerk_to_redis') {
         // Sync from Clerk to Redis
-        const userIds = options.userIds || await this.getAllUserIds();
-        
+        const userIds = options.userIds || (await this.getAllUserIds());
+
         for (const userId of userIds) {
           try {
             const clerkRole = await this.getClerkUserRole(userId);
@@ -338,7 +340,7 @@ class ProductionErrorRecoverySystem {
           } catch (error) {
             errors.push({
               userId,
-              error: error instanceof Error ? error.message : 'Unknown error'
+              error: error instanceof Error ? error.message : 'Unknown error',
             });
           }
         }
@@ -354,16 +356,15 @@ class ProductionErrorRecoverySystem {
         syncType,
         syncedUsers,
         errorCount: errors.length,
-        inconsistencyCount: inconsistencies.length
+        inconsistencyCount: inconsistencies.length,
       });
 
       return {
         success: errors.length === 0,
         syncedUsers,
         errors,
-        inconsistencies: options.validateConsistency ? inconsistencies : undefined
+        inconsistencies: options.validateConsistency ? inconsistencies : undefined,
       };
-
     } catch (error) {
       await this.logManualSyncError(correlationId, error as Error);
       throw error;
@@ -380,7 +381,7 @@ class ProductionErrorRecoverySystem {
       validateIntegrity?: boolean;
       dryRun?: boolean;
       backupFirst?: boolean;
-    } = {}
+    } = {},
   ): Promise<{
     success: boolean;
     rollbackActions: Array<{ action: string; success: boolean; message: string }>;
@@ -399,15 +400,15 @@ class ProductionErrorRecoverySystem {
           rollbackActions.push({
             action: 'create_emergency_backup',
             success: true,
-            message: 'Emergency backup created successfully'
+            message: 'Emergency backup created successfully',
           });
         } catch (error) {
           rollbackActions.push({
             action: 'create_emergency_backup',
             success: false,
-            message: `Backup failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            message: `Backup failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
           });
-          
+
           if (!options.dryRun) {
             throw error; // Don't proceed without backup
           }
@@ -421,13 +422,13 @@ class ProductionErrorRecoverySystem {
           rollbackActions.push({
             action: 'rollback_cache',
             success: true,
-            message: 'Cache state rolled back successfully'
+            message: 'Cache state rolled back successfully',
           });
         } catch (error) {
           rollbackActions.push({
             action: 'rollback_cache',
             success: false,
-            message: `Cache rollback failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            message: `Cache rollback failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
           });
         }
       }
@@ -438,39 +439,40 @@ class ProductionErrorRecoverySystem {
           rollbackActions.push({
             action: 'rollback_database',
             success: true,
-            message: 'Database state rolled back successfully'
+            message: 'Database state rolled back successfully',
           });
         } catch (error) {
           rollbackActions.push({
             action: 'rollback_database',
             success: false,
-            message: `Database rollback failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            message: `Database rollback failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
           });
         }
       }
 
       // Validate data integrity if requested
-      let dataIntegrityChecks: Array<{ check: string; passed: boolean; details?: string }> | undefined;
-      
+      let dataIntegrityChecks:
+        | Array<{ check: string; passed: boolean; details?: string }>
+        | undefined;
+
       if (options.validateIntegrity) {
         dataIntegrityChecks = await this.validateDataIntegrity();
       }
 
-      const success = rollbackActions.every(action => action.success);
+      const success = rollbackActions.every((action) => action.success);
 
       await this.logRollbackComplete(correlationId, {
         rollbackType,
         success,
         actionsExecuted: rollbackActions.length,
-        checksPerformed: dataIntegrityChecks?.length || 0
+        checksPerformed: dataIntegrityChecks?.length || 0,
       });
 
       return {
         success,
         rollbackActions,
-        dataIntegrityChecks
+        dataIntegrityChecks,
       };
-
     } catch (error) {
       await this.logRollbackError(correlationId, error as Error);
       throw error;
@@ -493,20 +495,20 @@ class ProductionErrorRecoverySystem {
         serviceStatuses[service] = {
           status: 'down',
           lastCheck: Date.now(),
-          details: { error: error instanceof Error ? error.message : 'Unknown error' }
+          details: { error: error instanceof Error ? error.message : 'Unknown error' },
         };
       }
     }
 
     // Determine overall status
-    const serviceStatusValues = Object.values(serviceStatuses).map(s => s.status);
+    const serviceStatusValues = Object.values(serviceStatuses).map((s) => s.status);
     let overall: SystemHealthStatus['overall'];
 
-    if (serviceStatusValues.every(s => s === 'healthy')) {
+    if (serviceStatusValues.every((s) => s === 'healthy')) {
       overall = 'healthy';
-    } else if (serviceStatusValues.some(s => s === 'down')) {
+    } else if (serviceStatusValues.some((s) => s === 'down')) {
       overall = 'down';
-    } else if (serviceStatusValues.some(s => s === 'critical')) {
+    } else if (serviceStatusValues.some((s) => s === 'critical')) {
       overall = 'critical';
     } else {
       overall = 'degraded';
@@ -519,7 +521,7 @@ class ProductionErrorRecoverySystem {
       overall,
       services: serviceStatuses,
       activeIncidents: Array.from(this.activeIncidents.values()),
-      systemMetrics
+      systemMetrics,
     };
   }
 
@@ -540,12 +542,12 @@ class ProductionErrorRecoverySystem {
           await redis.ping();
           return { success: true, message: 'Redis connection restored' };
         } catch (error) {
-          return { 
-            success: false, 
-            message: `Redis reconnection failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+          return {
+            success: false,
+            message: `Redis reconnection failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
           };
         }
-      }
+      },
     });
 
     // Clerk-related recovery actions
@@ -560,20 +562,20 @@ class ProductionErrorRecoverySystem {
         try {
           const syncResult = await this.executeManualDataSync('clerk_to_redis', {
             forceSync: true,
-            validateConsistency: true
+            validateConsistency: true,
           });
-          return { 
-            success: syncResult.success, 
+          return {
+            success: syncResult.success,
             message: `Synced ${syncResult.syncedUsers} users with ${syncResult.errors.length} errors`,
-            metadata: syncResult
+            metadata: syncResult,
           };
         } catch (error) {
-          return { 
-            success: false, 
-            message: `Clerk resync failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+          return {
+            success: false,
+            message: `Clerk resync failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
           };
         }
-      }
+      },
     });
 
     // Circuit breaker reset
@@ -590,12 +592,12 @@ class ProductionErrorRecoverySystem {
           await redis.del('circuit_breaker:redis');
           return { success: true, message: 'Circuit breaker reset successfully' };
         } catch (error) {
-          return { 
-            success: false, 
-            message: `Circuit breaker reset failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+          return {
+            success: false,
+            message: `Circuit breaker reset failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
           };
         }
-      }
+      },
     });
 
     // Clear cache for fresh start
@@ -611,23 +613,23 @@ class ProductionErrorRecoverySystem {
           // Clear role cache entries
           const pattern = 'user_role:*';
           const keys = await redis.keys(pattern);
-          
+
           if (keys.length > 0) {
             await redis.del(...keys);
           }
-          
-          return { 
-            success: true, 
+
+          return {
+            success: true,
             message: `Cleared ${keys.length} cache entries`,
-            metadata: { clearedKeys: keys.length }
+            metadata: { clearedKeys: keys.length },
           };
         } catch (error) {
-          return { 
-            success: false, 
-            message: `Cache clear failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+          return {
+            success: false,
+            message: `Cache clear failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
           };
         }
-      }
+      },
     });
   }
 
@@ -644,11 +646,11 @@ class ProductionErrorRecoverySystem {
         error: {
           message: context.error.message,
           stack: context.error.stack,
-          name: context.error.name
+          name: context.error.name,
         },
         userId: context.userId,
         metadata: context.metadata,
-        previousAttempts: context.previousAttempts || 0
+        previousAttempts: context.previousAttempts || 0,
       };
 
       await redis.lpush('error_recovery:logs', JSON.stringify(logEntry));
@@ -677,7 +679,7 @@ class ProductionErrorRecoverySystem {
       success: false,
       message: 'Circuit breaker is open - skipping retry to prevent cascade failure',
       metadata: { circuitBreakerState: 'open' },
-      nextActions: [this.recoveryActions.get('reset_circuit_breaker')!]
+      nextActions: [this.recoveryActions.get('reset_circuit_breaker')!],
     };
   }
 
@@ -714,16 +716,16 @@ class ProductionErrorRecoverySystem {
   }
 
   private async executeRecoveryStrategy(
-    actions: RecoveryAction[], 
-    context: ErrorContext
+    actions: RecoveryAction[],
+    context: ErrorContext,
   ): Promise<RecoveryResult> {
     const results: RecoveryResult[] = [];
-    
+
     for (const action of actions) {
       try {
         const result = await action.execute();
         results.push(result);
-        
+
         // If this action succeeded, we might be done
         if (result.success) {
           return {
@@ -731,14 +733,14 @@ class ProductionErrorRecoverySystem {
             message: `Recovery successful: ${action.description}`,
             metadata: {
               executedAction: action.id,
-              allResults: results
-            }
+              allResults: results,
+            },
           };
         }
       } catch (error) {
         results.push({
           success: false,
-          message: `Action ${action.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+          message: `Action ${action.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         });
       }
     }
@@ -747,8 +749,8 @@ class ProductionErrorRecoverySystem {
     return {
       success: false,
       message: 'All recovery actions failed',
-      metadata: { attemptedActions: actions.map(a => a.id), results },
-      escalationRequired: true
+      metadata: { attemptedActions: actions.map((a) => a.id), results },
+      escalationRequired: true,
     };
   }
 
@@ -756,11 +758,13 @@ class ProductionErrorRecoverySystem {
     // Create incident for high-severity services or critical operations
     const criticalServices = ['clerk', 'database', 'payment'];
     const criticalOperations = ['user_authentication', 'payment_processing', 'role_update'];
-    
+
     const hasCriticalService = criticalServices.includes(context.service);
-    const hasCriticalOperation = criticalOperations.some(op => context.operation.includes(op));
-    const hasExceededRetries = Boolean(context.previousAttempts && context.previousAttempts >= this.config.maxRetries);
-    
+    const hasCriticalOperation = criticalOperations.some((op) => context.operation.includes(op));
+    const hasExceededRetries = Boolean(
+      context.previousAttempts && context.previousAttempts >= this.config.maxRetries,
+    );
+
     return hasCriticalService || hasCriticalOperation || hasExceededRetries;
   }
 
@@ -776,7 +780,7 @@ class ProductionErrorRecoverySystem {
     return {
       usersAffected: context.service === 'clerk' ? 1000 : 100,
       servicesDown: [context.service],
-      businessImpact: context.service === 'payment' ? 'critical' : 'medium'
+      businessImpact: context.service === 'payment' ? 'critical' : 'medium',
     };
   }
 
@@ -789,19 +793,22 @@ class ProductionErrorRecoverySystem {
       await redis.setex(
         `incident:${incident.incidentId}`,
         86400 * 7, // 7 days retention
-        JSON.stringify(incident)
+        JSON.stringify(incident),
       );
     } catch (error) {
       console.error('Failed to persist incident:', error);
     }
   }
 
-  private async sendIncidentAlert(incident: IncidentResponse, type: 'created' | 'updated' | 'resolved'): Promise<void> {
+  private async sendIncidentAlert(
+    incident: IncidentResponse,
+    type: 'created' | 'updated' | 'resolved',
+  ): Promise<void> {
     // This would integrate with alerting systems like PagerDuty, Slack, etc.
     console.log(`INCIDENT ALERT [${type.toUpperCase()}]: ${incident.title}`, {
       incidentId: incident.incidentId,
       severity: incident.severity,
-      status: incident.status
+      status: incident.status,
     });
   }
 
@@ -811,12 +818,12 @@ class ProductionErrorRecoverySystem {
       if (action.automated) {
         try {
           const result = await action.execute();
-          
+
           incident.timeline.push({
             timestamp: Date.now(),
             action: `Executed automated recovery: ${action.description}`,
             actor: 'system',
-            result: result.success ? 'Success' : `Failed: ${result.message}`
+            result: result.success ? 'Success' : `Failed: ${result.message}`,
           });
 
           if (result.success) {
@@ -828,7 +835,7 @@ class ProductionErrorRecoverySystem {
             timestamp: Date.now(),
             action: `Automated recovery failed: ${action.description}`,
             actor: 'system',
-            result: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+            result: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
           });
         }
       }
@@ -842,11 +849,11 @@ class ProductionErrorRecoverySystem {
     this.healthCheckTimer = setInterval(async () => {
       try {
         const healthStatus = await this.getSystemHealthStatus();
-        
+
         // Check for new issues
         if (healthStatus.overall !== 'healthy') {
           console.warn('System health degraded:', healthStatus.overall);
-          
+
           // Create incidents for down services
           for (const [serviceName, serviceStatus] of Object.entries(healthStatus.services)) {
             if (serviceStatus.status === 'down' && !this.hasActiveIncidentForService(serviceName)) {
@@ -856,7 +863,7 @@ class ProductionErrorRecoverySystem {
                 service: serviceName as ErrorContext['service'],
                 operation: 'health_check',
                 timestamp: Date.now(),
-                metadata: { healthCheck: true, serviceDetails: serviceStatus }
+                metadata: { healthCheck: true, serviceDetails: serviceStatus },
               };
 
               await this.handleError(context);
@@ -871,21 +878,32 @@ class ProductionErrorRecoverySystem {
 
   private hasActiveIncidentForService(serviceName: string): boolean {
     return Array.from(this.activeIncidents.values()).some(
-      incident => incident.affectedServices.includes(serviceName) && 
-                 incident.status !== 'resolved'
+      (incident) =>
+        incident.affectedServices.includes(serviceName) && incident.status !== 'resolved',
     );
   }
 
   private async sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // Placeholder methods for actual implementations
-  private async logRetryAttempt(context: ErrorContext, attempt: number, error: Error): Promise<void> {
-    console.log(`Retry attempt ${attempt} for ${context.service}:${context.operation}:`, error.message);
+  private async logRetryAttempt(
+    context: ErrorContext,
+    attempt: number,
+    error: Error,
+  ): Promise<void> {
+    console.log(
+      `Retry attempt ${attempt} for ${context.service}:${context.operation}:`,
+      error.message,
+    );
   }
 
-  private async logManualSyncStart(correlationId: string, syncType: string, options: any): Promise<void> {
+  private async logManualSyncStart(
+    correlationId: string,
+    syncType: string,
+    options: any,
+  ): Promise<void> {
     console.log(`Starting manual sync: ${syncType}`, { correlationId, options });
   }
 
@@ -897,7 +915,12 @@ class ProductionErrorRecoverySystem {
     console.error(`Manual sync failed`, { correlationId, error: error.message });
   }
 
-  private async logRollbackStart(correlationId: string, type: string, checkpointId: string, options: any): Promise<void> {
+  private async logRollbackStart(
+    correlationId: string,
+    type: string,
+    checkpointId: string,
+    options: any,
+  ): Promise<void> {
     console.log(`Starting rollback: ${type}`, { correlationId, checkpointId, options });
   }
 
@@ -940,7 +963,9 @@ class ProductionErrorRecoverySystem {
     // This would rollback database state
   }
 
-  private async validateDataIntegrity(): Promise<Array<{ check: string; passed: boolean; details?: string }>> {
+  private async validateDataIntegrity(): Promise<
+    Array<{ check: string; passed: boolean; details?: string }>
+  > {
     // This would validate data integrity
     return [];
   }
@@ -949,17 +974,19 @@ class ProductionErrorRecoverySystem {
     // This would check individual service health
     return {
       status: 'healthy',
-      lastCheck: Date.now()
+      lastCheck: Date.now(),
     };
   }
 
   private async getSystemMetrics(): Promise<SystemHealthStatus['systemMetrics']> {
     return {
       totalRequests: this.metrics.totalErrors + this.metrics.successfulRecoveries,
-      errorRate: this.metrics.totalErrors / Math.max(1, this.metrics.totalErrors + this.metrics.successfulRecoveries),
+      errorRate:
+        this.metrics.totalErrors /
+        Math.max(1, this.metrics.totalErrors + this.metrics.successfulRecoveries),
       averageLatency: this.metrics.averageRecoveryTime,
       circuitBreakerTrips: 0, // Would get from circuit breaker
-      recoveryActionsExecuted: this.metrics.successfulRecoveries + this.metrics.failedRecoveries
+      recoveryActionsExecuted: this.metrics.successfulRecoveries + this.metrics.failedRecoveries,
     };
   }
 
@@ -989,12 +1016,12 @@ class ProductionErrorRecoverySystem {
       timestamp: Date.now(),
       action: 'Incident resolved',
       actor: 'operator',
-      result: resolution
+      result: resolution,
     });
 
     await this.persistIncident(incident);
     await this.sendIncidentAlert(incident, 'resolved');
-    
+
     return true;
   }
 
@@ -1015,14 +1042,10 @@ export const errorRecoverySystem = ProductionErrorRecoverySystem.getInstance();
 export const handleProductionError = (context: ErrorContext) =>
   errorRecoverySystem.handleError(context);
 
-export const executeRetryWithBackoff = <T>(
-  operation: () => Promise<T>,
-  context: ErrorContext
-) => errorRecoverySystem.executeRetryWithBackoff(operation, context);
+export const executeRetryWithBackoff = <T>(operation: () => Promise<T>, context: ErrorContext) =>
+  errorRecoverySystem.executeRetryWithBackoff(operation, context);
 
-export const createProductionIncident = (
-  context: ErrorContext,
-  recoveryResult?: RecoveryResult
-) => errorRecoverySystem.createIncident(context, recoveryResult);
+export const createProductionIncident = (context: ErrorContext, recoveryResult?: RecoveryResult) =>
+  errorRecoverySystem.createIncident(context, recoveryResult);
 
 export const getSystemHealth = () => errorRecoverySystem.getSystemHealthStatus();

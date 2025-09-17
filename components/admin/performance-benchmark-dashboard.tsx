@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,13 +8,12 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Play, 
-  Square, 
-  RefreshCw, 
-  Activity, 
-  Zap, 
-  Users, 
+import {
+  Play,
+  RefreshCw,
+  Activity,
+  Zap,
+  Users,
   Database,
   Network,
   CheckCircle,
@@ -22,7 +21,7 @@ import {
   AlertTriangle,
   TrendingUp,
   BarChart3,
-  Monitor
+  Monitor,
 } from 'lucide-react';
 
 interface BenchmarkStatus {
@@ -42,14 +41,14 @@ interface BenchmarkStatus {
 
 interface BenchmarkResult {
   success: boolean;
-  report?: any;
-  analysis?: any;
-  insights?: any;
-  concurrencyAnalysis?: any;
-  loadAnalysis?: any;
-  resilienceAnalysis?: any;
-  executiveSummary?: any;
-  metadata?: any;
+  report?: Record<string, unknown>;
+  analysis?: Record<string, unknown>;
+  insights?: Record<string, unknown>;
+  concurrencyAnalysis?: Record<string, unknown>;
+  loadAnalysis?: Record<string, unknown>;
+  resilienceAnalysis?: Record<string, unknown>;
+  executiveSummary?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   error?: string;
 }
 
@@ -91,34 +90,44 @@ export function PerformanceBenchmarkDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [config, setConfig] = useState<TestConfiguration>({
+  const [config, _setConfig] = useState<TestConfiguration>({
     redisVsClerk: {
       regions: ['us-east-1', 'us-west-2', 'eu-west-1'],
-      iterations: 100
+      iterations: 100,
     },
     cacheHitRatio: {
       patterns: [
         { name: 'Random Access', userCount: 100, operationsPerUser: 50, accessPattern: 'random' },
-        { name: 'Hotspot (80/20)', userCount: 100, operationsPerUser: 50, accessPattern: 'hotspot' },
-        { name: 'Realistic Pattern', userCount: 200, operationsPerUser: 25, accessPattern: 'realistic' }
-      ]
+        {
+          name: 'Hotspot (80/20)',
+          userCount: 100,
+          operationsPerUser: 50,
+          accessPattern: 'hotspot',
+        },
+        {
+          name: 'Realistic Pattern',
+          userCount: 200,
+          operationsPerUser: 25,
+          accessPattern: 'realistic',
+        },
+      ],
     },
     sub30ms: {
       sampleSize: 1000,
       operations: ['redis_lookup', 'cache_hit', 'hybrid_auth'],
-      strictMode: false
+      strictMode: false,
     },
     concurrentUsers: {
       concurrentUsers: 50,
       operationsPerUser: 20,
       testDuration: 60000,
-      raceConditionDetection: true
+      raceConditionDetection: true,
     },
     loadTest: {
       concurrentUsers: 100,
       duration: 60000,
-      rampUpTime: 30000
-    }
+      rampUpTime: 30000,
+    },
   });
 
   // Fetch benchmark status
@@ -135,7 +144,7 @@ export function PerformanceBenchmarkDashboard() {
   }, []);
 
   // Run benchmark test
-  const runBenchmark = async (testType: string, endpoint: string, testConfig?: any) => {
+  const runBenchmark = async (testType: string, endpoint: string, testConfig?: Record<string, unknown>) => {
     setActiveTest(testType);
     setLoading(true);
     setError(null);
@@ -151,16 +160,18 @@ export function PerformanceBenchmarkDashboard() {
 
       const result = await response.json();
 
-      setTestResults(prev => ({
+      setTestResults((prev) => ({
         ...prev,
-        [testType]: result
+        [testType]: result,
       }));
-
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Unknown error occurred');
-      setTestResults(prev => ({
+      setTestResults((prev) => ({
         ...prev,
-        [testType]: { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+        [testType]: {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
       }));
     } finally {
       setActiveTest(null);
@@ -178,20 +189,27 @@ export function PerformanceBenchmarkDashboard() {
 
   const getBenchmarkIcon = (testType: string) => {
     switch (testType) {
-      case 'redisVsClerk': return <Database className="w-5 h-5" />;
-      case 'cacheHitRatio': return <Activity className="w-5 h-5" />;
-      case 'sub30ms': return <Zap className="w-5 h-5" />;
-      case 'concurrentUsers': return <Users className="w-5 h-5" />;
-      case 'loadTest': return <TrendingUp className="w-5 h-5" />;
-      case 'networkFailures': return <Network className="w-5 h-5" />;
-      default: return <BarChart3 className="w-5 h-5" />;
+      case 'redisVsClerk':
+        return <Database className="h-5 w-5" />;
+      case 'cacheHitRatio':
+        return <Activity className="h-5 w-5" />;
+      case 'sub30ms':
+        return <Zap className="h-5 w-5" />;
+      case 'concurrentUsers':
+        return <Users className="h-5 w-5" />;
+      case 'loadTest':
+        return <TrendingUp className="h-5 w-5" />;
+      case 'networkFailures':
+        return <Network className="h-5 w-5" />;
+      default:
+        return <BarChart3 className="h-5 w-5" />;
     }
   };
 
   const getResultStatus = (result?: BenchmarkResult) => {
     if (!result) return null;
-    if (!result.success) return <XCircle className="w-4 h-4 text-red-500" />;
-    return <CheckCircle className="w-4 h-4 text-green-500" />;
+    if (!result.success) return <XCircle className="h-4 w-4 text-red-500" />;
+    return <CheckCircle className="h-4 w-4 text-green-500" />;
   };
 
   const formatDuration = (ms: number) => {
@@ -211,7 +229,7 @@ export function PerformanceBenchmarkDashboard() {
           </p>
         </div>
         <Button onClick={fetchStatus} variant="outline" disabled={loading}>
-          <RefreshCw className="w-4 h-4 mr-2" />
+          <RefreshCw className="mr-2 h-4 w-4" />
           Refresh Status
         </Button>
       </div>
@@ -220,51 +238,51 @@ export function PerformanceBenchmarkDashboard() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Monitor className="w-5 h-5" />
+            <Monitor className="h-5 w-5" />
             System Status
           </CardTitle>
         </CardHeader>
         <CardContent>
           {status ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="bg-muted flex items-center justify-between rounded-lg p-3">
                 <div>
                   <p className="text-sm font-medium">Tests Running</p>
-                  <p className="text-2xl font-bold">
-                    {status.isRunning ? '1' : '0'}
-                  </p>
+                  <p className="text-2xl font-bold">{status.isRunning ? '1' : '0'}</p>
                 </div>
-                <div className={`w-3 h-3 rounded-full ${status.isRunning ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
+                <div
+                  className={`h-3 w-3 rounded-full ${status.isRunning ? 'animate-pulse bg-green-500' : 'bg-gray-300'}`}
+                />
               </div>
-              
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+
+              <div className="bg-muted flex items-center justify-between rounded-lg p-3">
                 <div>
                   <p className="text-sm font-medium">Total Benchmarks</p>
                   <p className="text-2xl font-bold">{status.totalBenchmarks}</p>
                 </div>
-                <Activity className="w-6 h-6 text-blue-500" />
+                <Activity className="h-6 w-6 text-blue-500" />
               </div>
-              
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+
+              <div className="bg-muted flex items-center justify-between rounded-lg p-3">
                 <div>
                   <p className="text-sm font-medium">Last Hour Activity</p>
                   <p className="text-2xl font-bold">{status.recentActivity.lastHour}</p>
                 </div>
-                <TrendingUp className="w-6 h-6 text-green-500" />
+                <TrendingUp className="h-6 w-6 text-green-500" />
               </div>
-              
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+
+              <div className="bg-muted flex items-center justify-between rounded-lg p-3">
                 <div>
                   <p className="text-sm font-medium">Avg Response Time</p>
                   <p className="text-2xl font-bold">
                     {status.recentActivity.averageResponseTime.toFixed(1)}ms
                   </p>
                 </div>
-                <Zap className="w-6 h-6 text-yellow-500" />
+                <Zap className="h-6 w-6 text-yellow-500" />
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               {[...Array(4)].map((_, i) => (
                 <Skeleton key={i} className="h-16 rounded-lg" />
               ))}
@@ -280,7 +298,11 @@ export function PerformanceBenchmarkDashboard() {
               <Badge variant={status.systemHealth.clerk === 'healthy' ? 'default' : 'destructive'}>
                 Clerk: {status.systemHealth.clerk}
               </Badge>
-              <Badge variant={status.systemHealth.circuitBreaker === 'closed' ? 'default' : 'destructive'}>
+              <Badge
+                variant={
+                  status.systemHealth.circuitBreaker === 'closed' ? 'default' : 'destructive'
+                }
+              >
                 Circuit Breaker: {status.systemHealth.circuitBreaker}
               </Badge>
             </div>
@@ -291,7 +313,7 @@ export function PerformanceBenchmarkDashboard() {
       {/* Error Display */}
       {error && (
         <Alert variant="destructive">
-          <AlertTriangle className="w-4 h-4" />
+          <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Test Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -306,7 +328,6 @@ export function PerformanceBenchmarkDashboard() {
 
         <TabsContent value="individual">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            
             {/* Redis vs Clerk Benchmark */}
             <Card>
               <CardHeader>
@@ -315,27 +336,27 @@ export function PerformanceBenchmarkDashboard() {
                   Redis vs Clerk
                   {getResultStatus(testResults.redisVsClerk)}
                 </CardTitle>
-                <CardDescription>
-                  Compare response times across regions
-                </CardDescription>
+                <CardDescription>Compare response times across regions</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <Button
-                    onClick={() => runBenchmark('redisVsClerk', 'redis-vs-clerk', config.redisVsClerk)}
+                    onClick={() =>
+                      runBenchmark('redisVsClerk', 'redis-vs-clerk', config.redisVsClerk)
+                    }
                     disabled={loading || activeTest !== null}
                     className="w-full"
                   >
                     {activeTest === 'redisVsClerk' ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="w-4 h-4 mr-2" />
+                      <Play className="mr-2 h-4 w-4" />
                     )}
                     Run Benchmark
                   </Button>
-                  
+
                   {testResults.redisVsClerk?.success && (
-                    <div className="text-sm space-y-2">
+                    <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span>Median Response:</span>
                         <span className="font-mono">
@@ -362,36 +383,39 @@ export function PerformanceBenchmarkDashboard() {
                   Cache Hit Ratio
                   {getResultStatus(testResults.cacheHitRatio)}
                 </CardTitle>
-                <CardDescription>
-                  Validate cache performance patterns
-                </CardDescription>
+                <CardDescription>Validate cache performance patterns</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <Button
-                    onClick={() => runBenchmark('cacheHitRatio', 'cache-hit-ratio', config.cacheHitRatio)}
+                    onClick={() =>
+                      runBenchmark('cacheHitRatio', 'cache-hit-ratio', config.cacheHitRatio)
+                    }
                     disabled={loading || activeTest !== null}
                     className="w-full"
                   >
                     {activeTest === 'cacheHitRatio' ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="w-4 h-4 mr-2" />
+                      <Play className="mr-2 h-4 w-4" />
                     )}
                     Test Cache
                   </Button>
-                  
+
                   {testResults.cacheHitRatio?.success && (
-                    <div className="text-sm space-y-2">
+                    <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span>Overall Hit Ratio:</span>
                         <span className="font-mono">
-                          {((testResults.cacheHitRatio.analysis?.overallHitRatio || 0) * 100).toFixed(1)}%
+                          {(
+                            (testResults.cacheHitRatio.analysis?.overallHitRatio || 0) * 100
+                          ).toFixed(1)}
+                          %
                         </span>
                       </div>
-                      <Progress 
-                        value={(testResults.cacheHitRatio.analysis?.overallHitRatio || 0) * 100} 
-                        className="h-2" 
+                      <Progress
+                        value={(testResults.cacheHitRatio.analysis?.overallHitRatio || 0) * 100}
+                        className="h-2"
                       />
                     </div>
                   )}
@@ -407,9 +431,7 @@ export function PerformanceBenchmarkDashboard() {
                   Sub-30ms Response
                   {getResultStatus(testResults.sub30ms)}
                 </CardTitle>
-                <CardDescription>
-                  Validate response time claims
-                </CardDescription>
+                <CardDescription>Validate response time claims</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -419,15 +441,15 @@ export function PerformanceBenchmarkDashboard() {
                     className="w-full"
                   >
                     {activeTest === 'sub30ms' ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="w-4 h-4 mr-2" />
+                      <Play className="mr-2 h-4 w-4" />
                     )}
                     Validate Speed
                   </Button>
-                  
+
                   {testResults.sub30ms?.success && (
-                    <div className="text-sm space-y-2">
+                    <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span>Compliance Rate:</span>
                         <span className="font-mono">
@@ -454,27 +476,27 @@ export function PerformanceBenchmarkDashboard() {
                   Concurrent Users
                   {getResultStatus(testResults.concurrentUsers)}
                 </CardTitle>
-                <CardDescription>
-                  Test with race condition detection
-                </CardDescription>
+                <CardDescription>Test with race condition detection</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <Button
-                    onClick={() => runBenchmark('concurrentUsers', 'concurrent-users', config.concurrentUsers)}
+                    onClick={() =>
+                      runBenchmark('concurrentUsers', 'concurrent-users', config.concurrentUsers)
+                    }
                     disabled={loading || activeTest !== null}
                     className="w-full"
                   >
                     {activeTest === 'concurrentUsers' ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="w-4 h-4 mr-2" />
+                      <Play className="mr-2 h-4 w-4" />
                     )}
                     Test Concurrency
                   </Button>
-                  
+
                   {testResults.concurrentUsers?.success && (
-                    <div className="text-sm space-y-2">
+                    <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span>Total Operations:</span>
                         <span className="font-mono">
@@ -484,7 +506,9 @@ export function PerformanceBenchmarkDashboard() {
                       <div className="flex justify-between">
                         <span>Ops/Second:</span>
                         <span className="font-mono">
-                          {testResults.concurrentUsers.concurrencyAnalysis?.operationsPerSecond?.toFixed(1)}
+                          {testResults.concurrentUsers.concurrencyAnalysis?.operationsPerSecond?.toFixed(
+                            1,
+                          )}
                         </span>
                       </div>
                     </div>
@@ -501,9 +525,7 @@ export function PerformanceBenchmarkDashboard() {
                   Load Test
                   {getResultStatus(testResults.loadTest)}
                 </CardTitle>
-                <CardDescription>
-                  Comprehensive system load testing
-                </CardDescription>
+                <CardDescription>Comprehensive system load testing</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -513,28 +535,34 @@ export function PerformanceBenchmarkDashboard() {
                     className="w-full"
                   >
                     {activeTest === 'loadTest' ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="w-4 h-4 mr-2" />
+                      <Play className="mr-2 h-4 w-4" />
                     )}
                     Run Load Test
                   </Button>
-                  
+
                   {testResults.loadTest?.success && (
-                    <div className="text-sm space-y-2">
+                    <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span>Peak Throughput:</span>
                         <span className="font-mono">
-                          {testResults.loadTest.loadAnalysis?.peakPerformance?.sustainedThroughput?.toFixed(1)} ops/s
+                          {testResults.loadTest.loadAnalysis?.peakPerformance?.sustainedThroughput?.toFixed(
+                            1,
+                          )}{' '}
+                          ops/s
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span>System Stability:</span>
-                        <Badge variant={
-                          testResults.loadTest.loadAnalysis?.peakPerformance?.systemStability === 'stable' 
-                            ? 'default' 
-                            : 'destructive'
-                        }>
+                        <Badge
+                          variant={
+                            testResults.loadTest.loadAnalysis?.peakPerformance?.systemStability ===
+                            'stable'
+                              ? 'default'
+                              : 'destructive'
+                          }
+                        >
                           {testResults.loadTest.loadAnalysis?.peakPerformance?.systemStability}
                         </Badge>
                       </div>
@@ -552,9 +580,7 @@ export function PerformanceBenchmarkDashboard() {
                   Network Failures
                   {getResultStatus(testResults.networkFailures)}
                 </CardTitle>
-                <CardDescription>
-                  Simulate failures and test recovery
-                </CardDescription>
+                <CardDescription>Simulate failures and test recovery</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -565,15 +591,15 @@ export function PerformanceBenchmarkDashboard() {
                     variant="destructive"
                   >
                     {activeTest === 'networkFailures' ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="w-4 h-4 mr-2" />
+                      <Play className="mr-2 h-4 w-4" />
                     )}
                     Simulate Failures
                   </Button>
-                  
+
                   {testResults.networkFailures?.success && (
-                    <div className="text-sm space-y-2">
+                    <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span>Failure Scenarios:</span>
                         <span className="font-mono">
@@ -583,7 +609,10 @@ export function PerformanceBenchmarkDashboard() {
                       <div className="flex justify-between">
                         <span>Avg Recovery Time:</span>
                         <span className="font-mono">
-                          {testResults.networkFailures.resilienceAnalysis?.averageRecoveryTime?.toFixed(2)}ms
+                          {testResults.networkFailures.resilienceAnalysis?.averageRecoveryTime?.toFixed(
+                            2,
+                          )}
+                          ms
                         </span>
                       </div>
                     </div>
@@ -591,7 +620,6 @@ export function PerformanceBenchmarkDashboard() {
                 </div>
               </CardContent>
             </Card>
-
           </div>
         </TabsContent>
 
@@ -599,7 +627,7 @@ export function PerformanceBenchmarkDashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
+                <BarChart3 className="h-5 w-5" />
                 Full Benchmark Suite
                 {getResultStatus(testResults.fullSuite)}
               </CardTitle>
@@ -610,18 +638,20 @@ export function PerformanceBenchmarkDashboard() {
             <CardContent>
               <div className="space-y-4">
                 <Button
-                  onClick={() => runBenchmark('fullSuite', 'full-suite', {
-                    includeLongRunningTests: true,
-                    skipNetworkFailureTests: false
-                  })}
+                  onClick={() =>
+                    runBenchmark('fullSuite', 'full-suite', {
+                      includeLongRunningTests: true,
+                      skipNetworkFailureTests: false,
+                    })
+                  }
                   disabled={loading || activeTest !== null}
                   className="w-full"
                   size="lg"
                 >
                   {activeTest === 'fullSuite' ? (
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Play className="w-4 h-4 mr-2" />
+                    <Play className="mr-2 h-4 w-4" />
                   )}
                   Run Full Suite
                 </Button>
@@ -629,14 +659,14 @@ export function PerformanceBenchmarkDashboard() {
                 {testResults.fullSuite?.success && (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-muted rounded-lg">
+                      <div className="bg-muted rounded-lg p-4">
                         <h4 className="font-medium">Overall Score</h4>
                         <div className="text-2xl font-bold">
                           {testResults.fullSuite.executiveSummary?.overallScore}/100
                         </div>
                       </div>
-                      
-                      <div className="p-4 bg-muted rounded-lg">
+
+                      <div className="bg-muted rounded-lg p-4">
                         <h4 className="font-medium">Total Duration</h4>
                         <div className="text-2xl font-bold">
                           {formatDuration(testResults.fullSuite.metadata?.totalTestDuration || 0)}
@@ -645,24 +675,34 @@ export function PerformanceBenchmarkDashboard() {
                     </div>
 
                     <div>
-                      <h4 className="font-medium mb-2">Key Findings</h4>
-                      <ul className="text-sm space-y-1">
-                        {testResults.fullSuite.executiveSummary?.keyFindings?.map((finding: string, index: number) => (
-                          <li key={index} className="flex items-center gap-2">
-                            <div className="w-1 h-1 bg-current rounded-full" />
-                            {finding}
-                          </li>
-                        ))}
+                      <h4 className="mb-2 font-medium">Key Findings</h4>
+                      <ul className="space-y-1 text-sm">
+                        {testResults.fullSuite.executiveSummary?.keyFindings?.map(
+                          (finding: string, index: number) => (
+                            <li key={index} className="flex items-center gap-2">
+                              <div className="h-1 w-1 rounded-full bg-current" />
+                              {finding}
+                            </li>
+                          ),
+                        )}
                       </ul>
                     </div>
 
                     <div>
-                      <h4 className="font-medium mb-2">Risk Assessment</h4>
+                      <h4 className="mb-2 font-medium">Risk Assessment</h4>
                       <div className="flex gap-2">
-                        {Object.entries(testResults.fullSuite.executiveSummary?.riskAssessment || {}).map(([key, value]) => (
-                          <Badge 
+                        {Object.entries(
+                          testResults.fullSuite.executiveSummary?.riskAssessment || {},
+                        ).map(([key, value]) => (
+                          <Badge
                             key={key}
-                            variant={value === 'low' ? 'default' : value === 'medium' ? 'secondary' : 'destructive'}
+                            variant={
+                              value === 'low'
+                                ? 'default'
+                                : value === 'medium'
+                                  ? 'secondary'
+                                  : 'destructive'
+                            }
                           >
                             {key}: {value as string}
                           </Badge>

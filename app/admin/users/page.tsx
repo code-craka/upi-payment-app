@@ -1,80 +1,80 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import { UserTable } from "@/components/user-management/user-table"
-import { CreateUserDialog } from "@/components/user-management/create-user-dialog"
-import { EditUserDialog } from "@/components/user-management/edit-user-dialog"
-import type { User } from "@/lib/types"
-import { useToast } from "@/hooks/use-toast"
+import { useState } from 'react';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
+import { UserTable } from '@/components/user-management/user-table';
+import { CreateUserDialog } from '@/components/user-management/create-user-dialog';
+import { EditUserDialog } from '@/components/user-management/edit-user-dialog';
+import type { User } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function UsersPage() {
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const { toast } = useToast()
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const { toast } = useToast();
 
   const handleCreateUser = () => {
-    setCreateDialogOpen(true)
-  }
+    setCreateDialogOpen(true);
+  };
 
   const handleEditUser = (user: User) => {
-    setSelectedUser(user)
-    setEditDialogOpen(true)
-  }
+    setSelectedUser(user);
+    setEditDialogOpen(true);
+  };
 
   const executeUserAction = async (options: {
-    action: () => Promise<void>
-    successTitle: string
-    successDescription: string
-    errorTitle: string
-    errorDescription: string
+    action: () => Promise<void>;
+    successTitle: string;
+    successDescription: string;
+    errorTitle: string;
+    errorDescription: string;
   }) => {
     try {
-      await options.action()
+      await options.action();
       toast({
         title: options.successTitle,
         description: options.successDescription,
-      })
-    } catch (error) {
+      });
+    } catch {
       toast({
         title: options.errorTitle,
         description: options.errorDescription,
-        variant: "destructive",
-      })
+        variant: 'destructive',
+      });
     }
-  }
+  };
 
   const handleDeleteUser = async (userId: string) => {
     await executeUserAction({
       action: () => new Promise((resolve) => setTimeout(resolve, 500)),
-      successTitle: "User deleted",
+      successTitle: 'User deleted',
       successDescription: `User ${userId} has been successfully removed from the system.`,
-      errorTitle: "Error deleting user",
-      errorDescription: "There was a problem deleting the user. Please try again."
-    })
-  }
+      errorTitle: 'Error deleting user',
+      errorDescription: 'There was a problem deleting the user. Please try again.',
+    });
+  };
 
   const handleChangeRole = async (userId: string, newRole: string) => {
     await executeUserAction({
       action: () => new Promise((resolve) => setTimeout(resolve, 500)),
-      successTitle: "Role updated",
+      successTitle: 'Role updated',
       successDescription: `User role has been changed to ${newRole}.`,
-      errorTitle: "Error updating role",
-      errorDescription: "There was a problem updating the user role. Please try again."
-    })
-  }
+      errorTitle: 'Error updating role',
+      errorDescription: 'There was a problem updating the user role. Please try again.',
+    });
+  };
 
   const handleUserCreated = (userData: User) => {
     // Handle the created user data
-    console.log("User created:", userData)
-  }
+    console.warn('User created:', userData);
+  };
 
   const handleUserUpdated = (userData: User) => {
     // Handle the updated user data
-    console.log("User updated:", userData)
-  }
+    console.warn('User updated:', userData);
+  };
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
@@ -91,7 +91,11 @@ export default function UsersPage() {
         onChangeRole={handleChangeRole}
       />
 
-      <CreateUserDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} onUserCreated={handleUserCreated} />
+      <CreateUserDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onUserCreated={handleUserCreated}
+      />
 
       <EditUserDialog
         open={editDialogOpen}
@@ -100,5 +104,5 @@ export default function UsersPage() {
         onUserUpdated={handleUserUpdated}
       />
     </div>
-  )
+  );
 }

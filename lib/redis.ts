@@ -59,7 +59,7 @@ export interface RoleStats {
 export async function cacheUserRole(
   userId: string,
   role: string,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
 ): Promise<void> {
   try {
     // Atomic role caching with version increment using Lua script
@@ -93,14 +93,14 @@ export async function cacheUserRole(
         [
           REDIS_KEYS.USER_ROLE(userId),
           REDIS_KEYS.USER_ROLE_VERSION(userId),
-          REDIS_KEYS.SESSION_SYNC(userId)
+          REDIS_KEYS.SESSION_SYNC(userId),
         ],
         [
           JSON.stringify({ ...sessionData, version: 0 }),
           ROLE_CACHE_TTL.toString(),
-          Date.now().toString()
-        ]
-      )
+          Date.now().toString(),
+        ],
+      ),
     );
 
     // Log successful cache operation (server-side only)
@@ -123,9 +123,7 @@ export async function cacheUserRole(
  */
 export async function getCachedUserRole(userId: string): Promise<RedisSessionData | null> {
   try {
-    const cached = await redisCircuitBreaker.execute(() =>
-      redis.get(REDIS_KEYS.USER_ROLE(userId))
-    );
+    const cached = await redisCircuitBreaker.execute(() => redis.get(REDIS_KEYS.USER_ROLE(userId)));
 
     if (!cached) {
       return null;
@@ -184,12 +182,12 @@ export async function invalidateUserRole(userId: string): Promise<void> {
         luaScript,
         [
           REDIS_KEYS.USER_ROLE(userId),
-          REDIS_KEYS.SESSION_SYNC(userId), 
+          REDIS_KEYS.SESSION_SYNC(userId),
           REDIS_KEYS.ROLE_CACHE(userId),
-          REDIS_KEYS.INVALIDATION_LOG(userId)
+          REDIS_KEYS.INVALIDATION_LOG(userId),
         ],
-        [Date.now().toString()]
-      )
+        [Date.now().toString()],
+      ),
     );
 
     if (process.env.NODE_ENV === 'development') {
@@ -210,7 +208,7 @@ export async function invalidateUserRole(userId: string): Promise<void> {
 export async function syncUserRole(
   userId: string,
   clerkRole: string,
-  force = false
+  force = false,
 ): Promise<boolean> {
   try {
     // Check if recently synced (unless forced)
@@ -219,7 +217,7 @@ export async function syncUserRole(
       if (lastSync) {
         const syncTime = parseInt(lastSync as string);
         const timeDiff = Date.now() - syncTime;
-        
+
         // Skip if synced within last 10 seconds
         if (timeDiff < 10000) {
           return true;
@@ -253,13 +251,15 @@ export async function updateRoleStats(roleChange: {
   try {
     // Get current stats
     const statsData = await redis.get(REDIS_KEYS.ROLE_STATS);
-    const stats: RoleStats = statsData ? JSON.parse(statsData as string) : {
-      admin: 0,
-      merchant: 0,
-      viewer: 0,
-      total: 0,
-      lastUpdated: 0,
-    };
+    const stats: RoleStats = statsData
+      ? JSON.parse(statsData as string)
+      : {
+          admin: 0,
+          merchant: 0,
+          viewer: 0,
+          total: 0,
+          lastUpdated: 0,
+        };
 
     // Update counts
     if (roleChange.oldRole && ['admin', 'merchant', 'viewer'].includes(roleChange.oldRole)) {
@@ -278,7 +278,7 @@ export async function updateRoleStats(roleChange: {
     await redis.setex(
       REDIS_KEYS.ROLE_STATS,
       300, // 5 minutes TTL
-      JSON.stringify(stats)
+      JSON.stringify(stats),
     );
 
     if (process.env.NODE_ENV === 'development') {
@@ -297,7 +297,7 @@ export async function updateRoleStats(roleChange: {
 export async function getRoleStats(): Promise<RoleStats | null> {
   try {
     const statsData = await redis.get(REDIS_KEYS.ROLE_STATS);
-    
+
     if (!statsData) {
       return null;
     }
@@ -373,16 +373,14 @@ export async function batchInvalidateRoles(userIds: string[]): Promise<void> {
     `;
 
     const deletedCount = await redisCircuitBreaker.execute(() =>
-      redis.eval(
-        luaScript,
-        [],
-        [...userIds, Date.now().toString()]
-      )
+      redis.eval(luaScript, [], [...userIds, Date.now().toString()]),
     );
 
     if (process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console
-      console.log(`[Redis] Batch invalidated ${deletedCount} cache keys for ${userIds.length} users`);
+      console.log(
+        `[Redis] Batch invalidated ${deletedCount} cache keys for ${userIds.length} users`,
+      );
     }
   } catch (error) {
     console.error('[Redis] Failed to batch invalidate roles:', error);

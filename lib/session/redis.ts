@@ -1,16 +1,16 @@
-import Redis from 'ioredis'
-import { SessionData, SessionDataSchema, UserRole, type SessionResponse } from '@/lib/types'
-import { serverLogger } from '@/lib/utils/server-logger'
-import { getPermissionsForRole } from '@/lib/types/roles'
+import Redis from 'ioredis';
+import { SessionData, SessionDataSchema, UserRole, type SessionResponse } from '@/lib/types';
+import { serverLogger } from '@/lib/utils/server-logger';
+import { getPermissionsForRole } from '@/lib/types/roles';
 
 // Redis client singleton
-let redis: Redis | null = null
+let redis: Redis | null = null;
 
 function getRedisClient(): Redis {
   if (!redis) {
-    const redisHost = process.env.REDIS_HOST || 'localhost'
-    const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10)
-    const redisPassword = process.env.REDIS_PASSWORD
+    const redisHost = process.env.REDIS_HOST || 'localhost';
+    const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+    const redisPassword = process.env.REDIS_PASSWORD;
 
     redis = new Redis({
       host: redisHost,
@@ -22,30 +22,30 @@ function getRedisClient(): Redis {
       // Configure connection timeout
       connectTimeout: 5000,
       commandTimeout: 5000,
-    })
+    });
 
     // Handle connection events
     redis.on('ready', () => {
-      serverLogger.info('Redis connection established successfully')
-    })
+      serverLogger.info('Redis connection established successfully');
+    });
 
     redis.on('error', (error: Error) => {
-      serverLogger.error('Redis connection error', error)
-    })
+      serverLogger.error('Redis connection error', error);
+    });
   }
-  
-  return redis
+
+  return redis;
 }
 
 // Session key prefix
-const SESSION_PREFIX = 'user_session:'
-const SESSION_TTL = 60 * 60 * 24 * 30 // 30 days in seconds
+const SESSION_PREFIX = 'user_session:';
+const SESSION_TTL = 60 * 60 * 24 * 30; // 30 days in seconds
 
 /**
  * Generate Redis key for user session
  */
 function getSessionKey(userId: string): string {
-  return `${SESSION_PREFIX}${userId}`
+  return `${SESSION_PREFIX}${userId}`;
 }
 
 /**
@@ -56,48 +56,52 @@ function getSessionKey(userId: string): string {
  */
 export async function getSession(userId: string, refreshTTL = false): Promise<SessionData | null> {
   try {
-    const client = getRedisClient()
-    const sessionKey = getSessionKey(userId)
-    
-    const sessionData = await client.get(sessionKey)
-    
+    const client = getRedisClient();
+    const sessionKey = getSessionKey(userId);
+
+    const sessionData = await client.get(sessionKey);
+
     if (!sessionData) {
-      serverLogger.debug('No session found in Redis', { userId })
-      return null
+      serverLogger.debug('No session found in Redis', { userId });
+      return null;
     }
 
     // Parse and validate session data
-    const parsed = JSON.parse(sessionData)
+    const parsed = JSON.parse(sessionData);
     // Convert updatedAt string back to Date
     if (parsed.updatedAt) {
-      parsed.updatedAt = new Date(parsed.updatedAt)
+      parsed.updatedAt = new Date(parsed.updatedAt);
     }
-    
-    const validated = SessionDataSchema.parse(parsed)
-    
+
+    const validated = SessionDataSchema.parse(parsed);
+
     // Auto-refresh TTL if session exists and flag is set
     if (refreshTTL) {
       try {
-        await client.expire(sessionKey, SESSION_TTL)
-        serverLogger.debug('Session TTL auto-refreshed on access', { userId, ttl: SESSION_TTL })
+        await client.expire(sessionKey, SESSION_TTL);
+        serverLogger.debug('Session TTL auto-refreshed on access', { userId, ttl: SESSION_TTL });
       } catch (refreshError) {
         // Don't fail the whole operation if TTL refresh fails
-        serverLogger.warn('Failed to refresh TTL on session access', { userId, error: refreshError })
+        serverLogger.warn('Failed to refresh TTL on session access', {
+          userId,
+          error: refreshError,
+        });
       }
     }
-    
-    serverLogger.debug('Session retrieved from Redis', { 
-      userId, 
+
+    serverLogger.debug('Session retrieved from Redis', {
+      userId,
       role: validated.role,
       updatedAt: validated.updatedAt,
-      ttlRefreshed: refreshTTL
-    })
-    
-    return validated
+      ttlRefreshed: refreshTTL,
+    });
 
+    return validated;
   } catch (error) {
-    serverLogger.error('Failed to get session from Redis - cluster may be unavailable', error, { userId })
-    return null
+    serverLogger.error('Failed to get session from Redis - cluster may be unavailable', error, {
+      userId,
+    });
+    return null;
   }
 }
 
@@ -108,54 +112,49 @@ export async function getSession(userId: string, refreshTTL = false): Promise<Se
  * @returns Promise<boolean> - Success status
  */
 export async function setSession(
-  userId: string, 
-  data: { role: UserRole; permissions?: string[] }
+  userId: string,
+  data: { role: UserRole; permissions?: string[] },
 ): Promise<boolean> {
   try {
-    const client = getRedisClient()
-    const sessionKey = getSessionKey(userId)
-    
+    const client = getRedisClient();
+    const sessionKey = getSessionKey(userId);
+
     // Get default permissions for role, then merge with any custom permissions
-    const defaultPermissions = Array.from(getPermissionsForRole(data.role))
-    const customPermissions = data.permissions || []
-    const allPermissions = Array.from(new Set([...defaultPermissions, ...customPermissions]))
-    
+    const defaultPermissions = Array.from(getPermissionsForRole(data.role));
+    const customPermissions = data.permissions || [];
+    const allPermissions = Array.from(new Set([...defaultPermissions, ...customPermissions]));
+
     const sessionData: SessionData = {
       role: data.role,
       permissions: allPermissions,
       updatedAt: new Date(),
-    }
+    };
 
     // Validate data before storing
-    const validated = SessionDataSchema.parse(sessionData)
-    
+    const validated = SessionDataSchema.parse(sessionData);
+
     // Store in Redis with TTL
-    const result = await client.setex(
-      sessionKey, 
-      SESSION_TTL, 
-      JSON.stringify(validated)
-    )
-    
+    const result = await client.setex(sessionKey, SESSION_TTL, JSON.stringify(validated));
+
     if (result === 'OK') {
-      serverLogger.info('Session updated in Redis with role permissions', { 
-        userId, 
-        role: validated.role, 
+      serverLogger.info('Session updated in Redis with role permissions', {
+        userId,
+        role: validated.role,
         permissionCount: validated.permissions?.length || 0,
         defaultPermissionCount: defaultPermissions.length,
         customPermissionCount: customPermissions.length,
-        ttl: SESSION_TTL
-      })
-      return true
+        ttl: SESSION_TTL,
+      });
+      return true;
     }
-    
-    return false
 
+    return false;
   } catch (error) {
-    serverLogger.error('Failed to set session in Redis - cluster may be unavailable', error, { 
-      userId, 
-      role: data.role 
-    })
-    return false
+    serverLogger.error('Failed to set session in Redis - cluster may be unavailable', error, {
+      userId,
+      role: data.role,
+    });
+    return false;
   }
 }
 
@@ -166,22 +165,23 @@ export async function setSession(
  */
 export async function deleteSession(userId: string): Promise<boolean> {
   try {
-    const client = getRedisClient()
-    const sessionKey = getSessionKey(userId)
-    
-    const result = await client.del(sessionKey)
-    
-    if (result === 1) {
-      serverLogger.info('Session deleted from Redis', { userId })
-      return true
-    }
-    
-    serverLogger.warn('Session not found for deletion', { userId })
-    return false
+    const client = getRedisClient();
+    const sessionKey = getSessionKey(userId);
 
+    const result = await client.del(sessionKey);
+
+    if (result === 1) {
+      serverLogger.info('Session deleted from Redis', { userId });
+      return true;
+    }
+
+    serverLogger.warn('Session not found for deletion', { userId });
+    return false;
   } catch (error) {
-    serverLogger.error('Failed to delete session from Redis - cluster may be unavailable', error, { userId })
-    return false
+    serverLogger.error('Failed to delete session from Redis - cluster may be unavailable', error, {
+      userId,
+    });
+    return false;
   }
 }
 
@@ -190,7 +190,7 @@ export async function deleteSession(userId: string): Promise<boolean> {
  * @param userId - User ID
  * @returns Promise<boolean> - Success status
  */
-export const delSession = deleteSession
+export const delSession = deleteSession;
 
 /**
  * Helper function to get session with admin privilege check
@@ -198,8 +198,8 @@ export const delSession = deleteSession
  * @returns Promise<SessionData | null> - Session data or null
  */
 async function getSessionWithAdminCheck(userId: string): Promise<SessionData | null> {
-  const session = await getSession(userId)
-  return session
+  const session = await getSession(userId);
+  return session;
 }
 
 /**
@@ -210,49 +210,53 @@ async function getSessionWithAdminCheck(userId: string): Promise<SessionData | n
  */
 export async function hasRole(userId: string, requiredRole: UserRole): Promise<boolean> {
   try {
-    const session = await getSessionWithAdminCheck(userId)
-    
+    const session = await getSessionWithAdminCheck(userId);
+
     if (!session) {
-      return false
+      return false;
     }
-    
+
     // Admin has access to everything
     if (session.role === 'admin') {
-      return true
+      return true;
     }
-    
-    return session.role === requiredRole
 
+    return session.role === requiredRole;
   } catch (error) {
-    serverLogger.error('Failed to check user role - Redis may be unavailable', error, { userId, requiredRole })
-    return false
+    serverLogger.error('Failed to check user role - Redis may be unavailable', error, {
+      userId,
+      requiredRole,
+    });
+    return false;
   }
 }
 
 /**
  * Check if user has required permission
- * @param userId - User ID  
+ * @param userId - User ID
  * @param requiredPermission - Required permission
  * @returns Promise<boolean> - Whether user has required permission
  */
 export async function hasPermission(userId: string, requiredPermission: string): Promise<boolean> {
   try {
-    const session = await getSessionWithAdminCheck(userId)
-    
+    const session = await getSessionWithAdminCheck(userId);
+
     if (!session) {
-      return false
+      return false;
     }
-    
+
     // Admin has all permissions
     if (session.role === 'admin') {
-      return true
+      return true;
     }
-    
-    return session.permissions?.includes(requiredPermission) ?? false
 
+    return session.permissions?.includes(requiredPermission) ?? false;
   } catch (error) {
-    serverLogger.error('Failed to check user permission - Redis may be unavailable', error, { userId, requiredPermission })
-    return false
+    serverLogger.error('Failed to check user permission - Redis may be unavailable', error, {
+      userId,
+      requiredPermission,
+    });
+    return false;
   }
 }
 
@@ -263,8 +267,8 @@ export async function hasPermission(userId: string, requiredPermission: string):
  */
 export async function getSessionResponse(userId: string): Promise<SessionResponse> {
   try {
-    const session = await getSession(userId)
-    
+    const session = await getSession(userId);
+
     if (!session) {
       return {
         userId,
@@ -272,26 +276,25 @@ export async function getSessionResponse(userId: string): Promise<SessionRespons
         permissions: [],
         updatedAt: null,
         hasSession: false,
-      }
+      };
     }
-    
+
     return {
       userId,
       role: session.role,
       permissions: session.permissions || [],
       updatedAt: session.updatedAt,
       hasSession: true,
-    }
-
+    };
   } catch (error) {
-    serverLogger.error('Failed to get session response', error, { userId })
+    serverLogger.error('Failed to get session response', error, { userId });
     return {
       userId,
       role: null,
       permissions: [],
       updatedAt: null,
       hasSession: false,
-    }
+    };
   }
 }
 
@@ -302,28 +305,27 @@ export async function getSessionResponse(userId: string): Promise<SessionRespons
  */
 export async function refreshSession(userId: string): Promise<boolean> {
   try {
-    const client = getRedisClient()
-    const sessionKey = getSessionKey(userId)
-    
-    // Check if session exists
-    const exists = await client.exists(sessionKey)
-    if (!exists) {
-      return false
-    }
-    
-    // Refresh TTL
-    const result = await client.expire(sessionKey, SESSION_TTL)
-    
-    if (result === 1) {
-      serverLogger.debug('Session TTL refreshed', { userId, ttl: SESSION_TTL })
-      return true
-    }
-    
-    return false
+    const client = getRedisClient();
+    const sessionKey = getSessionKey(userId);
 
+    // Check if session exists
+    const exists = await client.exists(sessionKey);
+    if (!exists) {
+      return false;
+    }
+
+    // Refresh TTL
+    const result = await client.expire(sessionKey, SESSION_TTL);
+
+    if (result === 1) {
+      serverLogger.debug('Session TTL refreshed', { userId, ttl: SESSION_TTL });
+      return true;
+    }
+
+    return false;
   } catch (error) {
-    serverLogger.error('Failed to refresh session TTL', error, { userId })
-    return false
+    serverLogger.error('Failed to refresh session TTL', error, { userId });
+    return false;
   }
 }
 
@@ -333,12 +335,12 @@ export async function refreshSession(userId: string): Promise<boolean> {
  */
 export async function redisHealthCheck(): Promise<boolean> {
   try {
-    const client = getRedisClient()
-    const result = await client.ping()
-    return result === 'PONG'
+    const client = getRedisClient();
+    const result = await client.ping();
+    return result === 'PONG';
   } catch (error) {
-    serverLogger.error('Redis health check failed', error)
-    return false
+    serverLogger.error('Redis health check failed', error);
+    return false;
   }
 }
 
@@ -348,11 +350,11 @@ export async function redisHealthCheck(): Promise<boolean> {
 export async function closeRedisConnection(): Promise<void> {
   try {
     if (redis) {
-      await redis.quit()
-      redis = null
-      serverLogger.info('Redis connection closed')
+      await redis.quit();
+      redis = null;
+      serverLogger.info('Redis connection closed');
     }
   } catch (error) {
-    serverLogger.error('Failed to close Redis connection', error)
+    serverLogger.error('Failed to close Redis connection', error);
   }
 }

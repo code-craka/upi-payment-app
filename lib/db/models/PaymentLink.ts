@@ -1,39 +1,48 @@
-import mongoose, { Schema, type Document } from "mongoose"
+import mongoose, { Schema, type Document, type Model } from 'mongoose';
 
 export interface PaymentLinkDocument extends Document {
-  linkId: string
-  title: string
-  description?: string
-  amount?: number
-  allowCustomAmount: boolean
-  minAmount?: number
-  maxAmount?: number
-  upiId: string
-  createdBy: string
-  isActive: boolean
-  expiresAt?: Date
-  usageLimit?: number
-  usageCount: number
+  linkId: string;
+  title: string;
+  description?: string;
+  amount?: number;
+  allowCustomAmount: boolean;
+  minAmount?: number;
+  maxAmount?: number;
+  upiId: string;
+  createdBy: string;
+  isActive: boolean;
+  expiresAt?: Date;
+  usageLimit?: number;
+  usageCount: number;
   customFields: Array<{
-    name: string
-    type: "text" | "email" | "phone" | "number"
-    required: boolean
-    placeholder?: string
-  }>
+    name: string;
+    type: 'text' | 'email' | 'phone' | 'number';
+    required: boolean;
+    placeholder?: string;
+  }>;
   settings: {
-    collectCustomerInfo: boolean
-    sendEmailReceipt: boolean
-    redirectUrl?: string
-    webhookUrl?: string
-  }
+    collectCustomerInfo: boolean;
+    sendEmailReceipt: boolean;
+    redirectUrl?: string;
+    webhookUrl?: string;
+  };
   stats: {
-    totalOrders: number
-    successfulOrders: number
-    totalAmount: number
-    lastUsedAt?: Date
-  }
-  createdAt: Date
-  updatedAt: Date
+    totalOrders: number;
+    successfulOrders: number;
+    totalAmount: number;
+    lastUsedAt?: Date;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+  // Instance methods
+  isExpired(): boolean;
+  canBeUsed(): boolean;
+  incrementUsage(amount: number, isSuccessful: boolean): Promise<PaymentLinkDocument>;
+}
+
+export interface PaymentLinkModelType extends Model<PaymentLinkDocument> {
+  findByLinkId(linkId: string): Promise<PaymentLinkDocument | null>;
+  findActiveLinks(userId: string): Promise<PaymentLinkDocument[]>;
 }
 
 const PaymentLinkSchema = new Schema<PaymentLinkDocument>(
@@ -151,29 +160,29 @@ PaymentLinkSchema.methods.canBeUsed = function (): boolean {
   return true
 }
 
-PaymentLinkSchema.methods.incrementUsage = function (amount: number, isSuccessful: boolean) {
-  this.usageCount += 1
-  this.stats.totalOrders += 1
-  this.stats.totalAmount += amount
+PaymentLinkSchema.methods.incrementUsage = function (amount: number, isSuccessful: boolean): Promise<PaymentLinkDocument> {
+  this.usageCount += 1;
+  this.stats.totalOrders += 1;
+  this.stats.totalAmount += amount;
   if (isSuccessful) {
-    this.stats.successfulOrders += 1
+    this.stats.successfulOrders += 1;
   }
-  this.stats.lastUsedAt = new Date()
-  return this.save()
-}
+  this.stats.lastUsedAt = new Date();
+  return this.save();
+};
 
-// Static methods
-PaymentLinkSchema.statics.findByLinkId = function (linkId: string) {
-  return this.findOne({ linkId, isActive: true })
-}
+// Static methods with proper return types
+PaymentLinkSchema.statics.findByLinkId = function (linkId: string): Promise<PaymentLinkDocument | null> {
+  return this.findOne({ linkId, isActive: true });
+};
 
-PaymentLinkSchema.statics.findActiveLinks = function (userId: string) {
+PaymentLinkSchema.statics.findActiveLinks = function (userId: string): Promise<PaymentLinkDocument[]> {
   return this.find({
     createdBy: userId,
     isActive: true,
     $or: [{ expiresAt: { $exists: false } }, { expiresAt: { $gt: new Date() } }],
-  }).sort({ createdAt: -1 })
-}
+  }).sort({ createdAt: -1 });
+};
 
-export const PaymentLinkModel =
-  mongoose.models.PaymentLink || mongoose.model<PaymentLinkDocument>("PaymentLink", PaymentLinkSchema)
+export const PaymentLinkModel = (mongoose.models.PaymentLink ||
+  mongoose.model<PaymentLinkDocument>('PaymentLink', PaymentLinkSchema)) as PaymentLinkModelType;

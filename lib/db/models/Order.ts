@@ -1,14 +1,30 @@
-import mongoose, { Schema, type Document } from "mongoose"
-import type { Order } from "@/lib/types"
-import { mongooseSecurityPlugin, MONGOOSE_SECURITY_OPTIONS } from "@/lib/db/security"
+import mongoose, { Schema, type Document, type Model } from 'mongoose';
+import type { Order } from '@/lib/types';
+import { mongooseSecurityPlugin } from '@/lib/db/security';
 
 export interface OrderDocument
-  extends Omit<Order, "id" | "createdAt" | "updatedAt" | "expiresAt" | "verifiedAt">,
+  extends Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'expiresAt' | 'verifiedAt'>,
     Document {
-  createdAt: Date
-  updatedAt: Date
-  expiresAt: Date
-  verifiedAt?: Date
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt: Date;
+  verifiedAt?: Date;
+  // Instance methods
+  isExpired(): boolean;
+  canBeVerified(): boolean;
+}
+
+export interface OrderModelType extends Model<OrderDocument> {
+  findByOrderId(orderId: string): Promise<OrderDocument | null>;
+  findActiveOrders(userId: string): Promise<OrderDocument[]>;
+  findExpiredOrders(): Promise<OrderDocument[]>;
+  getOrderStats(userId?: string): Promise<Array<{
+    _id: string;
+    count: number;
+    totalAmount: number;
+  }>>;
+  getRecentOrders(userId?: string, limit?: number): Promise<OrderDocument[]>;
+  markExpiredOrders(): Promise<number>;
 }
 
 const OrderSchema = new Schema<OrderDocument>(
@@ -37,14 +53,14 @@ const OrderSchema = new Schema<OrderDocument>(
       type: String,
       validate: {
         validator: (v: string) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
-        message: "Invalid email format",
+        message: 'Invalid email format',
       },
     },
     customerPhone: {
       type: String,
       validate: {
         validator: (v: string) => !v || /^[+]?[\d\s-()]{10,15}$/.test(v),
-        message: "Invalid phone format",
+        message: 'Invalid phone format',
       },
     },
     upiId: {
@@ -52,20 +68,20 @@ const OrderSchema = new Schema<OrderDocument>(
       required: true,
       validate: {
         validator: (v: string) => /^[\w.-]+@[\w.-]+$/.test(v),
-        message: "Invalid UPI ID format",
+        message: 'Invalid UPI ID format',
       },
     },
     status: {
       type: String,
-      enum: ["pending", "pending-verification", "completed", "expired", "failed"],
-      default: "pending",
+      enum: ['pending', 'pending-verification', 'completed', 'expired', 'failed'],
+      default: 'pending',
       index: true,
     },
     utrNumber: {
       type: String,
       validate: {
         validator: (v: string) => !v || /^[A-Z0-9]{12}$/.test(v),
-        message: "Invalid UTR format",
+        message: 'Invalid UTR format',
       },
     },
     createdBy: {
@@ -86,91 +102,95 @@ const OrderSchema = new Schema<OrderDocument>(
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
   },
-)
+);
 
 // Indexes for performance
-OrderSchema.index({ createdBy: 1, createdAt: -1 })
-OrderSchema.index({ status: 1, expiresAt: 1 })
-OrderSchema.index({ utrNumber: 1 }, { sparse: true })
+OrderSchema.index({ createdBy: 1, createdAt: -1 });
+OrderSchema.index({ status: 1, expiresAt: 1 });
+OrderSchema.index({ utrNumber: 1 }, { sparse: true });
 
 // Instance methods
 OrderSchema.methods.isExpired = function (): boolean {
-  return new Date() > this.expiresAt && this.status === "pending"
-}
+  return new Date() > this.expiresAt && this.status === 'pending';
+};
 
 OrderSchema.methods.canBeVerified = function (): boolean {
-  return this.status === "pending-verification" && this.utrNumber
-}
+  return this.status === 'pending-verification' && this.utrNumber;
+};
 
-// Static methods
-OrderSchema.statics.findByOrderId = function (orderId: string) {
-  return this.findOne({ orderId })
-}
+// Static methods with proper return types
+OrderSchema.statics.findByOrderId = function (orderId: string): Promise<OrderDocument | null> {
+  return this.findOne({ orderId });
+};
 
-OrderSchema.statics.findActiveOrders = function (userId: string) {
+OrderSchema.statics.findActiveOrders = function (userId: string): Promise<OrderDocument[]> {
   return this.find({
     createdBy: userId,
-    status: { $in: ["pending", "pending-verification"] },
-  }).sort({ createdAt: -1 })
-}
+    status: { $in: ['pending', 'pending-verification'] },
+  }).sort({ createdAt: -1 });
+};
 
-OrderSchema.statics.findExpiredOrders = function () {
+OrderSchema.statics.findExpiredOrders = function (): Promise<OrderDocument[]> {
   return this.find({
-    status: "pending",
+    status: 'pending',
     expiresAt: { $lt: new Date() },
-  })
-}
+  });
+};
 
-OrderSchema.pre("save", function (next) {
+OrderSchema.pre('save', function (next) {
   // Auto-expire orders that are past expiration
-  if (this.status === "pending" && new Date() > this.expiresAt) {
-    this.status = "expired"
+  if (this.status === 'pending' && new Date() > this.expiresAt) {
+    this.status = 'expired';
   }
-  next()
-})
+  next();
+});
 
-OrderSchema.virtual("paymentLink").get(function () {
-  return `/pay/${this.orderId}`
-})
+OrderSchema.virtual('paymentLink').get(function () {
+  return `/pay/${this.orderId}`;
+});
 
-OrderSchema.virtual("timeRemaining").get(function () {
-  if (this.status !== "pending") return 0
-  const now = new Date()
-  const remaining = this.expiresAt.getTime() - now.getTime()
-  return Math.max(0, remaining)
-})
+OrderSchema.virtual('timeRemaining').get(function () {
+  if (this.status !== 'pending') return 0;
+  const now = new Date();
+  const remaining = this.expiresAt.getTime() - now.getTime();
+  return Math.max(0, remaining);
+});
 
-OrderSchema.statics.getOrderStats = function (userId?: string) {
-  const match = userId ? { createdBy: userId } : {}
+OrderSchema.statics.getOrderStats = function (userId?: string): Promise<Array<{
+  _id: string;
+  count: number;
+  totalAmount: number;
+}>> {
+  const match = userId ? { createdBy: userId } : {};
   return this.aggregate([
     { $match: match },
     {
       $group: {
-        _id: "$status",
+        _id: '$status',
         count: { $sum: 1 },
-        totalAmount: { $sum: "$amount" },
+        totalAmount: { $sum: '$amount' },
       },
     },
-  ])
-}
+  ]);
+};
 
-OrderSchema.statics.getRecentOrders = function (userId?: string, limit = 10) {
-  const match = userId ? { createdBy: userId } : {}
-  return this.find(match).sort({ createdAt: -1 }).limit(limit).populate("createdBy", "email name")
-}
+OrderSchema.statics.getRecentOrders = function (userId?: string, limit = 10): Promise<OrderDocument[]> {
+  const match = userId ? { createdBy: userId } : {};
+  return this.find(match).sort({ createdAt: -1 }).limit(limit).populate('createdBy', 'email name');
+};
 
-OrderSchema.statics.markExpiredOrders = async function () {
+OrderSchema.statics.markExpiredOrders = async function (): Promise<number> {
   const result = await this.updateMany(
     {
-      status: "pending",
+      status: 'pending',
       expiresAt: { $lt: new Date() },
     },
-    { status: "expired" },
-  )
-  return result.modifiedCount
-}
+    { status: 'expired' },
+  );
+  return result.modifiedCount;
+};
 
 // Apply security plugin to prevent injection attacks
-OrderSchema.plugin(mongooseSecurityPlugin)
+OrderSchema.plugin(mongooseSecurityPlugin);
 
-export const OrderModel = mongoose.models.Order || mongoose.model<OrderDocument>("Order", OrderSchema)
+export const OrderModel = (mongoose.models.Order || mongoose.model<OrderDocument>('Order', OrderSchema)) as OrderModelType;

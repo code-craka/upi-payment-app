@@ -1,7 +1,7 @@
-import { z } from "zod"
+import { z } from 'zod';
 
-export const UserRoleSchema = z.enum(["admin", "merchant", "viewer"])
-export type UserRole = z.infer<typeof UserRoleSchema>
+export const UserRoleSchema = z.enum(['admin', 'merchant', 'viewer']);
+export type UserRole = z.infer<typeof UserRoleSchema>;
 
 export const SafeUserSchema = z.object({
   id: z.string(),
@@ -11,13 +11,19 @@ export const SafeUserSchema = z.object({
   role: UserRoleSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
-})
+});
 
-export type SafeUser = z.infer<typeof SafeUserSchema>
+export type SafeUser = z.infer<typeof SafeUserSchema>;
 
-export const OrderStatusSchema = z.enum(["pending", "pending-verification", "completed", "expired", "failed"])
+export const OrderStatusSchema = z.enum([
+  'pending',
+  'pending-verification',
+  'completed',
+  'expired',
+  'failed',
+]);
 
-export type OrderStatus = z.infer<typeof OrderStatusSchema>
+export type OrderStatus = z.infer<typeof OrderStatusSchema>;
 
 export const OrderSchema = z.object({
   id: z.string(),
@@ -36,9 +42,9 @@ export const OrderSchema = z.object({
   updatedAt: z.date(),
   verifiedAt: z.date().optional(),
   verifiedBy: z.string().optional(),
-})
+});
 
-export type Order = z.infer<typeof OrderSchema>
+export type Order = z.infer<typeof OrderSchema>;
 
 // Extended Order type for payment pages with additional UI fields
 export const PaymentOrderSchema = OrderSchema.extend({
@@ -46,9 +52,9 @@ export const PaymentOrderSchema = OrderSchema.extend({
   vpa: z.string().optional(),
   upiDeepLink: z.string().optional(),
   utr: z.string().optional(),
-})
+});
 
-export type PaymentOrder = z.infer<typeof PaymentOrderSchema>
+export type PaymentOrder = z.infer<typeof PaymentOrderSchema>;
 
 // Extended Order type for table display with MongoDB _id and UI fields
 export const OrderTableSchema = OrderSchema.extend({
@@ -58,9 +64,9 @@ export const OrderTableSchema = OrderSchema.extend({
   upiDeepLink: z.string().optional(),
   utr: z.string().optional(),
   paymentPageUrl: z.string().optional(),
-})
+});
 
-export type OrderTable = z.infer<typeof OrderTableSchema>
+export type OrderTable = z.infer<typeof OrderTableSchema>;
 
 export const AuditLogSchema = z.object({
   id: z.string(),
@@ -73,9 +79,9 @@ export const AuditLogSchema = z.object({
   userAgent: z.string(),
   metadata: z.record(z.any()).optional(),
   createdAt: z.date(),
-})
+});
 
-export type AuditLog = z.infer<typeof AuditLogSchema>
+export type AuditLog = z.infer<typeof AuditLogSchema>;
 
 export const SettingsSchema = z.object({
   id: z.string(),
@@ -84,74 +90,74 @@ export const SettingsSchema = z.object({
   description: z.string().optional(),
   updatedBy: z.string(),
   updatedAt: z.date(),
-})
+});
 
-export type Settings = z.infer<typeof SettingsSchema>
+export type Settings = z.infer<typeof SettingsSchema>;
 
 // Permission definitions
 export const PERMISSIONS = {
   admin: [
-    "create_user",
-    "delete_user",
-    "view_all_orders",
-    "update_settings",
-    "view_audit_logs",
-    "verify_orders",
-    "manage_roles",
+    'create_user',
+    'delete_user',
+    'view_all_orders',
+    'update_settings',
+    'view_audit_logs',
+    'verify_orders',
+    'manage_roles',
   ],
-  merchant: ["create_order", "view_own_orders", "manage_own_links", "submit_utr"],
-  viewer: ["view_assigned_orders"],
-} as const
+  merchant: ['create_order', 'view_own_orders', 'manage_own_links', 'submit_utr'],
+  viewer: ['view_assigned_orders'],
+} as const;
 
-export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS][number]
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS][number];
 
 export function hasPermission(userRole: UserRole, permission: Permission): boolean {
-  const rolePermissions = PERMISSIONS[userRole] || []
-  return (rolePermissions as readonly Permission[]).includes(permission) || userRole === "admin"
+  const rolePermissions = PERMISSIONS[userRole] || [];
+  return (rolePermissions as readonly Permission[]).includes(permission) || userRole === 'admin';
 }
 
 // Legacy interfaces for backward compatibility
 export interface User {
-  id: string
-  email: string
-  firstName?: string
-  lastName?: string
-  role: "admin" | "merchant" | "viewer"
-  createdAt: Date
-  lastActive?: Date
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  role: 'admin' | 'merchant' | 'viewer';
+  createdAt: Date;
+  lastActive?: Date;
 }
 
 export interface SystemSettings {
-  _id: string
-  timerDuration: number
-  staticUpiId?: string
+  _id: string;
+  timerDuration: number;
+  staticUpiId?: string;
   enabledUpiApps: {
-    gpay: boolean
-    phonepe: boolean
-    paytm: boolean
-    bhim: boolean
-  }
-  updatedBy: string
-  updatedAt: Date
+    gpay: boolean;
+    phonepe: boolean;
+    paytm: boolean;
+    bhim: boolean;
+  };
+  updatedBy: string;
+  updatedAt: Date;
 }
 
 export interface Analytics {
-  totalOrders: number
-  ordersByStatus: Record<string, number>
+  totalOrders: number;
+  ordersByStatus: Record<string, number>;
   userStats: Array<{
-    userId: string
-    userName: string
-    totalLinks: number
-    successfulOrders: number
-    successRate: number
-  }>
+    userId: string;
+    userName: string;
+    totalLinks: number;
+    successfulOrders: number;
+    successRate: number;
+  }>;
   recentActivity: Array<{
-    orderId: string
-    action: string
-    timestamp: Date
-    userId: string
-    userName: string
-  }>
+    orderId: string;
+    action: string;
+    timestamp: Date;
+    userId: string;
+    userName: string;
+  }>;
 }
 
 // Session Management Types
@@ -159,9 +165,9 @@ export const SessionDataSchema = z.object({
   role: UserRoleSchema,
   permissions: z.array(z.string()).optional(),
   updatedAt: z.date(),
-})
+});
 
-export type SessionData = z.infer<typeof SessionDataSchema>
+export type SessionData = z.infer<typeof SessionDataSchema>;
 
 export const SessionResponseSchema = z.object({
   userId: z.string(),
@@ -169,9 +175,9 @@ export const SessionResponseSchema = z.object({
   permissions: z.array(z.string()).optional(),
   updatedAt: z.date().nullable(),
   hasSession: z.boolean(),
-})
+});
 
-export type SessionResponse = z.infer<typeof SessionResponseSchema>
+export type SessionResponse = z.infer<typeof SessionResponseSchema>;
 
 // ==========================================
 // HYBRID ROLE MANAGEMENT TYPES
@@ -184,9 +190,9 @@ export const RedisSessionDataSchema = z.object({
   lastSync: z.number(),
   clerkSync: z.boolean(),
   metadata: z.record(z.any()).optional(),
-})
+});
 
-export type RedisSessionData = z.infer<typeof RedisSessionDataSchema>
+export type RedisSessionData = z.infer<typeof RedisSessionDataSchema>;
 
 // Role Statistics for admin dashboard
 export const RoleStatsSchema = z.object({
@@ -195,9 +201,9 @@ export const RoleStatsSchema = z.object({
   viewer: z.number().min(0),
   total: z.number().min(0),
   lastUpdated: z.number(),
-})
+});
 
-export type RoleStats = z.infer<typeof RoleStatsSchema>
+export type RoleStats = z.infer<typeof RoleStatsSchema>;
 
 // Role Sync Status for debugging
 export const RoleSyncStatusSchema = z.object({
@@ -208,9 +214,9 @@ export const RoleSyncStatusSchema = z.object({
   lastClerkSync: z.number().nullable(),
   lastRedisSync: z.number().nullable(),
   syncError: z.string().optional(),
-})
+});
 
-export type RoleSyncStatus = z.infer<typeof RoleSyncStatusSchema>
+export type RoleSyncStatus = z.infer<typeof RoleSyncStatusSchema>;
 
 // Session Hook State
 export const SessionHookStateSchema = z.object({
@@ -220,9 +226,9 @@ export const SessionHookStateSchema = z.object({
   lastRefresh: z.number(),
   isStale: z.boolean(),
   refreshCount: z.number(),
-})
+});
 
-export type SessionHookState = z.infer<typeof SessionHookStateSchema>
+export type SessionHookState = z.infer<typeof SessionHookStateSchema>;
 
 // Admin Bootstrap Request
 export const AdminBootstrapRequestSchema = z.object({
@@ -230,9 +236,9 @@ export const AdminBootstrapRequestSchema = z.object({
   targetRole: UserRoleSchema,
   force: z.boolean().optional().default(false),
   reason: z.string().optional(),
-})
+});
 
-export type AdminBootstrapRequest = z.infer<typeof AdminBootstrapRequestSchema>
+export type AdminBootstrapRequest = z.infer<typeof AdminBootstrapRequestSchema>;
 
 // Admin Bootstrap Response
 export const AdminBootstrapResponseSchema = z.object({
@@ -244,9 +250,9 @@ export const AdminBootstrapResponseSchema = z.object({
   redisUpdated: z.boolean(),
   message: z.string(),
   timestamp: z.number(),
-})
+});
 
-export type AdminBootstrapResponse = z.infer<typeof AdminBootstrapResponseSchema>
+export type AdminBootstrapResponse = z.infer<typeof AdminBootstrapResponseSchema>;
 
 // Debug Session Response
 export const DebugSessionResponseSchema = z.object({
@@ -274,9 +280,9 @@ export const DebugSessionResponseSchema = z.object({
     totalLatency: z.number(),
   }),
   timestamp: z.number(),
-})
+});
 
-export type DebugSessionResponse = z.infer<typeof DebugSessionResponseSchema>
+export type DebugSessionResponse = z.infer<typeof DebugSessionResponseSchema>;
 
 // Role Change Event for audit logging
 export const RoleChangeEventSchema = z.object({
@@ -290,9 +296,9 @@ export const RoleChangeEventSchema = z.object({
   timestamp: z.number(),
   ipAddress: z.string().optional(),
   userAgent: z.string().optional(),
-})
+});
 
-export type RoleChangeEvent = z.infer<typeof RoleChangeEventSchema>
+export type RoleChangeEvent = z.infer<typeof RoleChangeEventSchema>;
 
 // Enhanced Permission Check with Redis support
 export interface HybridPermissionContext {
@@ -310,9 +316,9 @@ export const RedisConnectionStatusSchema = z.object({
   latency: z.number().optional(),
   lastTest: z.number(),
   uptime: z.number().optional(),
-})
+});
 
-export type RedisConnectionStatus = z.infer<typeof RedisConnectionStatusSchema>
+export type RedisConnectionStatus = z.infer<typeof RedisConnectionStatusSchema>;
 
 // Hybrid Auth Context for middleware
 export interface HybridAuthContext {
@@ -326,13 +332,13 @@ export interface HybridAuthContext {
 }
 
 // Role Management Event Types
-export type RoleManagementEvent = 
+export type RoleManagementEvent =
   | { type: 'role_assigned'; payload: RoleChangeEvent }
   | { type: 'role_cached'; payload: { userId: string; role: UserRole; ttl: number } }
   | { type: 'role_invalidated'; payload: { userId: string; reason: string } }
   | { type: 'sync_failed'; payload: { userId: string; error: string } }
   | { type: 'cache_miss'; payload: { userId: string; fallback: 'clerk' | 'default' } }
-  | { type: 'cache_hit'; payload: { userId: string; role: UserRole; age: number } }
+  | { type: 'cache_hit'; payload: { userId: string; role: UserRole; age: number } };
 
 // Hook Options for useSessionRole
 export interface UseSessionRoleOptions {

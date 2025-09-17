@@ -1,10 +1,10 @@
-"use client"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { SystemSettings } from "@/components/settings/system-settings"
-import { SecuritySettings } from "@/components/settings/security-settings"
-import { Settings, Shield } from "lucide-react"
+'use client';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SystemSettings } from '@/components/settings/system-settings';
+import { SecuritySettings } from '@/components/settings/security-settings';
+import { Settings, Shield } from 'lucide-react';
 
 export default function SettingsPage() {
   return (
@@ -16,7 +16,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="system" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="system" className="gap-2">
             <Settings className="h-4 w-4" />
             System
@@ -36,5 +36,5 @@ export default function SettingsPage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

@@ -20,17 +20,21 @@ const DashboardAnalyticsSchema = z.object({
       orderGrowth: z.number(),
       avgOrderValue: z.number(),
       conversionRate: z.number(),
-      monthlyRevenue: z.array(z.object({
-        month: z.string(),
-        revenue: z.number(),
-        orders: z.number()
-      })),
-      topMerchants: z.array(z.object({
-        id: z.string(),
-        name: z.string(),
-        revenue: z.number(),
-        orders: z.number()
-      }))
+      monthlyRevenue: z.array(
+        z.object({
+          month: z.string(),
+          revenue: z.number(),
+          orders: z.number(),
+        }),
+      ),
+      topMerchants: z.array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          revenue: z.number(),
+          orders: z.number(),
+        }),
+      ),
     }),
     userStats: z.object({
       totalUsers: z.number(),
@@ -40,31 +44,33 @@ const DashboardAnalyticsSchema = z.object({
       roleDistribution: z.object({
         admin: z.number(),
         merchant: z.number(),
-        viewer: z.number()
-      })
+        viewer: z.number(),
+      }),
     }),
-    recentActivity: z.array(z.object({
-      id: z.string(),
-      action: z.string(),
-      user: z.string().optional(),
-      timestamp: z.string(),
-      details: z.record(z.unknown()).optional()
-    })),
+    recentActivity: z.array(
+      z.object({
+        id: z.string(),
+        action: z.string(),
+        user: z.string().optional(),
+        timestamp: z.string(),
+        details: z.record(z.unknown()).optional(),
+      }),
+    ),
     systemHealth: z.object({
       status: z.enum(['healthy', 'warning', 'critical']),
       uptime: z.number(),
       responseTime: z.number(),
       errorRate: z.number(),
-      cacheHitRate: z.number()
+      cacheHitRate: z.number(),
     }),
     meta: z.object({
       lastUpdated: z.string(),
       userId: z.string(),
       source: z.enum(['redis', 'clerk']),
       cached: z.boolean(),
-      responseTime: z.number()
-    })
-  })
+      responseTime: z.number(),
+    }),
+  }),
 });
 
 export type DashboardAnalytics = z.infer<typeof DashboardAnalyticsSchema>;
@@ -73,17 +79,14 @@ export type DashboardAnalytics = z.infer<typeof DashboardAnalyticsSchema>;
  * GET /api/dashboard - Unified dashboard analytics endpoint
  * Returns comprehensive dashboard data including analytics, user stats, and recent activity
  */
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(_request: NextRequest): Promise<NextResponse> {
   const startTime = performance.now();
 
   try {
     // 1. Authentication with hybrid role check
     const user = await currentUser();
     if (!user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     // 2. Role validation with Redis cache
@@ -109,7 +112,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!['admin', 'merchant'].includes(userRole)) {
       return NextResponse.json(
         { error: 'Insufficient permissions for dashboard access' },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -117,16 +120,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     await connectDB();
 
     // 5. Parallel data fetching for performance
-    const [
-      analyticsData,
-      userStatsData,
-      recentActivityData,
-      systemHealthData
-    ] = await Promise.all([
+    const [analyticsData, userStatsData, recentActivityData, systemHealthData] = await Promise.all([
       getAnalyticsData(userRole),
       getUserStats(userRole),
       getRecentActivity(userRole, user.id),
-      getSystemHealth()
+      getSystemHealth(),
     ]);
 
     const responseTime = performance.now() - startTime;
@@ -142,8 +140,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         userId: user.id,
         source: authSource,
         cached,
-        responseTime: Math.round(responseTime)
-      }
+        responseTime: Math.round(responseTime),
+      },
     };
 
     // 7. Log performance metrics
@@ -151,25 +149,30 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       console.warn(`[Dashboard API] Slow response: ${responseTime}ms`);
     }
 
-    return NextResponse.json({
-      success: true,
-      data: response
-    }, {
-      status: 200,
-      headers: {
-        'Cache-Control': 'private, max-age=60', // 1 minute cache
-        'X-Response-Time': responseTime.toFixed(2)
-      }
-    });
-
+    return NextResponse.json(
+      {
+        success: true,
+        data: response,
+      },
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'private, max-age=60', // 1 minute cache
+          'X-Response-Time': responseTime.toFixed(2),
+        },
+      },
+    );
   } catch (error) {
     console.error('[Dashboard API] Error:', error);
-    
-    return NextResponse.json({
-      error: 'Failed to fetch dashboard data',
-      details: error instanceof Error ? error.message : 'Unknown error',
-      requestId: crypto.randomUUID()
-    }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch dashboard data',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        requestId: crypto.randomUUID(),
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -181,7 +184,7 @@ async function getAnalyticsData(userRole: string) {
     const now = new Date();
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    
+
     // Base query - admins see all data, merchants see their own
     const baseQuery = userRole === 'admin' ? {} : { merchantId: userRole };
 
@@ -189,29 +192,29 @@ async function getAnalyticsData(userRole: string) {
     const [totalRevenue, totalOrders, completedOrders, pendingOrders] = await Promise.all([
       OrderModel.aggregate([
         { $match: { ...baseQuery, status: 'completed' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
+        { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
       OrderModel.countDocuments(baseQuery),
       OrderModel.countDocuments({ ...baseQuery, status: 'completed' }),
-      OrderModel.countDocuments({ ...baseQuery, status: 'pending' })
+      OrderModel.countDocuments({ ...baseQuery, status: 'pending' }),
     ]);
 
     // Previous month for growth calculation
     const [lastMonthRevenue, lastMonthOrders] = await Promise.all([
       OrderModel.aggregate([
-        { 
-          $match: { 
-            ...baseQuery, 
+        {
+          $match: {
+            ...baseQuery,
             status: 'completed',
-            createdAt: { $gte: lastMonth, $lt: thisMonth }
-          } 
+            createdAt: { $gte: lastMonth, $lt: thisMonth },
+          },
         },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
+        { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
       OrderModel.countDocuments({
         ...baseQuery,
-        createdAt: { $gte: lastMonth, $lt: thisMonth }
-      })
+        createdAt: { $gte: lastMonth, $lt: thisMonth },
+      }),
     ]);
 
     const currentRevenue = totalRevenue[0]?.total || 0;
@@ -220,12 +223,10 @@ async function getAnalyticsData(userRole: string) {
     const previousOrders = lastMonthOrders;
 
     // Calculate growth rates
-    const revenueGrowth = previousRevenue > 0 
-      ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
-      : 0;
-    const orderGrowth = previousOrders > 0
-      ? ((currentOrders - previousOrders) / previousOrders) * 100
-      : 0;
+    const revenueGrowth =
+      previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+    const orderGrowth =
+      previousOrders > 0 ? ((currentOrders - previousOrders) / previousOrders) * 100 : 0;
 
     // Average order value and conversion rate
     const avgOrderValue = completedOrders > 0 ? currentRevenue / completedOrders : 0;
@@ -233,55 +234,58 @@ async function getAnalyticsData(userRole: string) {
 
     // Monthly revenue trend (last 6 months)
     const monthlyRevenue = await OrderModel.aggregate([
-      { 
-        $match: { 
-          ...baseQuery, 
+      {
+        $match: {
+          ...baseQuery,
           status: 'completed',
-          createdAt: { $gte: new Date(now.getFullYear(), now.getMonth() - 5, 1) }
-        } 
+          createdAt: { $gte: new Date(now.getFullYear(), now.getMonth() - 5, 1) },
+        },
       },
       {
         $group: {
           _id: {
             year: { $year: '$createdAt' },
-            month: { $month: '$createdAt' }
+            month: { $month: '$createdAt' },
           },
           revenue: { $sum: '$amount' },
-          orders: { $sum: 1 }
-        }
+          orders: { $sum: 1 },
+        },
       },
-      { $sort: { '_id.year': 1, '_id.month': 1 } }
+      { $sort: { '_id.year': 1, '_id.month': 1 } },
     ]);
 
     // Top merchants (admin only)
-    const topMerchants = userRole === 'admin' ? await OrderModel.aggregate([
-      { $match: { status: 'completed' } },
-      {
-        $group: {
-          _id: '$merchantId',
-          revenue: { $sum: '$amount' },
-          orders: { $sum: 1 }
-        }
-      },
-      { $sort: { revenue: -1 } },
-      { $limit: 5 },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: 'clerkId',
-          as: 'merchant'
-        }
-      },
-      {
-        $project: {
-          id: '$_id',
-          name: { $arrayElemAt: ['$merchant.name', 0] },
-          revenue: 1,
-          orders: 1
-        }
-      }
-    ]) : [];
+    const topMerchants =
+      userRole === 'admin'
+        ? await OrderModel.aggregate([
+            { $match: { status: 'completed' } },
+            {
+              $group: {
+                _id: '$merchantId',
+                revenue: { $sum: '$amount' },
+                orders: { $sum: 1 },
+              },
+            },
+            { $sort: { revenue: -1 } },
+            { $limit: 5 },
+            {
+              $lookup: {
+                from: 'users',
+                localField: '_id',
+                foreignField: 'clerkId',
+                as: 'merchant',
+              },
+            },
+            {
+              $project: {
+                id: '$_id',
+                name: { $arrayElemAt: ['$merchant.name', 0] },
+                revenue: 1,
+                orders: 1,
+              },
+            },
+          ])
+        : [];
 
     return {
       totalRevenue: currentRevenue,
@@ -292,17 +296,17 @@ async function getAnalyticsData(userRole: string) {
       orderGrowth: Math.round(orderGrowth * 100) / 100,
       avgOrderValue: Math.round(avgOrderValue * 100) / 100,
       conversionRate: Math.round(conversionRate * 100) / 100,
-      monthlyRevenue: monthlyRevenue.map((item: any) => ({
+      monthlyRevenue: monthlyRevenue.map((item: { _id: { year: number; month: number }; revenue: number; orders: number }) => ({
         month: `${item._id.year}-${String(item._id.month).padStart(2, '0')}`,
         revenue: item.revenue,
-        orders: item.orders
+        orders: item.orders,
       })),
-      topMerchants: topMerchants.map((merchant: any) => ({
+      topMerchants: topMerchants.map((merchant: { id: string; name?: string; revenue: number; orders: number }) => ({
         id: merchant.id,
         name: merchant.name || 'Unknown Merchant',
         revenue: merchant.revenue,
-        orders: merchant.orders
-      }))
+        orders: merchant.orders,
+      })),
     };
   } catch (error) {
     console.error('[Dashboard] Analytics error:', error);
@@ -316,7 +320,7 @@ async function getAnalyticsData(userRole: string) {
       avgOrderValue: 0,
       conversionRate: 0,
       monthlyRevenue: [],
-      topMerchants: []
+      topMerchants: [],
     };
   }
 }
@@ -333,7 +337,7 @@ async function getUserStats(userRole: string) {
         activeUsers: 0,
         newUsers: 0,
         userGrowth: 0,
-        roleDistribution: { admin: 0, merchant: 0, viewer: 0 }
+        roleDistribution: { admin: 0, merchant: 0, viewer: 0 },
       };
     }
 
@@ -345,27 +349,27 @@ async function getUserStats(userRole: string) {
       UserModel.countDocuments({}),
       UserModel.countDocuments({ createdAt: { $gte: thisMonth } }),
       UserModel.countDocuments({ createdAt: { $gte: lastMonth, $lt: thisMonth } }),
-      UserModel.aggregate([
-        { $group: { _id: '$role', count: { $sum: 1 } } }
-      ])
+      UserModel.aggregate([{ $group: { _id: '$role', count: { $sum: 1 } } }]),
     ]);
 
     const activeUsers = Math.floor(totalUsers * 0.7); // Estimate active users
-    const userGrowth = lastMonthUsers > 0 
-      ? ((newUsers - lastMonthUsers) / lastMonthUsers) * 100 
-      : 0;
+    const userGrowth =
+      lastMonthUsers > 0 ? ((newUsers - lastMonthUsers) / lastMonthUsers) * 100 : 0;
 
-    const roles = roleDistribution.reduce((acc: any, item: any) => {
-      acc[item._id] = item.count;
-      return acc;
-    }, { admin: 0, merchant: 0, viewer: 0 });
+    const roles = roleDistribution.reduce(
+      (acc: Record<string, number>, item: { _id: string; count: number }) => {
+        acc[item._id] = item.count;
+        return acc;
+      },
+      { admin: 0, merchant: 0, viewer: 0 },
+    );
 
     return {
       totalUsers,
       activeUsers,
       newUsers,
       userGrowth: Math.round(userGrowth * 100) / 100,
-      roleDistribution: roles
+      roleDistribution: roles,
     };
   } catch (error) {
     console.error('[Dashboard] User stats error:', error);
@@ -374,7 +378,7 @@ async function getUserStats(userRole: string) {
       activeUsers: 0,
       newUsers: 0,
       userGrowth: 0,
-      roleDistribution: { admin: 0, merchant: 0, viewer: 0 }
+      roleDistribution: { admin: 0, merchant: 0, viewer: 0 },
     };
   }
 }
@@ -393,12 +397,12 @@ async function getRecentActivity(userRole: string, userId: string) {
       .select('action userId createdAt metadata')
       .lean();
 
-    return activities.map((activity: any) => ({
-      id: activity._id.toString(),
-      action: activity.action,
-      user: activity.userId,
-      timestamp: activity.createdAt.toISOString(),
-      details: activity.metadata
+    return activities.map((activity: Record<string, unknown>) => ({
+      id: String(activity._id),
+      action: String(activity.action),
+      user: String(activity.userId),
+      timestamp: (activity.createdAt as Date).toISOString(),
+      details: activity.metadata as Record<string, unknown> | undefined,
     }));
   } catch (error) {
     console.error('[Dashboard] Activity error:', error);
@@ -430,7 +434,7 @@ async function getSystemHealth() {
       uptime: Math.round(uptime),
       responseTime: Math.round(responseTime * 100) / 100,
       errorRate: Math.round(errorRate * 100) / 100,
-      cacheHitRate: Math.round(cacheHitRate * 100) / 100
+      cacheHitRate: Math.round(cacheHitRate * 100) / 100,
     };
   } catch (error) {
     console.error('[Dashboard] Health check error:', error);
@@ -439,7 +443,7 @@ async function getSystemHealth() {
       uptime: 0,
       responseTime: 0,
       errorRate: 100,
-      cacheHitRate: 0
+      cacheHitRate: 0,
     };
   }
 }

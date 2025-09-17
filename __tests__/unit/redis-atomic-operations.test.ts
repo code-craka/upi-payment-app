@@ -1,6 +1,6 @@
 /**
  * Redis Atomic Operations Tests
- * 
+ *
  * Tests the atomic Lua script operations for role caching, invalidation,
  * and batch operations to prevent race conditions.
  */
@@ -29,13 +29,13 @@ jest.mock('@/lib/redis/circuit-breaker', () => ({
 }));
 
 import { Redis } from '@upstash/redis';
-import { 
-  cacheUserRole, 
-  invalidateUserRole, 
+import {
+  cacheUserRole,
+  invalidateUserRole,
   batchInvalidateRoles,
   getCachedUserRole,
   REDIS_KEYS,
-  type RedisSessionData
+  type RedisSessionData,
 } from '@/lib/redis';
 
 describe('Redis Atomic Operations', () => {
@@ -44,10 +44,10 @@ describe('Redis Atomic Operations', () => {
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
-    
+
     // Get the mocked Redis instance
     mockRedis = new Redis({} as any) as jest.Mocked<Redis>;
-    
+
     // Setup default mock responses
     mockRedis.ping.mockResolvedValue('PONG');
     mockRedis.eval.mockResolvedValue(1);
@@ -72,17 +72,17 @@ describe('Redis Atomic Operations', () => {
       await cacheUserRole(userId, role, metadata);
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
-        expect.stringContaining('local version = redis.call(\'INCR\', KEYS[2])'),
+        expect.stringContaining("local version = redis.call('INCR', KEYS[2])"),
         [
           REDIS_KEYS.USER_ROLE(userId),
           REDIS_KEYS.USER_ROLE_VERSION(userId),
-          REDIS_KEYS.SESSION_SYNC(userId)
+          REDIS_KEYS.SESSION_SYNC(userId),
         ],
         expect.arrayContaining([
           expect.stringContaining('"role":"admin"'),
           '30',
-          expect.any(String)
-        ])
+          expect.any(String),
+        ]),
       );
     });
 
@@ -120,14 +120,14 @@ describe('Redis Atomic Operations', () => {
       await invalidateUserRole(userId);
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
-        expect.stringContaining('redis.call(\'DEL\', keys[i])'),
+        expect.stringContaining("redis.call('DEL', keys[i])"),
         [
           REDIS_KEYS.USER_ROLE(userId),
           REDIS_KEYS.SESSION_SYNC(userId),
           REDIS_KEYS.ROLE_CACHE(userId),
-          REDIS_KEYS.INVALIDATION_LOG(userId)
+          REDIS_KEYS.INVALIDATION_LOG(userId),
         ],
-        [expect.any(String)] // Timestamp
+        [expect.any(String)], // Timestamp
       );
     });
 
@@ -152,7 +152,7 @@ describe('Redis Atomic Operations', () => {
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining('for i = 1, userCount do'),
         [],
-        [...userIds, expect.any(String)] // User IDs + timestamp
+        [...userIds, expect.any(String)], // User IDs + timestamp
       );
     });
 
@@ -172,7 +172,7 @@ describe('Redis Atomic Operations', () => {
       await batchInvalidateRoles(userIds);
 
       expect(mockRedis.eval).toHaveBeenCalledTimes(1);
-      
+
       // Verify all user IDs are included in the args
       const args = mockRedis.eval.mock.calls[0][2] as string[];
       expect(args.slice(0, -1)).toEqual(userIds); // All userIds except timestamp
@@ -258,16 +258,16 @@ describe('Redis Atomic Operations', () => {
 
       // Verify both operations used atomic Lua scripts
       expect(mockRedis.eval).toHaveBeenCalledTimes(2);
-      
+
       // Both calls should include version increment
-      mockRedis.eval.mock.calls.forEach(call => {
-        expect(call[0]).toContain('redis.call(\'INCR\', KEYS[2])');
+      mockRedis.eval.mock.calls.forEach((call) => {
+        expect(call[0]).toContain("redis.call('INCR', KEYS[2])");
       });
     });
 
     it('should maintain consistency during invalidation and caching', async () => {
       const userId = 'test-user-123';
-      
+
       // Setup mocks for concurrent operations
       mockRedis.eval.mockResolvedValue(1);
 
@@ -285,7 +285,7 @@ describe('Redis Atomic Operations', () => {
   describe('Performance and Reliability', () => {
     it('should complete operations within reasonable time', async () => {
       const startTime = performance.now();
-      
+
       mockRedis.eval.mockResolvedValueOnce(1);
       await cacheUserRole('test-user', 'admin');
 
@@ -300,8 +300,8 @@ describe('Redis Atomic Operations', () => {
       const userId = 'test-user-123';
 
       // Simulate timeout
-      mockRedis.eval.mockImplementationOnce(() => 
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 100))
+      mockRedis.eval.mockImplementationOnce(
+        () => new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 100)),
       );
 
       // Should not throw

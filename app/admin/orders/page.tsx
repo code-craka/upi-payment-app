@@ -1,6 +1,6 @@
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import { OrdersTable } from "@/components/orders/orders-table"
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
+import { OrdersTable } from '@/components/orders/orders-table';
 
 export default function OrdersPage() {
   return (
@@ -13,5 +13,5 @@ export default function OrdersPage() {
 
       <OrdersTable showAllOrders={true} />
     </div>
-  )
+  );
 }

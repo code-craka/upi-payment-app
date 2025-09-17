@@ -1,6 +1,6 @@
 /**
  * Manual Sync Trigger System
- * 
+ *
  * Comprehensive data consistency management system with manual triggers,
  * conflict resolution, validation, and automated sync monitoring.
  */
@@ -36,11 +36,11 @@ class CircuitBreaker {
     } catch (error) {
       this.failures++;
       this.lastFailureTime = Date.now();
-      
+
       if (this.failures >= this.threshold) {
         this.isOpen = true;
       }
-      
+
       throw error;
     }
   }
@@ -51,11 +51,11 @@ const circuitBreaker = new CircuitBreaker();
 // Mock models for demonstration
 const UserModel = {
   findById: async (id: string) => ({ _id: id, role: 'user' }),
-  findByIdAndUpdate: async (id: string, update: any) => ({ _id: id, ...update })
+  findByIdAndUpdate: async (id: string, update: any) => ({ _id: id, ...update }),
 };
 
 const AuditLogModel = {
-  create: async (data: any) => ({ _id: 'audit_' + Date.now(), ...data })
+  create: async (data: any) => ({ _id: 'audit_' + Date.now(), ...data }),
 };
 
 export interface SyncOperation {
@@ -141,7 +141,7 @@ class ManualSyncTriggerSystem {
   private activeSyncs: Map<string, SyncOperation> = new Map();
   private syncQueue: string[] = [];
   private isProcessing = false;
-  private syncTimer?: NodeJS.Timeout;
+  private syncTimer?: ReturnType<typeof setTimeout>;
 
   private defaultConfig: SyncConfiguration = {
     batchSize: 50,
@@ -152,28 +152,28 @@ class ManualSyncTriggerSystem {
       {
         field: 'role',
         source: 'clerk',
-        validator: (value: unknown) => typeof value === 'string' && 
-          ['admin', 'manager', 'user'].includes(value as string),
-        priority: 3
+        validator: (value: unknown) =>
+          typeof value === 'string' && ['admin', 'manager', 'user'].includes(value as string),
+        priority: 3,
       },
       {
         field: 'role',
         source: 'redis',
         validator: (value: unknown) => typeof value === 'string',
-        priority: 2
+        priority: 2,
       },
       {
         field: 'role',
         source: 'mongo',
         validator: (value: unknown) => typeof value === 'string',
-        priority: 1
-      }
+        priority: 1,
+      },
     ],
     notifications: {
       onConflict: true,
       onCompletion: true,
-      onError: true
-    }
+      onError: true,
+    },
   };
 
   private constructor() {
@@ -194,10 +194,10 @@ class ManualSyncTriggerSystem {
     type: SyncOperation['type'],
     initiatedBy: string,
     targetUserId?: string,
-    config?: Partial<SyncConfiguration>
+    config?: Partial<SyncConfiguration>,
   ): Promise<SyncOperation> {
     const syncConfig = { ...this.defaultConfig, ...config };
-    
+
     const operation: SyncOperation = {
       id: `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type,
@@ -207,7 +207,7 @@ class ManualSyncTriggerSystem {
       batchSize: syncConfig.batchSize,
       conflicts: [],
       errors: [],
-      progress: { processed: 0, total: 0, errors: 0, conflicts: 0 }
+      progress: { processed: 0, total: 0, errors: 0, conflicts: 0 },
     };
 
     // Store operation
@@ -227,7 +227,7 @@ class ManualSyncTriggerSystem {
       syncId: operation.id,
       type: operation.type,
       initiatedBy,
-      targetUserId
+      targetUserId,
     });
 
     return operation;
@@ -247,7 +247,7 @@ class ManualSyncTriggerSystem {
       while (this.syncQueue.length > 0) {
         const syncId = this.syncQueue.shift()!;
         const operation = this.activeSyncs.get(syncId);
-        
+
         if (!operation || operation.status !== 'pending') {
           continue;
         }
@@ -267,7 +267,7 @@ class ManualSyncTriggerSystem {
   private async executeSyncOperation(operation: SyncOperation): Promise<void> {
     operation.status = 'running';
     operation.startTime = Date.now();
-    
+
     try {
       switch (operation.type) {
         case 'user_role_sync':
@@ -287,7 +287,7 @@ class ManualSyncTriggerSystem {
       // Complete operation
       operation.completionTime = Date.now();
       operation.status = operation.conflicts.length > 0 ? 'conflict_detected' : 'completed';
-      
+
       // Generate result summary
       operation.result = this.generateSyncResult(operation);
 
@@ -295,7 +295,6 @@ class ManualSyncTriggerSystem {
       if (this.defaultConfig.notifications.onCompletion) {
         await this.sendSyncNotification('completion', operation);
       }
-
     } catch (error) {
       operation.status = 'failed';
       operation.errors.push({
@@ -304,7 +303,7 @@ class ManualSyncTriggerSystem {
         error: error instanceof Error ? error.message : 'Unknown error',
         stackTrace: error instanceof Error ? error.stack : undefined,
         recoverable: false,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       if (this.defaultConfig.notifications.onError) {
@@ -321,7 +320,7 @@ class ManualSyncTriggerSystem {
       status: operation.status,
       duration: operation.completionTime! - operation.startTime!,
       conflicts: operation.conflicts.length,
-      errors: operation.errors.length
+      errors: operation.errors.length,
     });
   }
 
@@ -354,13 +353,13 @@ class ManualSyncTriggerSystem {
           userId: user.userId,
           error: error instanceof Error ? error.message : 'Unknown error',
           recoverable: true,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
       // Batch processing delay
       if (operation.progress!.processed % (operation.batchSize || 50) === 0) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
   }
@@ -373,13 +372,13 @@ class ManualSyncTriggerSystem {
     const [clerkData, redisData, mongoData] = await Promise.allSettled([
       this.getClerkUserData(userId),
       this.getRedisUserData(userId),
-      this.getMongoUserData(userId)
+      this.getMongoUserData(userId),
     ]);
 
     const sources = {
       clerk: clerkData.status === 'fulfilled' ? clerkData.value : null,
       redis: redisData.status === 'fulfilled' ? redisData.value : null,
-      mongo: mongoData.status === 'fulfilled' ? mongoData.value : null
+      mongo: mongoData.status === 'fulfilled' ? mongoData.value : null,
     };
 
     // Validate data consistency
@@ -411,12 +410,12 @@ class ManualSyncTriggerSystem {
       clerk: Record<string, unknown> | null;
       redis: Record<string, unknown> | null;
       mongo: Record<string, unknown> | null;
-    }
+    },
   ): SyncConflict | null {
     const values = {
       clerk: sources.clerk?.role,
       redis: sources.redis?.role,
-      mongo: sources.mongo?.role
+      mongo: sources.mongo?.role,
     };
 
     // Check for role conflicts
@@ -431,7 +430,7 @@ class ManualSyncTriggerSystem {
         mongoData: sources.mongo || {},
         detectedAt: Date.now(),
         severity: this.calculateConflictSeverity(values),
-        resolutionStrategy: this.determineResolutionStrategy(values)
+        resolutionStrategy: this.determineResolutionStrategy(values),
       };
     }
 
@@ -441,11 +440,9 @@ class ManualSyncTriggerSystem {
   /**
    * Calculate conflict severity
    */
-  private calculateConflictSeverity(
-    values: Record<string, unknown>
-  ): SyncConflict['severity'] {
-    const hasAdminConflict = Object.values(values).some(v => v === 'admin');
-    const hasNullConflict = Object.values(values).some(v => !v);
+  private calculateConflictSeverity(values: Record<string, unknown>): SyncConflict['severity'] {
+    const hasAdminConflict = Object.values(values).some((v) => v === 'admin');
+    const hasNullConflict = Object.values(values).some((v) => !v);
 
     if (hasAdminConflict) return 'critical';
     if (hasNullConflict) return 'high';
@@ -456,7 +453,7 @@ class ManualSyncTriggerSystem {
    * Determine automatic resolution strategy
    */
   private determineResolutionStrategy(
-    values: Record<string, unknown>
+    values: Record<string, unknown>,
   ): SyncConflict['resolutionStrategy'] {
     if (this.defaultConfig.conflictResolutionStrategy === 'manual') {
       return 'manual';
@@ -473,10 +470,7 @@ class ManualSyncTriggerSystem {
   /**
    * Resolve conflict automatically
    */
-  private async resolveConflict(
-    conflict: SyncConflict,
-    operation: SyncOperation
-  ): Promise<void> {
+  private async resolveConflict(conflict: SyncConflict, operation: SyncOperation): Promise<void> {
     if (!conflict.resolutionStrategy || conflict.resolutionStrategy === 'manual') {
       return;
     }
@@ -504,7 +498,7 @@ class ManualSyncTriggerSystem {
 
       // Apply resolution
       await this.applySyncResolution(conflict.userId, authoritative, authSource);
-      
+
       conflict.resolvedAt = Date.now();
       conflict.resolvedBy = 'system';
 
@@ -512,9 +506,8 @@ class ManualSyncTriggerSystem {
         conflictId: conflict.id,
         userId: conflict.userId,
         strategy: conflict.resolutionStrategy,
-        authSource
+        authSource,
       });
-
     } catch (error) {
       operation.errors.push({
         id: `error_${Date.now()}`,
@@ -522,7 +515,7 @@ class ManualSyncTriggerSystem {
         userId: conflict.userId,
         error: error instanceof Error ? error.message : 'Unknown error',
         recoverable: true,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }
@@ -533,7 +526,7 @@ class ManualSyncTriggerSystem {
   private async applySyncResolution(
     userId: string,
     authoritative: Record<string, unknown>,
-    authSource: string
+    authSource: string,
   ): Promise<void> {
     const role = authoritative.role as string;
     if (!role) return;
@@ -545,28 +538,20 @@ class ManualSyncTriggerSystem {
       operations.push(
         circuitBreaker.execute(() =>
           clerkClient.users.updateUser(userId, {
-            publicMetadata: { role }
-          })
-        )
+            publicMetadata: { role },
+          }),
+        ),
       );
     }
 
     // Update Redis if not the source
     if (authSource !== 'redis') {
-      operations.push(
-        circuitBreaker.execute(() =>
-          redis.setex(`role:${userId}`, 30, role)
-        )
-      );
+      operations.push(circuitBreaker.execute(() => redis.setex(`role:${userId}`, 30, role)));
     }
 
     // Update MongoDB if not the source
     if (authSource !== 'mongo') {
-      operations.push(
-        connectDB().then(() =>
-          UserModel.findByIdAndUpdate(userId, { role })
-        )
-      );
+      operations.push(connectDB().then(() => UserModel.findByIdAndUpdate(userId, { role })));
     }
 
     await Promise.allSettled(operations);
@@ -581,7 +566,7 @@ class ManualSyncTriggerSystem {
       clerk: Record<string, unknown> | null;
       redis: Record<string, unknown> | null;
       mongo: Record<string, unknown> | null;
-    }
+    },
   ): Promise<void> {
     const role = sources.clerk?.role || sources.redis?.role || sources.mongo?.role;
     if (!role) return;
@@ -590,20 +575,12 @@ class ManualSyncTriggerSystem {
 
     // Ensure Redis has the role
     if (!sources.redis?.role) {
-      updates.push(
-        circuitBreaker.execute(() =>
-          redis.setex(`role:${userId}`, 30, role as string)
-        )
-      );
+      updates.push(circuitBreaker.execute(() => redis.setex(`role:${userId}`, 30, role as string)));
     }
 
     // Ensure MongoDB has the role
     if (!sources.mongo?.role) {
-      updates.push(
-        connectDB().then(() =>
-          UserModel.findByIdAndUpdate(userId, { role })
-        )
-      );
+      updates.push(connectDB().then(() => UserModel.findByIdAndUpdate(userId, { role })));
     }
 
     await Promise.allSettled(updates);
@@ -644,10 +621,12 @@ class ManualSyncTriggerSystem {
         role: user.publicMetadata?.role,
         email: user.emailAddresses[0]?.emailAddress,
         lastSignIn: user.lastSignInAt,
-        ...user.publicMetadata
+        ...user.publicMetadata,
       };
     } catch (error) {
-      throw new Error(`Failed to get Clerk data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get Clerk data: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -688,9 +667,9 @@ class ManualSyncTriggerSystem {
       performanceMetrics: {
         avgProcessingTime: processed > 0 ? duration / processed : 0,
         throughput: duration > 0 ? (processed / duration) * 1000 : 0,
-        errorRate: processed > 0 ? errors / processed : 0
+        errorRate: processed > 0 ? errors / processed : 0,
       },
-      recommendations: this.generateRecommendations(operation)
+      recommendations: this.generateRecommendations(operation),
     };
   }
 
@@ -708,12 +687,16 @@ class ManualSyncTriggerSystem {
     }
 
     if (operation.conflicts.length > 0) {
-      recommendations.push(`${operation.conflicts.length} conflicts detected. Review conflict resolution strategy.`);
+      recommendations.push(
+        `${operation.conflicts.length} conflicts detected. Review conflict resolution strategy.`,
+      );
     }
 
     const result = operation.result;
     if (result && result.performanceMetrics.throughput < 10) {
-      recommendations.push('Low throughput detected. Consider increasing batch size or optimizing network connectivity.');
+      recommendations.push(
+        'Low throughput detected. Consider increasing batch size or optimizing network connectivity.',
+      );
     }
 
     return recommendations;
@@ -725,7 +708,7 @@ class ManualSyncTriggerSystem {
   public async resolveConflictManually(
     conflictId: string,
     resolutionStrategy: SyncConflict['resolutionStrategy'],
-    resolvedBy: string
+    resolvedBy: string,
   ): Promise<boolean> {
     try {
       // Find conflict across all operations
@@ -733,7 +716,7 @@ class ManualSyncTriggerSystem {
       let targetOperation: SyncOperation | null = null;
 
       for (const operation of this.activeSyncs.values()) {
-        const conflict = operation.conflicts.find(c => c.id === conflictId);
+        const conflict = operation.conflicts.find((c) => c.id === conflictId);
         if (conflict) {
           targetConflict = conflict;
           targetOperation = operation;
@@ -756,7 +739,6 @@ class ManualSyncTriggerSystem {
       await this.persistSyncOperation(targetOperation);
 
       return true;
-
     } catch (error) {
       console.error('Manual conflict resolution failed:', error);
       return false;
@@ -788,26 +770,29 @@ class ManualSyncTriggerSystem {
     avgDuration: number;
   }> {
     const cutoff = Date.now() - timeframe;
-    const operations = Array.from(this.activeSyncs.values())
-      .filter(op => (op.startTime || 0) > cutoff);
+    const operations = Array.from(this.activeSyncs.values()).filter(
+      (op) => (op.startTime || 0) > cutoff,
+    );
 
-    const successful = operations.filter(op => op.status === 'completed').length;
-    const failed = operations.filter(op => op.status === 'failed').length;
+    const successful = operations.filter((op) => op.status === 'completed').length;
+    const failed = operations.filter((op) => op.status === 'failed').length;
     const conflictsDetected = operations.reduce((sum, op) => sum + op.conflicts.length, 0);
-    
-    const completedOps = operations.filter(op => op.completionTime);
-    const avgDuration = completedOps.length > 0 
-      ? completedOps.reduce((sum, op) => 
-          sum + ((op.completionTime || 0) - (op.startTime || 0)), 0
-        ) / completedOps.length 
-      : 0;
+
+    const completedOps = operations.filter((op) => op.completionTime);
+    const avgDuration =
+      completedOps.length > 0
+        ? completedOps.reduce(
+            (sum, op) => sum + ((op.completionTime || 0) - (op.startTime || 0)),
+            0,
+          ) / completedOps.length
+        : 0;
 
     return {
       totalSyncs: operations.length,
       successful,
       failed,
       conflictsDetected,
-      avgDuration
+      avgDuration,
     };
   }
 
@@ -828,15 +813,16 @@ class ManualSyncTriggerSystem {
   private async sendSyncNotification(
     type: 'completion' | 'error' | 'conflict',
     operation: SyncOperation,
-    conflict?: SyncConflict
+    conflict?: SyncConflict,
   ): Promise<void> {
     console.log(`SYNC NOTIFICATION [${type}]:`, {
       syncId: operation.id,
       type: operation.type,
       status: operation.status,
       conflict: conflict?.id,
-      duration: operation.completionTime ? 
-        (operation.completionTime - (operation.startTime || 0)) : undefined
+      duration: operation.completionTime
+        ? operation.completionTime - (operation.startTime || 0)
+        : undefined,
     });
   }
 
@@ -845,7 +831,7 @@ class ManualSyncTriggerSystem {
       await redis.setex(
         `sync_operation:${operation.id}`,
         86400 * 7, // 7 days
-        JSON.stringify(operation)
+        JSON.stringify(operation),
       );
     } catch (error) {
       console.error('Failed to persist sync operation:', error);
@@ -859,9 +845,9 @@ class ManualSyncTriggerSystem {
         action: event,
         entityType: 'SyncOperation',
         entityId: data.syncId as string,
-        userId: data.initiatedBy as string || 'system',
+        userId: (data.initiatedBy as string) || 'system',
         metadata: data,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     } catch (error) {
       console.error('Failed to log sync event:', error);
@@ -891,5 +877,5 @@ export const triggerFullSync = (initiatedBy: string) =>
 export const resolveConflictManually = (
   conflictId: string,
   strategy: SyncConflict['resolutionStrategy'],
-  resolvedBy: string
+  resolvedBy: string,
 ) => manualSyncTriggerSystem.resolveConflictManually(conflictId, strategy, resolvedBy);

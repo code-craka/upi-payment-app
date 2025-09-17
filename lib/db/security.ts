@@ -1,9 +1,9 @@
 /**
  * Database Security Utilities
- * 
+ *
  * Provides security utilities to prevent MongoDB injection attacks,
  * prototype pollution, and other database-related vulnerabilities.
- * 
+ *
  * Author: Sayem Abdullah Rihan (@code-craka)
  * Contact: hello@techsci.io
  */
@@ -26,7 +26,7 @@ export function sanitizeMongoQuery(query: any): any {
   // Handle objects
   if (typeof query === 'object') {
     const sanitized: any = {};
-    
+
     for (const [key, value] of Object.entries(query)) {
       // Prevent prototype pollution
       if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
@@ -46,7 +46,7 @@ export function sanitizeMongoQuery(query: any): any {
 
   // Handle strings - remove potential injection patterns
   if (typeof query === 'string') {
-    return query.replace(/[\$]/g, ''); // Remove $ characters
+    return query.replace(/\$/g, ''); // Remove $ characters
   }
 
   return query;
@@ -56,12 +56,28 @@ export function sanitizeMongoQuery(query: any): any {
  * List of allowed MongoDB operators
  */
 const ALLOWED_MONGO_OPERATORS = [
-  '$eq', '$ne', '$gt', '$gte', '$lt', '$lte', '$in', '$nin',
-  '$and', '$or', '$not', '$nor',
-  '$exists', '$type', '$regex', '$options',
-  '$all', '$elemMatch', '$size',
-  '$text', '$search',
-  '$where' // Use with extreme caution
+  '$eq',
+  '$ne',
+  '$gt',
+  '$gte',
+  '$lt',
+  '$lte',
+  '$in',
+  '$nin',
+  '$and',
+  '$or',
+  '$not',
+  '$nor',
+  '$exists',
+  '$type',
+  '$regex',
+  '$options',
+  '$all',
+  '$elemMatch',
+  '$size',
+  '$text',
+  '$search',
+  '$where', // Use with extreme caution
 ];
 
 function isAllowedMongoOperator(operator: string): boolean {
@@ -79,7 +95,7 @@ export function sanitizeObjectId(id: string): Types.ObjectId | null {
 
     // Remove any potentially dangerous characters
     const sanitizedId = id.replace(/[^\w]/g, '');
-    
+
     if (!Types.ObjectId.isValid(sanitizedId)) {
       return null;
     }
@@ -103,10 +119,12 @@ export function sanitizeSortParameter(sort: any): any {
 
   for (const [field, direction] of Object.entries(sort)) {
     // Only allow valid field names (no $ operators or prototype pollution)
-    if (field.startsWith('$') || 
-        field === '__proto__' || 
-        field === 'constructor' || 
-        field === 'prototype') {
+    if (
+      field.startsWith('$') ||
+      field === '__proto__' ||
+      field === 'constructor' ||
+      field === 'prototype'
+    ) {
       continue;
     }
 
@@ -136,14 +154,14 @@ export function sanitizePaginationParams(page?: number, limit?: number) {
 
   const sanitizedPage = Math.max(1, Math.floor(Number(page) || DEFAULT_PAGE));
   const sanitizedLimit = Math.min(
-    MAX_LIMIT, 
-    Math.max(1, Math.floor(Number(limit) || DEFAULT_LIMIT))
+    MAX_LIMIT,
+    Math.max(1, Math.floor(Number(limit) || DEFAULT_LIMIT)),
   );
 
   return {
     page: sanitizedPage,
     limit: sanitizedLimit,
-    skip: (sanitizedPage - 1) * sanitizedLimit
+    skip: (sanitizedPage - 1) * sanitizedLimit,
   };
 }
 
@@ -161,13 +179,15 @@ export function sanitizeUserInput(input: any): any {
 
   if (typeof input === 'object') {
     const sanitized: any = {};
-    
+
     for (const [key, value] of Object.entries(input)) {
       // Remove prototype pollution vectors
-      if (key === '__proto__' || 
-          key === 'constructor' || 
-          key === 'prototype' ||
-          key.startsWith('$')) {
+      if (
+        key === '__proto__' ||
+        key === 'constructor' ||
+        key === 'prototype' ||
+        key.startsWith('$')
+      ) {
         continue;
       }
 
@@ -187,18 +207,18 @@ export function sanitizeUserInput(input: any): any {
 export const MONGOOSE_SECURITY_OPTIONS = {
   // Disable automatic index creation in production
   autoIndex: process.env.NODE_ENV !== 'production',
-  
+
   // Use strict mode to prevent flexible schema
   strict: true,
-  
+
   // Disable version key to prevent version conflicts
   versionKey: false,
-  
+
   // Set collection options
   collection: {
     // Use strict mode for collections
-    strict: true
-  }
+    strict: true,
+  },
 };
 
 /**
@@ -206,7 +226,7 @@ export const MONGOOSE_SECURITY_OPTIONS = {
  */
 export function buildSafeAggregationPipeline(stages: any[]): any[] {
   const safePipeline: any[] = [];
-  
+
   for (const stage of stages) {
     if (!stage || typeof stage !== 'object') {
       continue;
@@ -215,12 +235,21 @@ export function buildSafeAggregationPipeline(stages: any[]): any[] {
     // Only allow safe aggregation stages
     const stageKeys = Object.keys(stage);
     const safeStages = [
-      '$match', '$project', '$sort', '$limit', '$skip', '$group', 
-      '$unwind', '$lookup', '$addFields', '$count', '$facet'
+      '$match',
+      '$project',
+      '$sort',
+      '$limit',
+      '$skip',
+      '$group',
+      '$unwind',
+      '$lookup',
+      '$addFields',
+      '$count',
+      '$facet',
     ];
 
-    const isStageAllowed = stageKeys.every(key => safeStages.includes(key));
-    
+    const isStageAllowed = stageKeys.every((key) => safeStages.includes(key));
+
     if (isStageAllowed) {
       safePipeline.push(sanitizeMongoQuery(stage));
     }
@@ -252,9 +281,9 @@ export function validateDatabaseInput(req: any, res: any, next: any) {
     next();
   } catch (error) {
     console.error('Database input validation error:', error);
-    res.status(400).json({ 
-      error: 'Invalid input data', 
-      code: 'VALIDATION_ERROR' 
+    res.status(400).json({
+      error: 'Invalid input data',
+      code: 'VALIDATION_ERROR',
     });
   }
 }
@@ -264,7 +293,7 @@ export function validateDatabaseInput(req: any, res: any, next: any) {
  */
 export function mongooseSecurityPlugin(schema: any) {
   // Add pre-save middleware to sanitize data
-  schema.pre('save', function(this: any, next: any) {
+  schema.pre('save', function (this: any, next: any) {
     try {
       // Sanitize the document before saving
       const sanitized = sanitizeUserInput(this.toObject());
@@ -276,7 +305,7 @@ export function mongooseSecurityPlugin(schema: any) {
   });
 
   // Add pre-find middleware to sanitize queries
-  schema.pre(['find', 'findOne', 'findOneAndUpdate'], function(this: any, next: any) {
+  schema.pre(['find', 'findOne', 'findOneAndUpdate'], function (this: any, next: any) {
     try {
       // Sanitize the query
       const sanitizedQuery = sanitizeMongoQuery(this.getQuery());

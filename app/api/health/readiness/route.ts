@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       overall: healthStatus.overall,
       timestamp: new Date().toISOString(),
       uptime: healthStatus.uptime,
-      services: healthStatus.services.map(service => ({
+      services: healthStatus.services.map((service) => ({
         name: service.service,
         status: service.status,
         latency: service.latency ? `${service.latency.toFixed(2)}ms` : undefined,
@@ -48,16 +48,19 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Readiness check failed:', error);
 
-    return NextResponse.json({
-      status: 'error',
-      timestamp: new Date().toISOString(),
-      error: error instanceof Error ? error.message : 'Readiness check failed',
-    }, {
-      status: 503,
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Content-Type': 'application/json',
+    return NextResponse.json(
+      {
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Readiness check failed',
       },
-    });
+      {
+        status: 503,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
 }

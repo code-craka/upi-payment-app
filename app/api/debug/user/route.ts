@@ -1,15 +1,18 @@
-import { currentUser } from "@clerk/nextjs/server"
-import { NextRequest, NextResponse } from "next/server"
+import { currentUser } from '@clerk/nextjs/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await currentUser()
-    
+    const user = await currentUser();
+
     if (!user) {
-      return NextResponse.json({
-        authenticated: false,
-        message: "No user session found"
-      }, { status: 401 })
+      return NextResponse.json(
+        {
+          authenticated: false,
+          message: 'No user session found',
+        },
+        { status: 401 },
+      );
     }
 
     const debugInfo = {
@@ -22,20 +25,22 @@ export async function GET(request: NextRequest) {
       role: user.publicMetadata?.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      sessionId: request.headers.get("authorization"),
-      timestamp: new Date().toISOString()
-    }
+      sessionId: request.headers.get('authorization'),
+      timestamp: new Date().toISOString(),
+    };
 
     return NextResponse.json({
       success: true,
-      user: debugInfo
-    })
-
+      user: debugInfo,
+    });
   } catch (error) {
-    return NextResponse.json({
-      success: false,
-      error: "Failed to get user info",
-      details: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to get user info',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
+    );
   }
 }

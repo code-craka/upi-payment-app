@@ -1,13 +1,13 @@
-import { auth } from "@clerk/nextjs/server"
-import { redirect } from "next/navigation"
-import { Suspense } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import { StatsCards } from "@/components/shared/stats-cards"
-import { formatCurrency } from "@/lib/utils"
-import { CreditCard, ShoppingCart, TrendingUp, Plus, Eye } from "lucide-react"
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
+import { StatsCards } from '@/components/shared/stats-cards';
+import { formatCurrency } from '@/lib/utils';
+import { CreditCard, ShoppingCart, TrendingUp, Plus, Eye } from 'lucide-react';
 
 // Mock data for merchant dashboard
 const mockMerchantStats = {
@@ -17,49 +17,49 @@ const mockMerchantStats = {
   totalRevenue: 125000,
   successRate: 93.3,
   recentOrders: [
-    { id: "ORD-001", amount: 1500, status: "completed", createdAt: "2 hours ago" },
-    { id: "ORD-002", amount: 2500, status: "pending", createdAt: "4 hours ago" },
-    { id: "ORD-003", amount: 750, status: "pending-verification", createdAt: "6 hours ago" },
+    { id: 'ORD-001', amount: 1500, status: 'completed', createdAt: '2 hours ago' },
+    { id: 'ORD-002', amount: 2500, status: 'pending', createdAt: '4 hours ago' },
+    { id: 'ORD-003', amount: 750, status: 'pending-verification', createdAt: '6 hours ago' },
   ],
-}
+};
 
 function MerchantStatsCards() {
   const merchantMetrics = [
     {
-      id: "payment-links",
-      title: "Payment Links",
+      id: 'payment-links',
+      title: 'Payment Links',
       value: mockMerchantStats.totalLinks,
-      description: "Total links created",
+      description: 'Total links created',
       icon: CreditCard,
-      trend: "+5 this week"
+      trend: '+5 this week',
     },
     {
-      id: "active-orders",
-      title: "Active Orders", 
+      id: 'active-orders',
+      title: 'Active Orders',
       value: mockMerchantStats.activeOrders,
-      description: "Pending payment",
+      description: 'Pending payment',
       icon: ShoppingCart,
-      trend: "+2 today"
+      trend: '+2 today',
     },
     {
-      id: "total-revenue",
-      title: "Total Revenue",
+      id: 'total-revenue',
+      title: 'Total Revenue',
       value: formatCurrency(mockMerchantStats.totalRevenue),
-      description: "From completed orders",
+      description: 'From completed orders',
       icon: TrendingUp,
-      trend: "+12% this month"
+      trend: '+12% this month',
     },
     {
-      id: "success-rate",
-      title: "Success Rate",
+      id: 'success-rate',
+      title: 'Success Rate',
       value: `${mockMerchantStats.successRate}%`,
-      description: "Payment completion rate", 
+      description: 'Payment completion rate',
       icon: TrendingUp,
-      trend: "+0.8% this week"
-    }
-  ]
+      trend: '+0.8% this week',
+    },
+  ];
 
-  return <StatsCards metrics={merchantMetrics} />
+  return <StatsCards metrics={merchantMetrics} />;
 }
 
 function QuickActions() {
@@ -82,27 +82,27 @@ function QuickActions() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function RecentOrders() {
   const getStatusBadge = (status: string) => {
     const statusColors = {
-      completed: "bg-green-100 text-green-800",
-      pending: "bg-blue-100 text-blue-800",
-      "pending-verification": "bg-yellow-100 text-yellow-800",
-      failed: "bg-red-100 text-red-800",
-      expired: "bg-gray-100 text-gray-800",
-    }
+      completed: 'bg-green-100 text-green-800',
+      pending: 'bg-blue-100 text-blue-800',
+      'pending-verification': 'bg-yellow-100 text-yellow-800',
+      failed: 'bg-red-100 text-red-800',
+      expired: 'bg-gray-100 text-gray-800',
+    };
 
     return (
       <span
-        className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[status as keyof typeof statusColors] || statusColors.pending}`}
+        className={`rounded-full px-2 py-1 text-xs font-medium ${statusColors[status as keyof typeof statusColors] || statusColors.pending}`}
       >
-        {status.replace("-", " ")}
+        {status.replace('-', ' ')}
       </span>
-    )
-  }
+    );
+  };
 
   return (
     <Card>
@@ -113,10 +113,10 @@ function RecentOrders() {
       <CardContent>
         <div className="space-y-4">
           {mockMerchantStats.recentOrders.map((order) => (
-            <div key={order.id} className="flex items-center justify-between p-3 border rounded-lg">
+            <div key={order.id} className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-1">
                 <p className="font-medium">{order.id}</p>
-                <p className="text-sm text-muted-foreground">{order.createdAt}</p>
+                <p className="text-muted-foreground text-sm">{order.createdAt}</p>
               </div>
               <div className="flex items-center gap-4">
                 <span className="font-medium">{formatCurrency(order.amount)}</span>
@@ -132,18 +132,18 @@ function RecentOrders() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 export default async function MerchantDashboard() {
-  const { userId, sessionClaims } = await auth()
+  const { userId, sessionClaims } = await auth();
 
   if (!userId) {
-    redirect("/sign-in")
+    redirect('/sign-in');
   }
 
-  const userRole = (sessionClaims?.publicMetadata as { role?: string })?.role as string
-  const userName = (sessionClaims?.firstName as string) || "User"
+  const userRole = (sessionClaims?.publicMetadata as { role?: string })?.role as string;
+  const userName = (sessionClaims?.firstName as string) || 'User';
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
@@ -167,5 +167,5 @@ export default async function MerchantDashboard() {
         </div>
       </div>
     </div>
-  )
+  );
 }

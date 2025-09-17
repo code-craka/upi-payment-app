@@ -1,19 +1,25 @@
-import mongoose, { Schema, type Document } from "mongoose"
+import mongoose, { Schema, type Document, type Model } from 'mongoose';
 
 export interface WebhookDocument extends Document {
-  url: string
-  events: string[]
-  isActive: boolean
-  secret: string
-  createdBy: string
-  lastTriggeredAt?: Date
+  url: string;
+  events: string[];
+  isActive: boolean;
+  secret: string;
+  createdBy: string;
+  lastTriggeredAt?: Date;
   stats: {
-    totalAttempts: number
-    successfulAttempts: number
-    failedAttempts: number
-  }
-  createdAt: Date
-  updatedAt: Date
+    totalAttempts: number;
+    successfulAttempts: number;
+    failedAttempts: number;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+  // Instance methods
+  recordAttempt(success: boolean): Promise<WebhookDocument>;
+}
+
+export interface WebhookModelType extends Model<WebhookDocument> {
+  // Add static methods here if needed in the future
 }
 
 const WebhookSchema = new Schema<WebhookDocument>(
@@ -23,19 +29,19 @@ const WebhookSchema = new Schema<WebhookDocument>(
       required: true,
       validate: {
         validator: (v: string) => /^https?:\/\/.+/.test(v),
-        message: "Invalid URL format",
+        message: 'Invalid URL format',
       },
     },
     events: [
       {
         type: String,
         enum: [
-          "order.created",
-          "order.utr_submitted",
-          "order.completed",
-          "order.failed",
-          "order.expired",
-          "payment_link.used",
+          'order.created',
+          'order.utr_submitted',
+          'order.completed',
+          'order.failed',
+          'order.expired',
+          'payment_link.used',
         ],
       },
     ],
@@ -65,21 +71,21 @@ const WebhookSchema = new Schema<WebhookDocument>(
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
   },
-)
+);
 
 // Indexes
-WebhookSchema.index({ createdBy: 1, isActive: 1 })
+WebhookSchema.index({ createdBy: 1, isActive: 1 });
 
-// Instance methods
-WebhookSchema.methods.recordAttempt = function (success: boolean) {
-  this.stats.totalAttempts += 1
+// Instance methods with proper return types
+WebhookSchema.methods.recordAttempt = function (success: boolean): Promise<WebhookDocument> {
+  this.stats.totalAttempts += 1;
   if (success) {
-    this.stats.successfulAttempts += 1
+    this.stats.successfulAttempts += 1;
   } else {
-    this.stats.failedAttempts += 1
+    this.stats.failedAttempts += 1;
   }
-  this.lastTriggeredAt = new Date()
-  return this.save()
-}
+  this.lastTriggeredAt = new Date();
+  return this.save();
+};
 
-export const WebhookModel = mongoose.models.Webhook || mongoose.model<WebhookDocument>("Webhook", WebhookSchema)
+export const WebhookModel = (mongoose.models.Webhook || mongoose.model<WebhookDocument>('Webhook', WebhookSchema)) as WebhookModelType;

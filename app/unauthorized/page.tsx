@@ -1,12 +1,12 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, ArrowLeft } from "lucide-react"
-import { UserDebugInfo } from "@/components/user-debug-info"
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Shield, ArrowLeft } from 'lucide-react';
+import { UserDebugInfo } from '@/components/user-debug-info';
 
 export default function UnauthorizedPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="bg-background flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-2xl space-y-4">
         <Card>
           <CardHeader className="text-center">
@@ -17,9 +17,9 @@ export default function UnauthorizedPage() {
             <CardDescription>You don't have permission to access this resource.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground text-center">
-              This page requires specific permissions that your account doesn't have. Please contact your administrator if
-              you believe this is an error.
+            <p className="text-muted-foreground text-center text-sm">
+              This page requires specific permissions that your account doesn't have. Please contact
+              your administrator if you believe this is an error.
             </p>
             <div className="flex flex-col gap-2">
               <Button asChild>
@@ -34,10 +34,10 @@ export default function UnauthorizedPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Debug Information */}
         <UserDebugInfo />
       </div>
     </div>
-  )
+  );
 }

@@ -1,7 +1,7 @@
-import { z } from "zod"
+import { z } from 'zod';
 
-export const UserRoleSchema = z.enum(["admin", "merchant", "viewer"])
-export type UserRole = z.infer<typeof UserRoleSchema>
+export const UserRoleSchema = z.enum(['admin', 'merchant', 'viewer']);
+export type UserRole = z.infer<typeof UserRoleSchema>;
 
 export const SafeUserSchema = z.object({
   id: z.string(),
@@ -11,13 +11,19 @@ export const SafeUserSchema = z.object({
   role: UserRoleSchema,
   createdAt: z.date(),
   updatedAt: z.date(),
-})
+});
 
-export type SafeUser = z.infer<typeof SafeUserSchema>
+export type SafeUser = z.infer<typeof SafeUserSchema>;
 
-export const OrderStatusSchema = z.enum(["pending", "pending-verification", "completed", "expired", "failed"])
+export const OrderStatusSchema = z.enum([
+  'pending',
+  'pending-verification',
+  'completed',
+  'expired',
+  'failed',
+]);
 
-export type OrderStatus = z.infer<typeof OrderStatusSchema>
+export type OrderStatus = z.infer<typeof OrderStatusSchema>;
 
 export const OrderSchema = z.object({
   id: z.string(),
@@ -36,9 +42,9 @@ export const OrderSchema = z.object({
   updatedAt: z.date(),
   verifiedAt: z.date().optional(),
   verifiedBy: z.string().optional(),
-})
+});
 
-export type Order = z.infer<typeof OrderSchema>
+export type Order = z.infer<typeof OrderSchema>;
 
 export const AuditLogSchema = z.object({
   id: z.string(),
@@ -51,9 +57,9 @@ export const AuditLogSchema = z.object({
   userAgent: z.string(),
   metadata: z.record(z.any()).optional(),
   createdAt: z.date(),
-})
+});
 
-export type AuditLog = z.infer<typeof AuditLogSchema>
+export type AuditLog = z.infer<typeof AuditLogSchema>;
 
 export const SettingsSchema = z.object({
   id: z.string(),
@@ -62,23 +68,23 @@ export const SettingsSchema = z.object({
   description: z.string().optional(),
   updatedBy: z.string(),
   updatedAt: z.date(),
-})
+});
 
-export type Settings = z.infer<typeof SettingsSchema>
+export type Settings = z.infer<typeof SettingsSchema>;
 
 // Permission definitions
 export const PERMISSIONS = {
   admin: [
-    "create_user",
-    "delete_user",
-    "view_all_orders",
-    "update_settings",
-    "view_audit_logs",
-    "verify_orders",
-    "manage_roles",
+    'create_user',
+    'delete_user',
+    'view_all_orders',
+    'update_settings',
+    'view_audit_logs',
+    'verify_orders',
+    'manage_roles',
   ],
-  merchant: ["create_order", "view_own_orders", "manage_own_links", "submit_utr"],
-  viewer: ["view_assigned_orders"],
-} as const
+  merchant: ['create_order', 'view_own_orders', 'manage_own_links', 'submit_utr'],
+  viewer: ['view_assigned_orders'],
+} as const;
 
-export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS][number]
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS][number];

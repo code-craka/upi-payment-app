@@ -25,15 +25,18 @@ export async function GET(request: NextRequest) {
       try {
         await requireRole('admin');
       } catch (error) {
-        return NextResponse.json({
-          error: 'Authentication required',
-          timestamp: new Date().toISOString(),
-        }, {
-          status: 401,
-          headers: {
-            'Content-Type': 'application/json',
+        return NextResponse.json(
+          {
+            error: 'Authentication required',
+            timestamp: new Date().toISOString(),
           },
-        });
+          {
+            status: 401,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        );
       }
     }
 
@@ -54,15 +57,18 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Metrics endpoint failed:', error);
 
-    return NextResponse.json({
-      error: 'Metrics collection failed',
-      timestamp: new Date().toISOString(),
-    }, {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
+    return NextResponse.json(
+      {
+        error: 'Metrics collection failed',
+        timestamp: new Date().toISOString(),
       },
-    });
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
 }
 
@@ -104,8 +110,8 @@ function addHealthMetrics(lines: string[], healthStatus: any, timestamp: number)
   lines.push('# HELP upi_health_status Overall health status (0=healthy, 1=degraded, 2=unhealthy)');
   lines.push('# TYPE upi_health_status gauge');
 
-  const statusValue = healthStatus.overall === 'healthy' ? 0 :
-                     healthStatus.overall === 'degraded' ? 1 : 2;
+  const statusValue =
+    healthStatus.overall === 'healthy' ? 0 : healthStatus.overall === 'degraded' ? 1 : 2;
   lines.push(`upi_health_status ${statusValue} ${timestamp}`);
 }
 
@@ -113,12 +119,13 @@ function addHealthMetrics(lines: string[], healthStatus: any, timestamp: number)
  * Add service-specific metrics
  */
 function addServiceMetrics(lines: string[], healthStatus: any, timestamp: number): void {
-  lines.push('# HELP upi_service_health_status Health status per service (0=healthy, 1=degraded, 2=unhealthy)');
+  lines.push(
+    '# HELP upi_service_health_status Health status per service (0=healthy, 1=degraded, 2=unhealthy)',
+  );
   lines.push('# TYPE upi_service_health_status gauge');
 
   healthStatus.services.forEach((service: any) => {
-    const value = service.status === 'healthy' ? 0 :
-                 service.status === 'degraded' ? 1 : 2;
+    const value = service.status === 'healthy' ? 0 : service.status === 'degraded' ? 1 : 2;
     lines.push(`upi_service_health_status{service="${service.service}"} ${value} ${timestamp}`);
   });
 
@@ -127,7 +134,9 @@ function addServiceMetrics(lines: string[], healthStatus: any, timestamp: number
 
   healthStatus.services.forEach((service: any) => {
     if (service.latency) {
-      lines.push(`upi_service_latency_ms{service="${service.service}"} ${service.latency} ${timestamp}`);
+      lines.push(
+        `upi_service_latency_ms{service="${service.service}"} ${service.latency} ${timestamp}`,
+      );
     }
   });
 }

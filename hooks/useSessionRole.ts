@@ -1,12 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useUser } from "@clerk/nextjs";
-import { 
-  type UserRole, 
-  type SessionHookState, 
-  type UseSessionRoleOptions 
-} from "@/lib/types";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { type UserRole, type SessionHookState, type UseSessionRoleOptions } from '@/lib/types';
 
 // Default options for the hook
 const DEFAULT_OPTIONS: Required<UseSessionRoleOptions> = {
@@ -20,21 +16,21 @@ const DEFAULT_OPTIONS: Required<UseSessionRoleOptions> = {
 
 /**
  * Custom hook for hybrid role management with Redis caching
- * 
+ *
  * Features:
  * - Automatic 30-second refresh from Redis cache
  * - Instant role updates via manual refresh
  * - Fallback to Clerk when Redis is unavailable
  * - Stale-while-revalidate pattern
  * - Error handling and retry logic
- * 
+ *
  * @param options Configuration options for the hook
  * @returns Hook state with role, loading status, and refresh function
  */
 export function useSessionRole(options: UseSessionRoleOptions = {}) {
   const { user, isLoaded: isUserLoaded } = useUser();
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  
+
   // Hook state
   const [state, setState] = useState<SessionHookState>({
     role: null,
@@ -46,133 +42,140 @@ export function useSessionRole(options: UseSessionRoleOptions = {}) {
   });
 
   // Refs for cleanup and avoiding stale closures
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const previousRoleRef = useRef<UserRole | null>(null);
 
   /**
    * Fetch role from our hybrid API endpoint
    */
-  const fetchRole = useCallback(async (force: boolean = false): Promise<UserRole | null> => {
-    if (!user?.id) {
-      return null;
-    }
-
-    try {
-      // Cancel previous request if still in flight
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-
-      abortControllerRef.current = new AbortController();
-      
-      const response = await fetch("/api/debug/session", {
-        method: "GET",
-        headers: {
-          "Cache-Control": force ? "no-cache" : "max-age=30", // 30 seconds cache
-        },
-        signal: abortControllerRef.current.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      // Check if response has the expected structure
-      if (!data.redisData) {
-        throw new Error("Invalid response structure");
-      }
-
-      // Prefer Redis cached role, fallback to Clerk role
-      const role = data.redisData.role || data.clerkData?.role || null;
-      
-      return role as UserRole | null;
-
-    } catch (error: any) {
-      // Don't throw on abort errors (cleanup)
-      if (error.name === 'AbortError') {
+  const fetchRole = useCallback(
+    async (force: boolean = false): Promise<UserRole | null> => {
+      if (!user?.id) {
         return null;
       }
 
-      console.error("[useSessionRole] Fetch error:", error);
-      
-      // Fallback to Clerk role if available
-      return (user.publicMetadata?.role as UserRole) || null;
-    }
-  }, [user?.id, user?.publicMetadata?.role]);
+      try {
+        // Cancel previous request if still in flight
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+
+        abortControllerRef.current = new AbortController();
+
+        const response = await fetch('/api/debug/session', {
+          method: 'GET',
+          headers: {
+            'Cache-Control': force ? 'no-cache' : 'max-age=30', // 30 seconds cache
+          },
+          signal: abortControllerRef.current.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Check if response has the expected structure
+        if (!data.redisData) {
+          throw new Error('Invalid response structure');
+        }
+
+        // Prefer Redis cached role, fallback to Clerk role
+        const role = data.redisData.role || data.clerkData?.role || null;
+
+        return role as UserRole | null;
+      } catch (error: any) {
+        // Don't throw on abort errors (cleanup)
+        if (error.name === 'AbortError') {
+          return null;
+        }
+
+        console.error('[useSessionRole] Fetch error:', error);
+
+        // Fallback to Clerk role if available
+        return (user.publicMetadata?.role as UserRole) || null;
+      }
+    },
+    [user?.id, user?.publicMetadata?.role],
+  );
 
   /**
    * Update state with new role and handle change callbacks
    */
-  const updateState = useCallback((updates: Partial<SessionHookState>) => {
-    setState(prevState => {
-      const newState = { ...prevState, ...updates };
-      
-      // Check for role changes
-      if ('role' in updates && updates.role !== previousRoleRef.current) {
-        const oldRole = previousRoleRef.current;
-        const newRole = updates.role || null;
-        
-        previousRoleRef.current = newRole;
-        
-        // Trigger role change callback
-        try {
-          opts.onRoleChange(oldRole, newRole);
-        } catch (error) {
-          console.error("[useSessionRole] onRoleChange callback error:", error);
+  const updateState = useCallback(
+    (updates: Partial<SessionHookState>) => {
+      setState((prevState) => {
+        const newState = { ...prevState, ...updates };
+
+        // Check for role changes
+        if ('role' in updates && updates.role !== previousRoleRef.current) {
+          const oldRole = previousRoleRef.current;
+          const newRole = updates.role || null;
+
+          previousRoleRef.current = newRole;
+
+          // Trigger role change callback
+          try {
+            opts.onRoleChange(oldRole, newRole);
+          } catch (error) {
+            console.error('[useSessionRole] onRoleChange callback error:', error);
+          }
         }
-      }
-      
-      return newState;
-    });
-  }, [opts.onRoleChange]);
+
+        return newState;
+      });
+    },
+    [opts.onRoleChange],
+  );
 
   /**
    * Manual refresh function for immediate role updates
    */
-  const refreshRole = useCallback(async (force: boolean = false): Promise<UserRole | null> => {
-    if (!isUserLoaded || !user) {
-      return null;
-    }
-
-    updateState({ isLoading: true, error: null });
-
-    try {
-      const role = await fetchRole(force);
-      const now = Date.now();
-      
-      updateState({
-        role,
-        isLoading: false,
-        error: null,
-        lastRefresh: now,
-        isStale: false,
-        refreshCount: state.refreshCount + 1,
-      });
-
-      return role;
-
-    } catch (error: any) {
-      console.error("[useSessionRole] Refresh error:", error);
-      
-      updateState({
-        isLoading: false,
-        error: error.message || "Failed to refresh role",
-        isStale: true,
-      });
-
-      // Trigger error callback
-      try {
-        opts.onError(error);
-      } catch (callbackError) {
-        console.error("[useSessionRole] onError callback error:", callbackError);
+  const refreshRole = useCallback(
+    async (force: boolean = false): Promise<UserRole | null> => {
+      if (!isUserLoaded || !user) {
+        return null;
       }
 
-      return state.role; // Return current role on error
-    }
-  }, [isUserLoaded, user, fetchRole, state.refreshCount, updateState, opts.onError]);
+      updateState({ isLoading: true, error: null });
+
+      try {
+        const role = await fetchRole(force);
+        const now = Date.now();
+
+        updateState({
+          role,
+          isLoading: false,
+          error: null,
+          lastRefresh: now,
+          isStale: false,
+          refreshCount: state.refreshCount + 1,
+        });
+
+        return role;
+      } catch (error: any) {
+        console.error('[useSessionRole] Refresh error:', error);
+
+        updateState({
+          isLoading: false,
+          error: error.message || 'Failed to refresh role',
+          isStale: true,
+        });
+
+        // Trigger error callback
+        try {
+          opts.onError(error);
+        } catch (callbackError) {
+          console.error('[useSessionRole] onError callback error:', callbackError);
+        }
+
+        return state.role; // Return current role on error
+      }
+    },
+    [isUserLoaded, user, fetchRole, state.refreshCount, updateState, opts.onError],
+  );
 
   /**
    * Check if current role data is stale
@@ -200,7 +203,7 @@ export function useSessionRole(options: UseSessionRoleOptions = {}) {
         // Skip refresh when tab is hidden to save resources
         return;
       }
-      
+
       refreshRole(false);
     }, opts.refreshInterval);
 
@@ -271,22 +274,22 @@ export function useSessionRole(options: UseSessionRoleOptions = {}) {
     role: state.role,
     isLoading: state.isLoading,
     error: state.error,
-    
+
     // Data freshness
     isStale: state.isStale,
     lastRefresh: state.lastRefresh,
     refreshCount: state.refreshCount,
-    
+
     // Actions
     refresh: refreshRole,
     forceRefresh: () => refreshRole(true),
-    
+
     // Utilities
     hasRole: (targetRole: UserRole) => state.role === targetRole,
-    isAdmin: state.role === "admin",
-    isMerchant: state.role === "merchant",
-    isViewer: state.role === "viewer",
-    
+    isAdmin: state.role === 'admin',
+    isMerchant: state.role === 'merchant',
+    isViewer: state.role === 'viewer',
+
     // Debugging info
     debug: {
       options: opts,
@@ -299,17 +302,14 @@ export function useSessionRole(options: UseSessionRoleOptions = {}) {
 
 /**
  * Hook for checking specific role permissions
- * 
+ *
  * @param requiredRole Role required for access
  * @param options Hook configuration options
  * @returns Permission check result with loading state
  */
-export function useRolePermission(
-  requiredRole: UserRole,
-  options: UseSessionRoleOptions = {}
-) {
+export function useRolePermission(requiredRole: UserRole, options: UseSessionRoleOptions = {}) {
   const { role, isLoading, error, refresh } = useSessionRole(options);
-  
+
   return {
     hasPermission: role === requiredRole,
     isLoading,
@@ -326,16 +326,12 @@ export function useRolePermission(
  * @param options - Hook configuration options
  * @returns Role check result and session data
  */
-export function useRequireRole(
-  requiredRole: UserRole, 
-  options: UseSessionRoleOptions = {}
-) {
+export function useRequireRole(requiredRole: UserRole, options: UseSessionRoleOptions = {}) {
   const sessionData = useSessionRole(options);
-  
-  const hasRequiredRole = sessionData.role && (
-    sessionData.role === requiredRole || 
-    sessionData.role === 'admin' // Admin has access to everything
-  );
+
+  const hasRequiredRole =
+    sessionData.role &&
+    (sessionData.role === requiredRole || sessionData.role === 'admin'); // Admin has access to everything
 
   return {
     ...sessionData,
@@ -355,10 +351,10 @@ export function useRequireRole(
  */
 export function useRequirePermission(
   requiredPermission: string,
-  options: UseSessionRoleOptions = {}
+  options: UseSessionRoleOptions = {},
 ) {
   const sessionData = useSessionRole(options);
-  
+
   // For now, only admin has all permissions
   const hasRequiredPermission = sessionData.role === 'admin';
 
@@ -374,10 +370,10 @@ export function useRequirePermission(
 
 /**
  * Hook for admin-only functionality
- * 
+ *
  * @param options Hook configuration options
  * @returns Admin permission state
  */
 export function useAdminRole(options: UseSessionRoleOptions = {}) {
-  return useRolePermission("admin", options);
+  return useRolePermission('admin', options);
 }

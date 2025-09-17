@@ -8,7 +8,7 @@ import { requireRole } from '@/lib/auth/safe-auth';
 function buildDetailedResponse(
   healthStatus: any,
   includeMetrics: boolean,
-  includeHistory: boolean
+  includeHistory: boolean,
 ): any {
   const response: any = {
     status: healthStatus.overall,
@@ -121,8 +121,8 @@ export async function GET(request: NextRequest) {
     addHistoryToResponse(response, healthStatus, includeHistory);
 
     // Determine response status based on overall health
-    const statusCode = healthStatus.overall === 'healthy' ? 200 :
-                      healthStatus.overall === 'degraded' ? 200 : 503;
+    const statusCode =
+      healthStatus.overall === 'healthy' ? 200 : healthStatus.overall === 'degraded' ? 200 : 503;
 
     return NextResponse.json(response, {
       status: statusCode,
@@ -136,30 +136,36 @@ export async function GET(request: NextRequest) {
 
     // Check if it's an authentication error
     if (error instanceof Error && error.message.includes('role')) {
-      return NextResponse.json({
-        status: 'unauthorized',
-        error: 'Admin access required for detailed health information',
+      return NextResponse.json(
+        {
+          status: 'unauthorized',
+          error: 'Admin access required for detailed health information',
+          timestamp: new Date().toISOString(),
+        },
+        {
+          status: 403,
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        status: 'error',
         timestamp: new Date().toISOString(),
-      }, {
-        status: 403,
+        error: error instanceof Error ? error.message : 'Health check failed',
+      },
+      {
+        status: 503,
         headers: {
           'Cache-Control': 'no-cache',
           'Content-Type': 'application/json',
         },
-      });
-    }
-
-    return NextResponse.json({
-      status: 'error',
-      timestamp: new Date().toISOString(),
-      error: error instanceof Error ? error.message : 'Health check failed',
-    }, {
-      status: 503,
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Content-Type': 'application/json',
       },
-    });
+    );
   }
 }
 
@@ -174,37 +180,43 @@ export async function POST(request: NextRequest) {
     // Perform health check
     const healthStatus = await healthCheckService.performHealthCheck();
 
-    return NextResponse.json({
-      success: true,
-      message: 'Health check completed',
-      status: healthStatus.overall,
-      timestamp: new Date().toISOString(),
-      services: healthStatus.services.map(s => ({
-        service: s.service,
-        status: s.status,
-        latency: s.latency,
-      })),
-      alerts: healthStatus.alerts.length,
-    }, {
-      status: 200,
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Content-Type': 'application/json',
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Health check completed',
+        status: healthStatus.overall,
+        timestamp: new Date().toISOString(),
+        services: healthStatus.services.map((s) => ({
+          service: s.service,
+          status: s.status,
+          latency: s.latency,
+        })),
+        alerts: healthStatus.alerts.length,
       },
-    });
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   } catch (error) {
     console.error('Manual health check failed:', error);
 
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Manual health check failed',
-      timestamp: new Date().toISOString(),
-    }, {
-      status: 500,
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Content-Type': 'application/json',
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Manual health check failed',
+        timestamp: new Date().toISOString(),
       },
-    });
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
 }

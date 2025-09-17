@@ -51,7 +51,7 @@ export class DeadLetterQueueService {
     error: Error,
     correlationId: string,
     headers: Record<string, string>,
-    processingTime?: number
+    processingTime?: number,
   ): Promise<string> {
     const entryId = crypto.randomUUID();
     const entry: DeadLetterEntry = {
@@ -99,7 +99,9 @@ export class DeadLetterQueueService {
     } catch (circuitError) {
       console.error('Failed to add to DLQ due to circuit breaker:', circuitError);
       // If Redis is down, we still want to log the failure
-      throw new Error(`DLQ unavailable: ${circuitError instanceof Error ? circuitError.message : 'Unknown error'}`);
+      throw new Error(
+        `DLQ unavailable: ${circuitError instanceof Error ? circuitError.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -174,7 +176,7 @@ export class DeadLetterQueueService {
     entryId: string,
     retryCount: number,
     lastRetryAt: number,
-    nextRetryAt?: number
+    nextRetryAt?: number,
   ): Promise<boolean> {
     try {
       return await this.circuitBreaker.execute(async () => {
@@ -238,7 +240,7 @@ export class DeadLetterQueueService {
     try {
       return await this.circuitBreaker.execute(async () => {
         const entries = await redis.lrange(this.DLQ_KEY, 0, -1);
-        const cutoffTime = Date.now() - (this.ENTRY_TTL * 1000);
+        const cutoffTime = Date.now() - this.ENTRY_TTL * 1000;
         let removedCount = 0;
 
         for (const entryStr of entries) {
@@ -287,7 +289,8 @@ export class DeadLetterQueueService {
     stats.entriesByType[entry.event.type] = (stats.entriesByType[entry.event.type] || 0) + 1;
 
     // Update retry distribution
-    stats.retryDistribution[entry.retryCount] = (stats.retryDistribution[entry.retryCount] || 0) + 1;
+    stats.retryDistribution[entry.retryCount] =
+      (stats.retryDistribution[entry.retryCount] || 0) + 1;
 
     // Update timestamps
     if (stats.totalEntries === 0) {
@@ -357,7 +360,8 @@ export class DeadLetterQueueService {
       entriesByType,
       oldestEntry: parsedEntries.length > 0 ? oldestEntry : 0,
       newestEntry: parsedEntries.length > 0 ? newestEntry : 0,
-      averageProcessingTime: processingTimeCount > 0 ? totalProcessingTime / processingTimeCount : 0,
+      averageProcessingTime:
+        processingTimeCount > 0 ? totalProcessingTime / processingTimeCount : 0,
       retryDistribution,
     };
   }

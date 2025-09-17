@@ -1,6 +1,6 @@
 /**
  * Circuit Breaker Tests
- * 
+ *
  * Tests the Redis-backed circuit breaker implementation for
  * fault tolerance and graceful degradation patterns.
  */
@@ -25,20 +25,22 @@ describe('Circuit Breaker', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     mockRedis = new Redis({} as any) as jest.Mocked<Redis>;
-    circuitBreaker = new PersistentCircuitBreaker(mockRedis, { 
-      serviceName: 'test-service' 
+    circuitBreaker = new PersistentCircuitBreaker(mockRedis, {
+      serviceName: 'test-service',
     });
-    
+
     // Default healthy state
-    mockRedis.get.mockResolvedValue(JSON.stringify({
-      state: 'CLOSED',
-      failures: 0,
-      lastFailure: 0,
-      lastSuccess: Date.now(),
-    }));
-    
+    mockRedis.get.mockResolvedValue(
+      JSON.stringify({
+        state: 'CLOSED',
+        failures: 0,
+        lastFailure: 0,
+        lastSuccess: Date.now(),
+      }),
+    );
+
     mockRedis.setex.mockResolvedValue('OK');
   });
 
@@ -66,18 +68,20 @@ describe('Circuit Breaker', () => {
       expect(mockRedis.setex).toHaveBeenCalledWith(
         expect.stringContaining('circuit_breaker:test-service'),
         300, // 5 minute TTL
-        expect.stringContaining('"state":"CLOSED"')
+        expect.stringContaining('"state":"CLOSED"'),
       );
     });
 
     it('should transition to OPEN on failure threshold', async () => {
       // Mock existing state with 4 failures (threshold is 5)
-      mockRedis.get.mockResolvedValueOnce(JSON.stringify({
-        state: 'CLOSED',
-        failures: 4,
-        lastFailure: Date.now() - 1000,
-        lastSuccess: Date.now() - 2000,
-      }));
+      mockRedis.get.mockResolvedValueOnce(
+        JSON.stringify({
+          state: 'CLOSED',
+          failures: 4,
+          lastFailure: Date.now() - 1000,
+          lastSuccess: Date.now() - 2000,
+        }),
+      );
 
       const mockOperation = jest.fn().mockRejectedValue(new Error('Service unavailable'));
 
@@ -87,7 +91,7 @@ describe('Circuit Breaker', () => {
       expect(mockRedis.setex).toHaveBeenCalledWith(
         expect.stringContaining('circuit_breaker:test-service'),
         300,
-        expect.stringContaining('"state":"OPEN"')
+        expect.stringContaining('"state":"OPEN"'),
       );
     });
   });
@@ -95,31 +99,36 @@ describe('Circuit Breaker', () => {
   describe('Open State (Failing)', () => {
     beforeEach(() => {
       // Mock circuit in OPEN state
-      mockRedis.get.mockResolvedValue(JSON.stringify({
-        state: 'OPEN',
-        failures: 5,
-        lastFailure: Date.now() - 30000, // 30 seconds ago
-        lastSuccess: Date.now() - 60000,
-      }));
+      mockRedis.get.mockResolvedValue(
+        JSON.stringify({
+          state: 'OPEN',
+          failures: 5,
+          lastFailure: Date.now() - 30000, // 30 seconds ago
+          lastSuccess: Date.now() - 60000,
+        }),
+      );
     });
 
     it('should reject operations immediately when circuit is open', async () => {
       const mockOperation = jest.fn().mockResolvedValue('success');
 
-      await expect(circuitBreaker.execute(mockOperation))
-        .rejects.toThrow('Circuit breaker is OPEN');
+      await expect(circuitBreaker.execute(mockOperation)).rejects.toThrow(
+        'Circuit breaker is OPEN',
+      );
 
       expect(mockOperation).not.toHaveBeenCalled();
     });
 
     it('should transition to HALF_OPEN after timeout period', async () => {
       // Mock circuit that's been open long enough for half-open transition
-      mockRedis.get.mockResolvedValueOnce(JSON.stringify({
-        state: 'OPEN',
-        failures: 5,
-        lastFailure: Date.now() - 65000, // More than 60 seconds ago
-        lastSuccess: Date.now() - 120000,
-      }));
+      mockRedis.get.mockResolvedValueOnce(
+        JSON.stringify({
+          state: 'OPEN',
+          failures: 5,
+          lastFailure: Date.now() - 65000, // More than 60 seconds ago
+          lastSuccess: Date.now() - 120000,
+        }),
+      );
 
       const mockOperation = jest.fn().mockResolvedValue('recovery-test');
 
@@ -127,24 +136,26 @@ describe('Circuit Breaker', () => {
 
       expect(result).toBe('recovery-test');
       expect(mockOperation).toHaveBeenCalledTimes(1);
-      
+
       // Should transition to HALF_OPEN first, then CLOSED on success
       expect(mockRedis.setex).toHaveBeenCalledWith(
         expect.stringContaining('circuit_breaker:test-service'),
         300,
-        expect.stringContaining('"state":"CLOSED"')
+        expect.stringContaining('"state":"CLOSED"'),
       );
     });
   });
 
   describe('Half-Open State (Testing)', () => {
     beforeEach(() => {
-      mockRedis.get.mockResolvedValue(JSON.stringify({
-        state: 'HALF_OPEN',
-        failures: 5,
-        lastFailure: Date.now() - 70000,
-        lastSuccess: Date.now() - 120000,
-      }));
+      mockRedis.get.mockResolvedValue(
+        JSON.stringify({
+          state: 'HALF_OPEN',
+          failures: 5,
+          lastFailure: Date.now() - 70000,
+          lastSuccess: Date.now() - 120000,
+        }),
+      );
     });
 
     it('should allow single test operation in half-open state', async () => {
@@ -164,20 +175,19 @@ describe('Circuit Breaker', () => {
       expect(mockRedis.setex).toHaveBeenCalledWith(
         expect.stringContaining('circuit_breaker:test-service'),
         300,
-        expect.stringContaining('"state":"CLOSED"')
+        expect.stringContaining('"state":"CLOSED"'),
       );
     });
 
     it('should transition back to OPEN on failed test', async () => {
       const mockOperation = jest.fn().mockRejectedValue(new Error('Still failing'));
 
-      await expect(circuitBreaker.execute(mockOperation))
-        .rejects.toThrow('Still failing');
+      await expect(circuitBreaker.execute(mockOperation)).rejects.toThrow('Still failing');
 
       expect(mockRedis.setex).toHaveBeenCalledWith(
         expect.stringContaining('circuit_breaker:test-service'),
         300,
-        expect.stringContaining('"state":"OPEN"')
+        expect.stringContaining('"state":"OPEN"'),
       );
     });
   });
@@ -191,7 +201,7 @@ describe('Circuit Breaker', () => {
       expect(mockRedis.setex).toHaveBeenCalledWith(
         'circuit_breaker:test-service',
         300,
-        expect.stringMatching(/"state":"CLOSED"/)
+        expect.stringMatching(/"state":"CLOSED"/),
       );
     });
 
@@ -220,11 +230,11 @@ describe('Circuit Breaker', () => {
     });
 
     it('should handle concurrent state updates', async () => {
-      const operations = Array(5).fill(null).map((_, i) => 
-        jest.fn().mockResolvedValue(`result-${i}`)
-      );
+      const operations = Array(5)
+        .fill(null)
+        .map((_, i) => jest.fn().mockResolvedValue(`result-${i}`));
 
-      const promises = operations.map(op => circuitBreaker.execute(op));
+      const promises = operations.map((op) => circuitBreaker.execute(op));
       const results = await Promise.all(promises);
 
       expect(results).toHaveLength(5);
@@ -243,27 +253,28 @@ describe('Circuit Breaker', () => {
       const customCircuitBreaker = new PersistentCircuitBreaker('custom-service', {
         failureThreshold: 3,
         recoveryTimeout: 30000,
-        monitoringWindow: 60000
+        monitoringWindow: 60000,
       });
 
       // Mock state with 2 failures (below threshold of 3)
-      mockRedis.get.mockResolvedValue(JSON.stringify({
-        state: 'CLOSED',
-        failures: 2,
-        lastFailure: Date.now() - 1000,
-        lastSuccess: Date.now() - 2000,
-      }));
+      mockRedis.get.mockResolvedValue(
+        JSON.stringify({
+          state: 'CLOSED',
+          failures: 2,
+          lastFailure: Date.now() - 1000,
+          lastSuccess: Date.now() - 2000,
+        }),
+      );
 
       const mockOperation = jest.fn().mockRejectedValue(new Error('Failure'));
 
-      await expect(customCircuitBreaker.execute(mockOperation))
-        .rejects.toThrow('Failure');
+      await expect(customCircuitBreaker.execute(mockOperation)).rejects.toThrow('Failure');
 
       // Should transition to OPEN (2 + 1 = 3, meets threshold)
       expect(mockRedis.setex).toHaveBeenCalledWith(
         expect.stringContaining('circuit_breaker:custom-service'),
         300,
-        expect.stringContaining('"state":"OPEN"')
+        expect.stringContaining('"state":"OPEN"'),
       );
     });
 
@@ -271,16 +282,18 @@ describe('Circuit Breaker', () => {
       const customCircuitBreaker = new PersistentCircuitBreaker('timeout-test', {
         failureThreshold: 5,
         recoveryTimeout: 10000, // 10 seconds instead of default 60
-        monitoringWindow: 60000
+        monitoringWindow: 60000,
       });
 
       // Mock OPEN state that's been open for 15 seconds (> 10 second timeout)
-      mockRedis.get.mockResolvedValue(JSON.stringify({
-        state: 'OPEN',
-        failures: 5,
-        lastFailure: Date.now() - 15000,
-        lastSuccess: Date.now() - 30000,
-      }));
+      mockRedis.get.mockResolvedValue(
+        JSON.stringify({
+          state: 'OPEN',
+          failures: 5,
+          lastFailure: Date.now() - 15000,
+          lastSuccess: Date.now() - 30000,
+        }),
+      );
 
       const mockOperation = jest.fn().mockResolvedValue('recovery');
 
@@ -330,19 +343,23 @@ describe('Circuit Breaker', () => {
       mockRedis.get.mockImplementation(() => {
         attemptCount++;
         if (attemptCount <= 2) {
-          return Promise.resolve(JSON.stringify({
-            state: 'HALF_OPEN',
-            failures: 5,
-            lastFailure: Date.now() - 65000,
-            lastSuccess: Date.now() - 120000,
-          }));
+          return Promise.resolve(
+            JSON.stringify({
+              state: 'HALF_OPEN',
+              failures: 5,
+              lastFailure: Date.now() - 65000,
+              lastSuccess: Date.now() - 120000,
+            }),
+          );
         }
-        return Promise.resolve(JSON.stringify({
-          state: 'CLOSED',
-          failures: 0,
-          lastFailure: 0,
-          lastSuccess: Date.now(),
-        }));
+        return Promise.resolve(
+          JSON.stringify({
+            state: 'CLOSED',
+            failures: 0,
+            lastFailure: 0,
+            lastSuccess: Date.now(),
+          }),
+        );
       });
 
       const operations = [
@@ -351,8 +368,7 @@ describe('Circuit Breaker', () => {
       ];
 
       // First operation should fail and keep circuit open
-      await expect(circuitBreaker.execute(operations[0]))
-        .rejects.toThrow('Still failing');
+      await expect(circuitBreaker.execute(operations[0])).rejects.toThrow('Still failing');
 
       // Second operation should succeed and close circuit
       const result = await circuitBreaker.execute(operations[1]);

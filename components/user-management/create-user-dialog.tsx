@@ -1,9 +1,9 @@
-"use client"
+'use client';
 
-import type React from "react"
+import type React from 'react';
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -11,76 +11,84 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/hooks/use-toast"
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 interface CreateUserDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onUserCreated: (userData: any) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUserCreated: (userData: any) => void;
 }
 
 export function CreateUserDialog({ open, onOpenChange, onUserCreated }: CreateUserDialogProps) {
   const [formData, setFormData] = useState({
-    email: "",
-    firstName: "",
-    lastName: "",
-    role: "merchant" as "admin" | "merchant" | "viewer",
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
+    email: '',
+    firstName: '',
+    lastName: '',
+    role: 'merchant' as 'admin' | 'merchant' | 'viewer',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const newUser = {
         id: Date.now().toString(),
         ...formData,
         createdAt: new Date(),
         lastActive: undefined,
-      }
+      };
 
-      onUserCreated(newUser)
+      onUserCreated(newUser);
 
       toast({
-        title: "User created successfully",
+        title: 'User created successfully',
         description: `${formData.firstName} ${formData.lastName} has been added as a ${formData.role}.`,
-      })
+      });
 
       // Reset form
       setFormData({
-        email: "",
-        firstName: "",
-        lastName: "",
-        role: "merchant",
-      })
+        email: '',
+        firstName: '',
+        lastName: '',
+        role: 'merchant',
+      });
 
-      onOpenChange(false)
+      onOpenChange(false);
     } catch (error) {
       toast({
-        title: "Error creating user",
-        description: "There was a problem creating the user. Please try again.",
-        variant: "destructive",
-      })
+        title: 'Error creating user',
+        description: 'There was a problem creating the user. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create New User</DialogTitle>
-          <DialogDescription>Add a new user to the system. They will receive an invitation email.</DialogDescription>
+          <DialogDescription>
+            Add a new user to the system. They will receive an invitation email.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
@@ -127,7 +135,9 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated }: CreateUs
               </Label>
               <Select
                 value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value as "admin" | "merchant" | "viewer" })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, role: value as 'admin' | 'merchant' | 'viewer' })
+                }
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select a role" />
@@ -145,11 +155,11 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated }: CreateUs
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Creating..." : "Create User"}
+              {isLoading ? 'Creating...' : 'Create User'}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

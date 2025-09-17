@@ -60,25 +60,25 @@ const result = await CircuitBreakers.redis.execute(async () => {
 ```typescript
 interface PersistentCircuitBreakerConfig {
   // Failure thresholds
-  failureThreshold: number;      // Failures before opening circuit
-  successThreshold: number;      // Successes needed in half-open state
+  failureThreshold: number; // Failures before opening circuit
+  successThreshold: number; // Successes needed in half-open state
 
   // Timeouts
-  recoveryTimeout: number;       // Base time before recovery attempt (ms)
-  maxRecoveryTimeout: number;    // Maximum recovery timeout (ms)
-  monitoringPeriod: number;      // Time window for failure tracking (ms)
+  recoveryTimeout: number; // Base time before recovery attempt (ms)
+  maxRecoveryTimeout: number; // Maximum recovery timeout (ms)
+  monitoringPeriod: number; // Time window for failure tracking (ms)
 
   // Exponential backoff
-  backoffMultiplier: number;     // Multiplier for exponential backoff
-  backoffJitter: number;         // Jitter factor (0-1)
+  backoffMultiplier: number; // Multiplier for exponential backoff
+  backoffJitter: number; // Jitter factor (0-1)
 
   // Redis configuration
-  stateTtl: number;              // TTL for circuit state in Redis (ms)
-  metricsTtl: number;            // TTL for metrics in Redis (ms)
+  stateTtl: number; // TTL for circuit state in Redis (ms)
+  metricsTtl: number; // TTL for metrics in Redis (ms)
 
   // Service identification
-  serviceName: string;           // Name of the service being protected
-  instanceId?: string;           // Optional instance identifier
+  serviceName: string; // Name of the service being protected
+  instanceId?: string; // Optional instance identifier
 }
 ```
 
@@ -88,13 +88,13 @@ interface PersistentCircuitBreakerConfig {
 const DEFAULT_CONFIG = {
   failureThreshold: 5,
   successThreshold: 3,
-  recoveryTimeout: 30000,     // 30 seconds
+  recoveryTimeout: 30000, // 30 seconds
   maxRecoveryTimeout: 300000, // 5 minutes
-  monitoringPeriod: 300000,   // 5 minutes
+  monitoringPeriod: 300000, // 5 minutes
   backoffMultiplier: 2,
   backoffJitter: 0.1,
-  stateTtl: 600000,           // 10 minutes
-  metricsTtl: 86400000,       // 24 hours
+  stateTtl: 600000, // 10 minutes
+  metricsTtl: 86400000, // 24 hours
   serviceName: 'redis-service',
 };
 ```
@@ -140,7 +140,7 @@ export const GET = withCircuitBreaker(
   {
     failureThreshold: 10,
     recoveryTimeout: 60000,
-  }
+  },
 );
 ```
 
@@ -172,7 +172,7 @@ export async function processPayment(paymentData: any) {
     const response = await fetch('https://api.stripe.com/v1/charges', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.STRIPE_KEY}`,
+        Authorization: `Bearer ${process.env.STRIPE_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(paymentData),
@@ -192,16 +192,16 @@ export async function processPayment(paymentData: any) {
 ```typescript
 export async function batchUpdateUsers(updates: any[]) {
   const results = await Promise.allSettled(
-    updates.map(update =>
+    updates.map((update) =>
       CircuitBreakers.redis.execute(async () => {
         return redis.set(`user:${update.id}`, JSON.stringify(update.data));
-      }, `update-user-${update.id}`)
-    )
+      }, `update-user-${update.id}`),
+    ),
   );
 
   return {
-    successful: results.filter(r => r.status === 'fulfilled').length,
-    failed: results.filter(r => r.status === 'rejected').length,
+    successful: results.filter((r) => r.status === 'fulfilled').length,
+    failed: results.filter((r) => r.status === 'rejected').length,
   };
 }
 ```
@@ -303,17 +303,17 @@ const isAvailable = await circuitBreaker.isAvailable();
 ```typescript
 // Production configuration
 const prodConfig = {
-  failureThreshold: 10,      // Higher threshold for production
-  successThreshold: 5,       // More successes required
-  recoveryTimeout: 120000,   // Longer recovery time
-  monitoringPeriod: 600000,  // 10-minute monitoring window
+  failureThreshold: 10, // Higher threshold for production
+  successThreshold: 5, // More successes required
+  recoveryTimeout: 120000, // Longer recovery time
+  monitoringPeriod: 600000, // 10-minute monitoring window
 };
 
 // Development configuration
 const devConfig = {
-  failureThreshold: 3,       // Lower threshold for development
-  successThreshold: 2,       // Fewer successes required
-  recoveryTimeout: 30000,    // Shorter recovery time
+  failureThreshold: 3, // Lower threshold for development
+  successThreshold: 2, // Fewer successes required
+  recoveryTimeout: 30000, // Shorter recovery time
 };
 ```
 

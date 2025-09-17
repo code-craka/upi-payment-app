@@ -22,39 +22,43 @@ Before you begin, ensure you have the following installed:
 ### Development Setup
 
 1. **Fork and Clone**
+
    ```bash
    git clone https://github.com/code-craka/upi-payment-app.git
    cd upi-payment-app
    ```
 
 2. **Install Dependencies**
+
    ```bash
    pnpm install
    ```
 
 3. **Environment Configuration**
    Create a `.env.local` file with the following:
+
    ```env
    # Database
    MONGODB_URI=mongodb://localhost:27017/upi-admin-dashboard-dev
-   
+
    # Redis (Required)
    REDIS_HOST=localhost
    REDIS_PORT=6379
    REDIS_PASSWORD=your-dev-password
-   
+
    # Authentication (Clerk)
    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
    CLERK_SECRET_KEY=sk_test_...
    NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
    NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-   
+
    # Security
    NEXTAUTH_SECRET=your-development-secret-key
    CSRF_SECRET=your-csrf-secret-key
    ```
 
 4. **Start Development Server**
+
    ```bash
    pnpm dev
    ```
@@ -63,6 +67,7 @@ Before you begin, ensure you have the following installed:
    - Visit <http://localhost:3000>
    - Check API health: <http://localhost:3000/api/test-db>
    - Verify Redis connection: <http://localhost:3000/api/debug/session>
+
 - Integration tests for API endpoints
 - E2E tests for critical user flows
 
@@ -150,6 +155,7 @@ Closes #123
 ### Bug Report Template
 
 When reporting bugs, please include:
+
 - **Environment**: OS, Node.js version, browser
 - **Steps to Reproduce**: Clear, numbered steps
 - **Expected Behavior**: What should happen
@@ -187,19 +193,19 @@ When reporting bugs, please include:
 ### Folder Structure
 
 \`\`\`
-├── app/                 # Next.js App Router
-│   ├── api/            # API routes
-│   ├── admin/          # Admin dashboard
-│   └── pay/            # Payment pages
-├── components/         # React components
-│   ├── ui/            # ShadCN UI components
-│   ├── payment/       # Payment components
-│   └── admin/         # Admin components
-├── lib/               # Utilities and business logic
-│   ├── auth/          # Authentication utilities
-│   ├── db/            # Database models and queries
-│   └── utils/         # Helper functions
-└── types/             # TypeScript type definitions
+├── app/ # Next.js App Router
+│ ├── api/ # API routes
+│ ├── admin/ # Admin dashboard
+│ └── pay/ # Payment pages
+├── components/ # React components
+│ ├── ui/ # ShadCN UI components
+│ ├── payment/ # Payment components
+│ └── admin/ # Admin components
+├── lib/ # Utilities and business logic
+│ ├── auth/ # Authentication utilities
+│ ├── db/ # Database models and queries
+│ └── utils/ # Helper functions
+└── types/ # TypeScript type definitions
 \`\`\`
 
 ### Component Organization
@@ -284,3 +290,4 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```

@@ -1,9 +1,9 @@
-"use client"
+'use client';
 
-import type React from "react"
+import type React from 'react';
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -11,74 +11,80 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/hooks/use-toast"
-import type { User } from "@/lib/types"
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import type { User } from '@/lib/types';
 
 interface EditUserDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  user: User | null
-  onUserUpdated: (userData: User) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  user: User | null;
+  onUserUpdated: (userData: User) => void;
 }
 
 export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: EditUserDialogProps) {
   const [formData, setFormData] = useState({
-    email: "",
-    firstName: "",
-    lastName: "",
-    role: "merchant" as "admin" | "merchant" | "viewer",
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
+    email: '',
+    firstName: '',
+    lastName: '',
+    role: 'merchant' as 'admin' | 'merchant' | 'viewer',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
       setFormData({
         email: user.email,
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
         role: user.role,
-      })
+      });
     }
-  }, [user])
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user) return
+    e.preventDefault();
+    if (!user) return;
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const updatedUser = {
         ...user,
         ...formData,
-      }
+      };
 
-      onUserUpdated(updatedUser)
+      onUserUpdated(updatedUser);
 
       toast({
-        title: "User updated successfully",
+        title: 'User updated successfully',
         description: `${formData.firstName} ${formData.lastName}'s information has been updated.`,
-      })
+      });
 
-      onOpenChange(false)
+      onOpenChange(false);
     } catch (error) {
       toast({
-        title: "Error updating user",
-        description: "There was a problem updating the user. Please try again.",
-        variant: "destructive",
-      })
+        title: 'Error updating user',
+        description: 'There was a problem updating the user. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -132,7 +138,9 @@ export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: Edit
               </Label>
               <Select
                 value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value as "admin" | "merchant" | "viewer" })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, role: value as 'admin' | 'merchant' | 'viewer' })
+                }
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select a role" />
@@ -150,11 +158,11 @@ export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: Edit
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Updating..." : "Update User"}
+              {isLoading ? 'Updating...' : 'Update User'}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

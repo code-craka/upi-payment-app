@@ -36,15 +36,14 @@ export async function GET(request: NextRequest) {
       default:
         return await getDashboardOverview();
     }
-
   } catch (error) {
     console.error('Webhook monitoring error:', error);
     return NextResponse.json(
       {
         error: 'Failed to retrieve monitoring data',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -68,20 +67,16 @@ export async function POST(request: NextRequest) {
       case 'retry_all':
         return await retryAllFailedWebhooks();
       default:
-        return NextResponse.json(
-          { error: 'Invalid action' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-
   } catch (error) {
     console.error('Webhook management error:', error);
     return NextResponse.json(
       {
         error: 'Failed to perform action',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

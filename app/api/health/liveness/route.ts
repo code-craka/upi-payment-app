@@ -16,29 +16,35 @@ export async function GET(request: NextRequest) {
     // Basic liveness check - just verify the service is responding
     const isLive = true; // Application is running if this code executes
 
-    return NextResponse.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      version: process.env.npm_package_version || '1.0.0',
-    }, {
-      status: 200,
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Content-Type': 'application/json',
+    return NextResponse.json(
+      {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: process.env.npm_package_version || '1.0.0',
       },
-    });
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   } catch (error) {
-    return NextResponse.json({
-      status: 'error',
-      timestamp: new Date().toISOString(),
-      error: 'Application is not responding',
-    }, {
-      status: 503,
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Content-Type': 'application/json',
+    return NextResponse.json(
+      {
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        error: 'Application is not responding',
       },
-    });
+      {
+        status: 503,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json',
+        },
+      },
+    );
   }
 }

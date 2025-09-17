@@ -1,12 +1,16 @@
 /**
  * Incident Response Workflows System
- * 
+ *
  * Comprehensive incident management system with automated workflows, escalation policies,
  * and integration with the production error recovery system.
  */
 
 import { redis } from '@/lib/redis';
-import { errorRecoverySystem, type IncidentResponse, type ErrorContext } from './error-recovery-system';
+import {
+  errorRecoverySystem,
+  type IncidentResponse,
+  type ErrorContext,
+} from './error-recovery-system';
 
 export interface WorkflowStep {
   id: string;
@@ -118,7 +122,7 @@ class IncidentResponseSystem {
   private escalationPolicies: Map<string, EscalationPolicy> = new Map();
   private communicationTemplates: Map<string, CommunicationTemplate> = new Map();
   private activeExecutions: Map<string, WorkflowExecution> = new Map();
-  private executionTimer?: NodeJS.Timeout;
+  private executionTimer?: ReturnType<typeof setTimeout>;
 
   private constructor() {
     this.initializeDefaultWorkflows();
@@ -153,11 +157,11 @@ class IncidentResponseSystem {
         workflowId: workflow.id,
         status: 'running',
         startTime: Date.now(),
-        steps: workflow.steps.map(step => ({
+        steps: workflow.steps.map((step) => ({
           stepId: step.id,
-          status: 'pending'
+          status: 'pending',
         })),
-        escalationHistory: []
+        escalationHistory: [],
       };
 
       // Store execution
@@ -171,7 +175,6 @@ class IncidentResponseSystem {
       this.executeWorkflowSteps(execution, workflow);
 
       return execution;
-
     } catch (error) {
       console.error('Failed to start workflow:', error);
       return null;
@@ -183,19 +186,19 @@ class IncidentResponseSystem {
    */
   private async executeWorkflowSteps(
     execution: WorkflowExecution,
-    workflow: IncidentWorkflow
+    workflow: IncidentWorkflow,
   ): Promise<void> {
     try {
       const completedSteps = new Set<string>();
-      
+
       while (execution.status === 'running') {
         // Find next eligible step
-        const nextStep = workflow.steps.find(step => {
-          const stepExecution = execution.steps.find(s => s.stepId === step.id);
+        const nextStep = workflow.steps.find((step) => {
+          const stepExecution = execution.steps.find((s) => s.stepId === step.id);
           const isPending = stepExecution?.status === 'pending';
-          const dependenciesMet = !step.dependencies || 
-            step.dependencies.every(depId => completedSteps.has(depId));
-          
+          const dependenciesMet =
+            !step.dependencies || step.dependencies.every((depId) => completedSteps.has(depId));
+
           return isPending && dependenciesMet;
         });
 
@@ -209,7 +212,7 @@ class IncidentResponseSystem {
         // Check conditions if present
         if (nextStep.conditions && !this.evaluateConditions(nextStep.conditions, execution)) {
           // Skip step due to conditions
-          const stepExecution = execution.steps.find(s => s.stepId === nextStep.id)!;
+          const stepExecution = execution.steps.find((s) => s.stepId === nextStep.id)!;
           stepExecution.status = 'skipped';
           completedSteps.add(nextStep.id);
           continue;
@@ -217,8 +220,8 @@ class IncidentResponseSystem {
 
         // Execute step
         const stepResult = await this.executeWorkflowStep(nextStep, execution);
-        const stepExecution = execution.steps.find(s => s.stepId === nextStep.id)!;
-        
+        const stepExecution = execution.steps.find((s) => s.stepId === nextStep.id)!;
+
         stepExecution.result = stepResult;
         stepExecution.completionTime = Date.now();
 
@@ -243,7 +246,6 @@ class IncidentResponseSystem {
       // Final execution update
       this.activeExecutions.set(execution.id, execution);
       await this.persistExecution(execution);
-
     } catch (error) {
       console.error('Workflow execution failed:', error);
       execution.status = 'failed';
@@ -256,12 +258,12 @@ class IncidentResponseSystem {
    */
   private async executeWorkflowStep(
     step: WorkflowStep,
-    execution: WorkflowExecution
+    execution: WorkflowExecution,
   ): Promise<WorkflowStepResult> {
-    const stepExecution = execution.steps.find(s => s.stepId === step.id)!;
+    const stepExecution = execution.steps.find((s) => s.stepId === step.id)!;
     stepExecution.status = 'running';
     stepExecution.startTime = Date.now();
-    
+
     execution.currentStepId = step.id;
 
     try {
@@ -277,13 +279,13 @@ class IncidentResponseSystem {
       } else {
         return {
           success: false,
-          message: `Unknown step type: ${step.type}`
+          message: `Unknown step type: ${step.type}`,
         };
       }
     } catch (error) {
       return {
         success: false,
-        message: `Step execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Step execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
     }
   }
@@ -293,7 +295,7 @@ class IncidentResponseSystem {
    */
   private async waitForManualAction(
     step: WorkflowStep,
-    execution: WorkflowExecution
+    execution: WorkflowExecution,
   ): Promise<WorkflowStepResult> {
     const timeout = step.escalationTimeout || 900000; // 15 minutes default
     const startTime = Date.now();
@@ -305,7 +307,7 @@ class IncidentResponseSystem {
       const checkInterval = setInterval(async () => {
         // Check if action was completed externally
         const updatedExecution = await this.getExecution(execution.id);
-        const stepStatus = updatedExecution?.steps.find(s => s.stepId === step.id);
+        const stepStatus = updatedExecution?.steps.find((s) => s.stepId === step.id);
 
         if (stepStatus?.result) {
           clearInterval(checkInterval);
@@ -319,7 +321,7 @@ class IncidentResponseSystem {
           resolve({
             success: false,
             message: `Manual action timeout after ${timeout}ms`,
-            requiresEscalation: true
+            requiresEscalation: true,
           });
         }
       }, 5000); // Check every 5 seconds
@@ -331,25 +333,26 @@ class IncidentResponseSystem {
    */
   private async executeConditionalStep(
     step: WorkflowStep,
-    execution: WorkflowExecution
+    execution: WorkflowExecution,
   ): Promise<WorkflowStepResult> {
     // Get current incident state
     const incident = await this.getIncident(execution.incidentId);
     if (!incident) {
       return {
         success: false,
-        message: 'Could not retrieve incident for conditional evaluation'
+        message: 'Could not retrieve incident for conditional evaluation',
       };
     }
 
     // Evaluate conditions
-    const conditionsMet = step.conditions ? 
-      this.evaluateConditions(step.conditions, execution, incident) : true;
+    const conditionsMet = step.conditions
+      ? this.evaluateConditions(step.conditions, execution, incident)
+      : true;
 
     if (!conditionsMet) {
       return {
         success: true,
-        message: 'Conditions not met, skipping step'
+        message: 'Conditions not met, skipping step',
       };
     }
 
@@ -360,7 +363,7 @@ class IncidentResponseSystem {
 
     return {
       success: true,
-      message: 'Conditional step evaluated successfully'
+      message: 'Conditional step evaluated successfully',
     };
   }
 
@@ -369,7 +372,7 @@ class IncidentResponseSystem {
    */
   private async initiateEscalation(
     execution: WorkflowExecution,
-    workflow: IncidentWorkflow
+    workflow: IncidentWorkflow,
   ): Promise<void> {
     const currentLevel = execution.escalationHistory.length;
     const escalationLevel = workflow.escalationPolicy.levels[currentLevel];
@@ -384,7 +387,7 @@ class IncidentResponseSystem {
       level: escalationLevel.level,
       timestamp: Date.now(),
       assignee: escalationLevel.assignees[0] || 'unassigned',
-      acknowledged: false
+      acknowledged: false,
     };
 
     execution.escalationHistory.push(escalation);
@@ -402,7 +405,7 @@ class IncidentResponseSystem {
   public async acknowledgeIncident(
     executionId: string,
     assignee: string,
-    acknowledgment: string
+    acknowledgment: string,
   ): Promise<boolean> {
     try {
       const execution = this.activeExecutions.get(executionId);
@@ -423,7 +426,7 @@ class IncidentResponseSystem {
           timestamp: Date.now(),
           action: `Incident acknowledged by ${assignee}`,
           actor: assignee,
-          result: acknowledgment
+          result: acknowledgment,
         });
 
         await this.persistIncident(incident);
@@ -431,7 +434,6 @@ class IncidentResponseSystem {
 
       await this.persistExecution(execution);
       return true;
-
     } catch (error) {
       console.error('Failed to acknowledge incident:', error);
       return false;
@@ -445,13 +447,13 @@ class IncidentResponseSystem {
     executionId: string,
     stepId: string,
     result: WorkflowStepResult,
-    operator: string
+    operator: string,
   ): Promise<boolean> {
     try {
       const execution = this.activeExecutions.get(executionId);
       if (!execution) return false;
 
-      const stepExecution = execution.steps.find(s => s.stepId === stepId);
+      const stepExecution = execution.steps.find((s) => s.stepId === stepId);
       if (!stepExecution || stepExecution.status !== 'running') return false;
 
       // Update step result
@@ -466,7 +468,7 @@ class IncidentResponseSystem {
           timestamp: Date.now(),
           action: `Manual step completed: ${stepId}`,
           actor: operator,
-          result: result.message
+          result: result.message,
         });
 
         await this.persistIncident(incident);
@@ -474,7 +476,6 @@ class IncidentResponseSystem {
 
       await this.persistExecution(execution);
       return true;
-
     } catch (error) {
       console.error('Failed to complete manual step:', error);
       return false;
@@ -499,7 +500,7 @@ class IncidentResponseSystem {
       description: 'Automated response for critical service failures',
       triggers: {
         severity: ['p0', 'p1'],
-        services: ['payment', 'clerk', 'database']
+        services: ['payment', 'clerk', 'database'],
       },
       steps: [
         {
@@ -513,9 +514,9 @@ class IncidentResponseSystem {
             return {
               success: true,
               message: `System health assessed: ${healthStatus.overall}`,
-              data: { healthStatus }
+              data: { healthStatus },
             };
-          }
+          },
         },
         {
           id: 'automatic_recovery',
@@ -528,9 +529,9 @@ class IncidentResponseSystem {
             // This would execute automatic recovery
             return {
               success: true,
-              message: 'Automatic recovery attempted'
+              message: 'Automatic recovery attempted',
             };
-          }
+          },
         },
         {
           id: 'escalate_if_unresolved',
@@ -539,16 +540,14 @@ class IncidentResponseSystem {
           action: 'conditional_escalation',
           estimatedDuration: 5000,
           dependencies: ['automatic_recovery'],
-          conditions: [
-            { field: 'automatic_recovery.success', operator: 'eq', value: false }
-          ],
+          conditions: [{ field: 'automatic_recovery.success', operator: 'eq', value: false }],
           execute: async () => {
             return {
               success: true,
               message: 'Escalating to on-call engineer',
-              requiresEscalation: true
+              requiresEscalation: true,
             };
-          }
+          },
         },
         {
           id: 'manual_investigation',
@@ -557,8 +556,8 @@ class IncidentResponseSystem {
           action: 'investigate',
           estimatedDuration: 900000, // 15 minutes
           escalationTimeout: 1800000, // 30 minutes
-          dependencies: ['escalate_if_unresolved']
-        }
+          dependencies: ['escalate_if_unresolved'],
+        },
       ],
       escalationPolicy: {
         id: 'critical_escalation',
@@ -569,36 +568,36 @@ class IncidentResponseSystem {
             delay: 0,
             assignees: ['on-call-engineer'],
             actions: ['page', 'slack'],
-            requiresAcknowledgment: true
+            requiresAcknowledgment: true,
           },
           {
             level: 2,
             delay: 300000, // 5 minutes
             assignees: ['engineering-manager'],
             actions: ['page', 'slack', 'email'],
-            requiresAcknowledgment: true
-          }
+            requiresAcknowledgment: true,
+          },
         ],
         notificationChannels: [
           {
             type: 'slack',
             config: { channel: '#incidents' },
             enabled: true,
-            severity: ['p0', 'p1', 'p2']
+            severity: ['p0', 'p1', 'p2'],
           },
           {
             type: 'pagerduty',
             config: { serviceKey: 'critical-service' },
             enabled: true,
-            severity: ['p0', 'p1']
-          }
-        ]
+            severity: ['p0', 'p1'],
+          },
+        ],
       },
       sla: {
         acknowledgmentTime: 300000, // 5 minutes
         responseTime: 900000, // 15 minutes
-        resolutionTime: 14400000 // 4 hours
-      }
+        resolutionTime: 14400000, // 4 hours
+      },
     };
 
     this.workflows.set(criticalServiceWorkflow.id, criticalServiceWorkflow);
@@ -610,7 +609,7 @@ class IncidentResponseSystem {
       description: 'Specific workflow for Redis/caching layer failures',
       triggers: {
         severity: ['p1', 'p2'],
-        services: ['redis']
+        services: ['redis'],
       },
       steps: [
         {
@@ -625,9 +624,9 @@ class IncidentResponseSystem {
             return {
               success: true,
               message: `Circuit breaker state: ${state ? 'EXISTS' : 'CLEAR'}`,
-              data: { circuitBreakerState: state }
+              data: { circuitBreakerState: state },
             };
-          }
+          },
         },
         {
           id: 'attempt_reconnection',
@@ -641,16 +640,16 @@ class IncidentResponseSystem {
               await redis.ping();
               return {
                 success: true,
-                message: 'Redis reconnection successful'
+                message: 'Redis reconnection successful',
               };
             } catch (error) {
               return {
                 success: false,
                 message: `Redis reconnection failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                requiresEscalation: true
+                requiresEscalation: true,
               };
             }
-          }
+          },
         },
         {
           id: 'fallback_to_clerk',
@@ -658,17 +657,15 @@ class IncidentResponseSystem {
           description: 'Enable Clerk-only mode for authentication',
           action: 'enable_clerk_fallback',
           estimatedDuration: 15000,
-          conditions: [
-            { field: 'attempt_reconnection.success', operator: 'eq', value: false }
-          ],
+          conditions: [{ field: 'attempt_reconnection.success', operator: 'eq', value: false }],
           execute: async () => {
             // This would enable Clerk-only authentication mode
             return {
               success: true,
-              message: 'Clerk-only mode enabled for graceful degradation'
+              message: 'Clerk-only mode enabled for graceful degradation',
             };
-          }
-        }
+          },
+        },
       ],
       escalationPolicy: {
         id: 'redis_escalation',
@@ -679,23 +676,23 @@ class IncidentResponseSystem {
             delay: 0,
             assignees: ['platform-engineer'],
             actions: ['slack'],
-            requiresAcknowledgment: true
-          }
+            requiresAcknowledgment: true,
+          },
         ],
         notificationChannels: [
           {
             type: 'slack',
             config: { channel: '#platform' },
             enabled: true,
-            severity: ['p1', 'p2']
-          }
-        ]
+            severity: ['p1', 'p2'],
+          },
+        ],
       },
       sla: {
         acknowledgmentTime: 600000, // 10 minutes
         responseTime: 1800000, // 30 minutes
-        resolutionTime: 7200000 // 2 hours
-      }
+        resolutionTime: 7200000, // 2 hours
+      },
     };
 
     this.workflows.set(redisFailureWorkflow.id, redisFailureWorkflow);
@@ -731,8 +728,17 @@ Status: {{status}}
 
 Dashboard: {{dashboardUrl}}
 `,
-        variables: ['incidentId', 'title', 'severity', 'affectedServices', 'description', 'assignedTo', 'status', 'dashboardUrl']
-      }
+        variables: [
+          'incidentId',
+          'title',
+          'severity',
+          'affectedServices',
+          'description',
+          'assignedTo',
+          'status',
+          'dashboardUrl',
+        ],
+      },
     };
 
     this.communicationTemplates.set(initialAlert.id, initialAlert);
@@ -766,24 +772,24 @@ Dashboard: {{dashboardUrl}}
 
   private matchesWorkflowTriggers(
     incident: IncidentResponse,
-    triggers: IncidentWorkflow['triggers']
+    triggers: IncidentWorkflow['triggers'],
   ): boolean {
     const severityMatch = triggers.severity.includes(incident.severity);
-    const serviceMatch = incident.affectedServices.some(service => 
-      triggers.services.includes(service)
+    const serviceMatch = incident.affectedServices.some((service) =>
+      triggers.services.includes(service),
     );
-    
+
     return severityMatch && serviceMatch;
   }
 
   private evaluateConditions(
     conditions: WorkflowStep['conditions'],
     execution: WorkflowExecution,
-    incident?: IncidentResponse
+    incident?: IncidentResponse,
   ): boolean {
     if (!conditions) return true;
 
-    return conditions.every(condition => {
+    return conditions.every((condition) => {
       // This would evaluate conditions against execution/incident state
       // For now, return true
       return true;
@@ -792,7 +798,7 @@ Dashboard: {{dashboardUrl}}
 
   private async sendInitialAlert(
     incident: IncidentResponse,
-    workflow: IncidentWorkflow
+    workflow: IncidentWorkflow,
   ): Promise<void> {
     const template = this.communicationTemplates.get('initial_alert');
     if (!template) return;
@@ -808,7 +814,7 @@ Dashboard: {{dashboardUrl}}
   private async sendEscalationNotification(
     execution: WorkflowExecution,
     level: EscalationLevel,
-    workflow: IncidentWorkflow
+    workflow: IncidentWorkflow,
   ): Promise<void> {
     const incident = await this.getIncident(execution.incidentId);
     if (!incident) return;
@@ -816,10 +822,11 @@ Dashboard: {{dashboardUrl}}
     // Send escalation notifications
     for (const channel of workflow.escalationPolicy.notificationChannels) {
       if (channel.enabled) {
-        await this.sendNotification(channel, 
-          this.communicationTemplates.get('escalation')!, 
-          incident, 
-          { escalationLevel: level.level, assignee: level.assignees[0] }
+        await this.sendNotification(
+          channel,
+          this.communicationTemplates.get('escalation')!,
+          incident,
+          { escalationLevel: level.level, assignee: level.assignees[0] },
         );
       }
     }
@@ -827,7 +834,7 @@ Dashboard: {{dashboardUrl}}
 
   private async notifyManualActionRequired(
     step: WorkflowStep,
-    execution: WorkflowExecution
+    execution: WorkflowExecution,
   ): Promise<void> {
     const incident = await this.getIncident(execution.incidentId);
     if (!incident) return;
@@ -835,7 +842,7 @@ Dashboard: {{dashboardUrl}}
     console.log(`MANUAL ACTION REQUIRED: ${step.description}`, {
       incidentId: incident.incidentId,
       stepId: step.id,
-      executionId: execution.id
+      executionId: execution.id,
     });
   }
 
@@ -843,19 +850,19 @@ Dashboard: {{dashboardUrl}}
     channel: NotificationChannel,
     template: CommunicationTemplate,
     incident: IncidentResponse,
-    variables?: Record<string, unknown>
+    variables?: Record<string, unknown>,
   ): Promise<void> {
     // This would integrate with actual notification services
     console.log(`NOTIFICATION [${channel.type}]: ${template.template.subject}`, {
       incident: incident.incidentId,
       channel: channel.type,
-      variables
+      variables,
     });
   }
 
   private async checkExecutionTimeouts(execution: WorkflowExecution): Promise<void> {
     // Check for step timeouts and trigger escalations
-    const runningStep = execution.steps.find(s => s.status === 'running');
+    const runningStep = execution.steps.find((s) => s.status === 'running');
     if (runningStep && runningStep.startTime) {
       const stepDuration = Date.now() - runningStep.startTime;
       // Check timeout logic here
@@ -867,7 +874,7 @@ Dashboard: {{dashboardUrl}}
       await redis.setex(
         `workflow_execution:${execution.id}`,
         86400 * 7, // 7 days
-        JSON.stringify(execution)
+        JSON.stringify(execution),
       );
     } catch (error) {
       console.error('Failed to persist execution:', error);
@@ -897,7 +904,7 @@ Dashboard: {{dashboardUrl}}
       await redis.setex(
         `incident:${incident.incidentId}`,
         86400 * 7, // 7 days
-        JSON.stringify(incident)
+        JSON.stringify(incident),
       );
     } catch (error) {
       console.error('Failed to persist incident:', error);
@@ -935,12 +942,15 @@ export const incidentResponseSystem = IncidentResponseSystem.getInstance();
 export const startIncidentWorkflow = (incident: IncidentResponse) =>
   incidentResponseSystem.startWorkflow(incident);
 
-export const acknowledgeIncident = (executionId: string, assignee: string, acknowledgment: string) =>
-  incidentResponseSystem.acknowledgeIncident(executionId, assignee, acknowledgment);
+export const acknowledgeIncident = (
+  executionId: string,
+  assignee: string,
+  acknowledgment: string,
+) => incidentResponseSystem.acknowledgeIncident(executionId, assignee, acknowledgment);
 
 export const completeManualStep = (
   executionId: string,
   stepId: string,
   result: WorkflowStepResult,
-  operator: string
+  operator: string,
 ) => incidentResponseSystem.completeManualStep(executionId, stepId, result, operator);

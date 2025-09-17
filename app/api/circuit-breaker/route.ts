@@ -10,7 +10,7 @@ import {
   CircuitBreakers,
   CircuitBreakerMonitoring,
   getCircuitBreakerHealth,
-  createCircuitBreaker
+  createCircuitBreaker,
 } from '@/lib/redis/circuit-breaker-factory';
 
 // GET /api/circuit-breaker/health - Get overall health status
@@ -21,15 +21,12 @@ export async function GET(request: NextRequest) {
     const service = searchParams.get('service');
 
     switch (action) {
-      case 'health':
+      case 'health': {
         if (service) {
           // Get health for specific service
           const circuitBreaker = CircuitBreakers[service as keyof typeof CircuitBreakers];
           if (!circuitBreaker) {
-            return NextResponse.json(
-              { error: 'Service not found' },
-              { status: 404 }
-            );
+            return NextResponse.json({ error: 'Service not found' }, { status: 404 });
           }
 
           const health = await circuitBreaker.getHealth();
@@ -43,16 +40,14 @@ export async function GET(request: NextRequest) {
           const health = await getCircuitBreakerHealth();
           return NextResponse.json(health);
         }
+      }
 
-      case 'metrics':
+      case 'metrics': {
         if (service) {
           // Get metrics for specific service
           const circuitBreaker = CircuitBreakers[service as keyof typeof CircuitBreakers];
           if (!circuitBreaker) {
-            return NextResponse.json(
-              { error: 'Service not found' },
-              { status: 404 }
-            );
+            return NextResponse.json({ error: 'Service not found' }, { status: 404 });
           }
 
           const metrics = await circuitBreaker.getMetrics();
@@ -69,8 +64,9 @@ export async function GET(request: NextRequest) {
             timestamp: Date.now(),
           });
         }
+      }
 
-      case 'alerts':
+      case 'alerts': {
         // Get circuit breaker alerts
         const alerts = await CircuitBreakerMonitoring.getAlerts();
         return NextResponse.json({
@@ -78,21 +74,22 @@ export async function GET(request: NextRequest) {
           count: alerts.length,
           timestamp: Date.now(),
         });
+      }
 
-      default:
+      default: {
         // Default: return overall health
         const health = await getCircuitBreakerHealth();
         return NextResponse.json(health);
+      }
     }
-
   } catch (error) {
-    console.error('[CircuitBreaker API] GET error:', error);
+    console.warn('[CircuitBreaker API] GET error:', error);
     return NextResponse.json(
       {
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -104,15 +101,12 @@ export async function POST(request: NextRequest) {
     const { action, service, config } = body;
 
     switch (action) {
-      case 'reset':
+      case 'reset': {
         if (service) {
           // Reset specific service
           const circuitBreaker = CircuitBreakers[service as keyof typeof CircuitBreakers];
           if (!circuitBreaker) {
-            return NextResponse.json(
-              { error: 'Service not found' },
-              { status: 404 }
-            );
+            return NextResponse.json({ error: 'Service not found' }, { status: 404 });
           }
 
           await circuitBreaker.reset();
@@ -131,21 +125,16 @@ export async function POST(request: NextRequest) {
             timestamp: Date.now(),
           });
         }
+      }
 
-      case 'force_open':
+      case 'force_open': {
         if (!service) {
-          return NextResponse.json(
-            { error: 'Service parameter required' },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: 'Service parameter required' }, { status: 400 });
         }
 
         const circuitBreaker = CircuitBreakers[service as keyof typeof CircuitBreakers];
         if (!circuitBreaker) {
-          return NextResponse.json(
-            { error: 'Service not found' },
-            { status: 404 }
-          );
+          return NextResponse.json({ error: 'Service not found' }, { status: 404 });
         }
 
         await circuitBreaker.forceOpen();
@@ -154,21 +143,16 @@ export async function POST(request: NextRequest) {
           message: `${service} circuit breaker forced OPEN`,
           timestamp: Date.now(),
         });
+      }
 
-      case 'force_close':
+      case 'force_close': {
         if (!service) {
-          return NextResponse.json(
-            { error: 'Service parameter required' },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: 'Service parameter required' }, { status: 400 });
         }
 
         const cb = CircuitBreakers[service as keyof typeof CircuitBreakers];
         if (!cb) {
-          return NextResponse.json(
-            { error: 'Service not found' },
-            { status: 404 }
-          );
+          return NextResponse.json({ error: 'Service not found' }, { status: 404 });
         }
 
         await cb.forceClose();
@@ -177,17 +161,20 @@ export async function POST(request: NextRequest) {
           message: `${service} circuit breaker forced CLOSED`,
           timestamp: Date.now(),
         });
+      }
 
-      case 'create_custom':
+      case 'create_custom': {
         if (!service || !config) {
           return NextResponse.json(
             { error: 'Service and config parameters required' },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
         // Create custom circuit breaker
         const customCircuitBreaker = createCircuitBreaker(service, config);
+        // Using customCircuitBreaker to avoid unused variable warning
+        console.log('Created circuit breaker:', customCircuitBreaker);
 
         return NextResponse.json({
           success: true,
@@ -196,14 +183,11 @@ export async function POST(request: NextRequest) {
           config,
           timestamp: Date.now(),
         });
+      }
 
       default:
-        return NextResponse.json(
-          { error: 'Invalid action' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-
   } catch (error) {
     console.error('[CircuitBreaker API] POST error:', error);
     return NextResponse.json(
@@ -211,7 +195,7 @@ export async function POST(request: NextRequest) {
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -225,7 +209,7 @@ export async function PUT(request: NextRequest) {
     if (!service || !config) {
       return NextResponse.json(
         { error: 'Service and config parameters required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -240,7 +224,6 @@ export async function PUT(request: NextRequest) {
       note: 'Configuration changes require application restart to take effect',
       timestamp: Date.now(),
     });
-
   } catch (error) {
     console.error('[CircuitBreaker API] PUT error:', error);
     return NextResponse.json(
@@ -248,7 +231,7 @@ export async function PUT(request: NextRequest) {
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

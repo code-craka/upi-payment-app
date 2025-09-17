@@ -102,7 +102,7 @@ export function AdminPanel() {
 
   if (isLoading) return <LoadingSpinner />;
   if (!isAdmin) return <AccessDenied />;
-  
+
   return <AdminDashboard />;
 }
 ```

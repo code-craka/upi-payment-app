@@ -1,10 +1,10 @@
-import { auth } from "@clerk/nextjs/server"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import { OrdersTable } from "@/components/orders/orders-table"
+import { auth } from '@clerk/nextjs/server';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
+import { OrdersTable } from '@/components/orders/orders-table';
 
 export default async function MerchantOrdersPage() {
-  const { userId } = await auth()
+  const { userId } = await auth();
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
@@ -16,5 +16,5 @@ export default async function MerchantOrdersPage() {
 
       <OrdersTable showAllOrders={false} userId={userId || undefined} />
     </div>
-  )
+  );
 }

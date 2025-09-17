@@ -85,7 +85,7 @@ export class WebhookLoggingService {
       source?: string;
       ipAddress?: string;
       userAgent?: string;
-    } = {}
+    } = {},
   ): Promise<string> {
     const logEntry: LogEntry = {
       id: crypto.randomUUID(),
@@ -121,8 +121,14 @@ export class WebhookLoggingService {
 
         // Add to correlation ID index
         if (logEntry.correlationId) {
-          await redis.sadd(`${this.LOG_INDEX_KEY}:correlation:${logEntry.correlationId}`, logEntry.id);
-          await redis.expire(`${this.LOG_INDEX_KEY}:correlation:${logEntry.correlationId}`, this.LOG_TTL);
+          await redis.sadd(
+            `${this.LOG_INDEX_KEY}:correlation:${logEntry.correlationId}`,
+            logEntry.id,
+          );
+          await redis.expire(
+            `${this.LOG_INDEX_KEY}:correlation:${logEntry.correlationId}`,
+            this.LOG_TTL,
+          );
         }
 
         // Add to operation index
@@ -168,7 +174,9 @@ export class WebhookLoggingService {
 
         // If correlation ID is specified, use the index
         if (query.correlationId) {
-          const ids = await redis.smembers(`${this.LOG_INDEX_KEY}:correlation:${query.correlationId}`);
+          const ids = await redis.smembers(
+            `${this.LOG_INDEX_KEY}:correlation:${query.correlationId}`,
+          );
           candidateIds = ids as string[];
         } else {
           // Get all log entries
@@ -242,7 +250,8 @@ export class WebhookLoggingService {
     try {
       return await this.circuitBreaker.execute(async () => {
         const entries = await redis.lrange(this.LOG_KEY, 0, limit - 1);
-        return (entries as string[]).map((entry: string) => JSON.parse(entry) as LogEntry)
+        return (entries as string[])
+          .map((entry: string) => JSON.parse(entry) as LogEntry)
           .sort((a, b) => b.timestamp - a.timestamp);
       });
     } catch (error) {
@@ -288,7 +297,7 @@ export class WebhookLoggingService {
     try {
       return await this.circuitBreaker.execute(async () => {
         const entries = await redis.lrange(this.LOG_KEY, 0, -1);
-        const cutoffTime = Date.now() - (this.LOG_TTL * 1000);
+        const cutoffTime = Date.now() - this.LOG_TTL * 1000;
         let removedCount = 0;
 
         for (const entryStr of entries as string[]) {
@@ -299,7 +308,10 @@ export class WebhookLoggingService {
 
             // Clean up indexes
             if (entry.correlationId) {
-              await redis.srem(`${this.LOG_INDEX_KEY}:correlation:${entry.correlationId}`, entry.id);
+              await redis.srem(
+                `${this.LOG_INDEX_KEY}:correlation:${entry.correlationId}`,
+                entry.id,
+              );
             }
             await redis.srem(`${this.LOG_INDEX_KEY}:operation:${entry.operation}`, entry.id);
             await redis.srem(`${this.LOG_INDEX_KEY}:level:${entry.level}`, entry.id);
@@ -390,7 +402,9 @@ export class WebhookLoggingService {
 
   private async calculateLogStats(): Promise<LogStats> {
     const entries = await redis.lrange(this.LOG_KEY, 0, -1);
-    const parsedEntries = (entries as string[]).map((entry: string) => JSON.parse(entry) as LogEntry);
+    const parsedEntries = (entries as string[]).map(
+      (entry: string) => JSON.parse(entry) as LogEntry,
+    );
 
     const logsByLevel: Record<string, number> = {};
     const logsByOperation: Record<string, number> = {};

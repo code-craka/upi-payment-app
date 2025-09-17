@@ -1,20 +1,20 @@
-"use client"
+'use client';
 
-import { useUser } from "@clerk/nextjs"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { RefreshCw } from "lucide-react"
-import { useState } from "react"
+import { useUser } from '@clerk/nextjs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 
 export function UserDebugInfo() {
-  const { user, isLoaded, isSignedIn } = useUser()
-  const [refreshKey, setRefreshKey] = useState(0)
+  const { user, isLoaded, isSignedIn } = useUser();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1)
-    window.location.reload()
-  }
+    setRefreshKey((prev) => prev + 1);
+    window.location.reload();
+  };
 
   if (!isLoaded) {
     return (
@@ -23,7 +23,7 @@ export function UserDebugInfo() {
           <p>Loading user info...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (!isSignedIn || !user) {
@@ -33,10 +33,10 @@ export function UserDebugInfo() {
           <p>No user signed in</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  const userRole = user.publicMetadata?.role as string
+  const userRole = user.publicMetadata?.role as string;
 
   return (
     <Card className="border-blue-200 bg-blue-50">
@@ -44,7 +44,7 @@ export function UserDebugInfo() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">User Debug Info</CardTitle>
           <Button size="sm" variant="outline" onClick={handleRefresh}>
-            <RefreshCw className="h-3 w-3 mr-1" />
+            <RefreshCw className="mr-1 h-3 w-3" />
             Refresh
           </Button>
         </div>
@@ -61,23 +61,27 @@ export function UserDebugInfo() {
           </div>
           <div>
             <strong>Name:</strong>
-            <p>{user.firstName} {user.lastName}</p>
+            <p>
+              {user.firstName} {user.lastName}
+            </p>
           </div>
           <div>
             <strong>Role:</strong>
             {userRole ? (
-              <Badge variant={userRole === "admin" ? "default" : "secondary"} className="text-xs">
+              <Badge variant={userRole === 'admin' ? 'default' : 'secondary'} className="text-xs">
                 {userRole}
               </Badge>
             ) : (
-              <Badge variant="destructive" className="text-xs">No Role</Badge>
+              <Badge variant="destructive" className="text-xs">
+                No Role
+              </Badge>
             )}
           </div>
         </div>
-        
+
         <div>
           <strong>Public Metadata:</strong>
-          <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-auto">
+          <pre className="mt-1 overflow-auto rounded bg-gray-100 p-2 text-xs">
             {JSON.stringify(user.publicMetadata, null, 2)}
           </pre>
         </div>
@@ -93,5 +97,5 @@ export function UserDebugInfo() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -66,7 +66,7 @@ export class RetryService {
     error: Error,
     correlationId: string,
     config: Partial<RetryConfig> = {},
-    processingTime?: number
+    processingTime?: number,
   ): Promise<string> {
     const retryConfig = { ...this.DEFAULT_CONFIG, ...config };
     const retryId = crypto.randomUUID();
@@ -104,7 +104,9 @@ export class RetryService {
       return retryId;
     } catch (circuitError) {
       console.error('Failed to schedule retry due to circuit breaker:', circuitError);
-      throw new Error(`Retry scheduling failed: ${circuitError instanceof Error ? circuitError.message : 'Unknown error'}`);
+      throw new Error(
+        `Retry scheduling failed: ${circuitError instanceof Error ? circuitError.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -112,7 +114,7 @@ export class RetryService {
    * Process pending retries
    */
   async processPendingRetries(
-    processor: (event: WebhookEvent, correlationId: string) => Promise<boolean>
+    processor: (event: WebhookEvent, correlationId: string) => Promise<boolean>,
   ): Promise<{ processed: number; successful: number; failed: number }> {
     let processed = 0;
     let successful = 0;
@@ -123,17 +125,15 @@ export class RetryService {
         const now = Date.now();
 
         // Get entries ready for retry (score <= now)
-        const retryEntries = await redis.zrange(
-          this.RETRY_QUEUE_KEY,
-          0,
-          -1
-        );
+        const retryEntries = await redis.zrange(this.RETRY_QUEUE_KEY, 0, -1);
 
         // Filter entries that are ready for retry
-        const readyEntries = (retryEntries as string[]).filter((entryStr: string) => {
-          const entry = JSON.parse(entryStr) as RetryEntry;
-          return entry.nextRetryAt <= now;
-        }).slice(0, 10); // Process up to 10 at a time
+        const readyEntries = (retryEntries as string[])
+          .filter((entryStr: string) => {
+            const entry = JSON.parse(entryStr) as RetryEntry;
+            return entry.nextRetryAt <= now;
+          })
+          .slice(0, 10); // Process up to 10 at a time
 
         for (const entryStr of readyEntries) {
           const entry = JSON.parse(entryStr) as RetryEntry;
@@ -316,7 +316,7 @@ export class RetryService {
   private async handleRetryFailure(
     entry: RetryEntry,
     entryStr: string,
-    error?: Error
+    error?: Error,
   ): Promise<void> {
     entry.retryCount++;
     entry.lastRetryAt = Date.now();
@@ -328,10 +328,12 @@ export class RetryService {
 
       await deadLetterQueue.addToDLQ(
         entry.event,
-        new Error(`Max retries (${entry.maxRetries}) exceeded. Last error: ${entry.lastError || 'Unknown'}`),
+        new Error(
+          `Max retries (${entry.maxRetries}) exceeded. Last error: ${entry.lastError || 'Unknown'}`,
+        ),
         entry.correlationId,
         {}, // headers not available in retry context
-        entry.processingTime
+        entry.processingTime,
       );
 
       await this.updateRetryStats('max_retries_exceeded', entry);
@@ -386,14 +388,17 @@ export class RetryService {
     }
 
     // Update retry distribution
-    stats.retryDistribution[entry.retryCount] = (stats.retryDistribution[entry.retryCount] || 0) + 1;
+    stats.retryDistribution[entry.retryCount] =
+      (stats.retryDistribution[entry.retryCount] || 0) + 1;
 
     await redis.setex(this.RETRY_STATS_KEY, 3600, JSON.stringify(stats)); // Cache for 1 hour
   }
 
   private async calculateRetryStats(): Promise<RetryStats> {
     const entries = await redis.zrange(this.RETRY_QUEUE_KEY, 0, -1);
-    const parsedEntries = (entries as string[]).map((entry: string) => JSON.parse(entry) as RetryEntry);
+    const parsedEntries = (entries as string[]).map(
+      (entry: string) => JSON.parse(entry) as RetryEntry,
+    );
 
     const retryDistribution: Record<number, number> = {};
     let totalDelay = 0;

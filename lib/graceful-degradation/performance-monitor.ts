@@ -1,6 +1,6 @@
 /**
  * Performance Budget Monitoring
- * 
+ *
  * Tracks and monitors performance metrics to ensure operations stay within
  * defined performance budgets. Provides alerting when budgets are exceeded.
  */
@@ -74,19 +74,19 @@ class PerformanceBudgetMonitor {
   private budgets: Map<string, PerformanceBudget> = new Map();
   private violations: BudgetViolation[] = [];
   private readonly config = getTimeoutConfig();
-  
+
   private constructor() {
     this.initializeDefaultBudgets();
     this.startPeriodicCleanup();
   }
-  
+
   public static getInstance(): PerformanceBudgetMonitor {
     if (!PerformanceBudgetMonitor.instance) {
       PerformanceBudgetMonitor.instance = new PerformanceBudgetMonitor();
     }
     return PerformanceBudgetMonitor.instance;
   }
-  
+
   /**
    * Initialize default performance budgets for all services
    */
@@ -101,7 +101,7 @@ class PerformanceBudgetMonitor {
         p99Threshold: 100,
         errorRateThreshold: 0.01,
         timeoutRateThreshold: 0.005,
-        sampleWindow: 1000
+        sampleWindow: 1000,
       },
       {
         service: 'redis',
@@ -111,9 +111,9 @@ class PerformanceBudgetMonitor {
         p99Threshold: 300,
         errorRateThreshold: 0.02,
         timeoutRateThreshold: 0.01,
-        sampleWindow: 1000
+        sampleWindow: 1000,
       },
-      
+
       // Clerk budgets
       {
         service: 'clerk',
@@ -123,7 +123,7 @@ class PerformanceBudgetMonitor {
         p99Threshold: 1000,
         errorRateThreshold: 0.02,
         timeoutRateThreshold: 0.01,
-        sampleWindow: 1000
+        sampleWindow: 1000,
       },
       {
         service: 'clerk',
@@ -133,9 +133,9 @@ class PerformanceBudgetMonitor {
         p99Threshold: 3000,
         errorRateThreshold: 0.03,
         timeoutRateThreshold: 0.02,
-        sampleWindow: 1000
+        sampleWindow: 1000,
       },
-      
+
       // Database budgets
       {
         service: 'database',
@@ -145,7 +145,7 @@ class PerformanceBudgetMonitor {
         p99Threshold: 200,
         errorRateThreshold: 0.01,
         timeoutRateThreshold: 0.005,
-        sampleWindow: 1000
+        sampleWindow: 1000,
       },
       {
         service: 'database',
@@ -155,37 +155,37 @@ class PerformanceBudgetMonitor {
         p99Threshold: 1500,
         errorRateThreshold: 0.02,
         timeoutRateThreshold: 0.01,
-        sampleWindow: 1000
-      }
+        sampleWindow: 1000,
+      },
     ];
-    
-    defaultBudgets.forEach(budget => {
+
+    defaultBudgets.forEach((budget) => {
       const key = `${budget.service}:${budget.operation}`;
       this.budgets.set(key, budget);
     });
   }
-  
+
   /**
    * Record a performance metric
    */
   public recordMetric(metric: PerformanceMetric): void {
     // Add to in-memory storage
     this.metrics.push(metric);
-    
+
     // Persist to Redis for cross-instance sharing
-    this.persistMetricToRedis(metric).catch(error => {
+    this.persistMetricToRedis(metric).catch((error) => {
       console.warn('Failed to persist performance metric to Redis:', error);
     });
-    
+
     // Check for budget violations
     this.checkBudgetViolations(metric);
-    
+
     // Cleanup old metrics if memory gets too large
     if (this.metrics.length > 10000) {
       this.metrics = this.metrics.slice(-5000); // Keep last 5000 metrics
     }
   }
-  
+
   /**
    * Persist metric to Redis for sharing across instances
    */
@@ -193,13 +193,13 @@ class PerformanceBudgetMonitor {
     const key = `performance_metrics:${new Date().toISOString().split('T')[0]}`;
     const metricData = JSON.stringify({
       ...metric,
-      timestamp: metric.timestamp.toISOString()
+      timestamp: metric.timestamp.toISOString(),
     });
-    
+
     await redis.lpush(key, metricData);
     await redis.expire(key, 86400 * 7); // Keep for 7 days
   }
-  
+
   /**
    * Check for budget violations after recording a metric
    */
@@ -208,36 +208,36 @@ class PerformanceBudgetMonitor {
     const budgetKeys = [
       `${newMetric.service}:fast`,
       `${newMetric.service}:standard`,
-      `${newMetric.service}:slow`
+      `${newMetric.service}:slow`,
     ];
-    
+
     for (const budgetKey of budgetKeys) {
       const budget = this.budgets.get(budgetKey);
       if (!budget) continue;
-      
+
       // Get recent metrics for this service/operation
       const recentMetrics = this.getRecentMetrics(
         newMetric.service,
         budget.operation,
-        budget.sampleWindow
+        budget.sampleWindow,
       );
-      
+
       if (recentMetrics.length < 10) continue; // Need sufficient sample size
-      
+
       // Calculate current performance
       const report = this.generateReport(newMetric.service, budget.operation, '5m');
-      
+
       // Check each threshold
       this.checkThresholds(budget, report);
     }
   }
-  
+
   /**
    * Check performance thresholds and record violations
    */
   private checkThresholds(budget: PerformanceBudget, report: PerformanceReport): void {
     const violations: BudgetViolation[] = [];
-    
+
     // Check P50 threshold
     if (report.metrics.p50 > budget.p50Threshold) {
       violations.push({
@@ -246,10 +246,10 @@ class PerformanceBudgetMonitor {
         currentValue: report.metrics.p50,
         threshold: budget.p50Threshold,
         timestamp: new Date(),
-        severity: report.metrics.p50 > budget.p50Threshold * 1.5 ? 'critical' : 'warning'
+        severity: report.metrics.p50 > budget.p50Threshold * 1.5 ? 'critical' : 'warning',
       });
     }
-    
+
     // Check P95 threshold
     if (report.metrics.p95 > budget.p95Threshold) {
       violations.push({
@@ -258,10 +258,10 @@ class PerformanceBudgetMonitor {
         currentValue: report.metrics.p95,
         threshold: budget.p95Threshold,
         timestamp: new Date(),
-        severity: report.metrics.p95 > budget.p95Threshold * 1.5 ? 'critical' : 'warning'
+        severity: report.metrics.p95 > budget.p95Threshold * 1.5 ? 'critical' : 'warning',
       });
     }
-    
+
     // Check P99 threshold
     if (report.metrics.p99 > budget.p99Threshold) {
       violations.push({
@@ -270,10 +270,10 @@ class PerformanceBudgetMonitor {
         currentValue: report.metrics.p99,
         threshold: budget.p99Threshold,
         timestamp: new Date(),
-        severity: report.metrics.p99 > budget.p99Threshold * 1.5 ? 'critical' : 'warning'
+        severity: report.metrics.p99 > budget.p99Threshold * 1.5 ? 'critical' : 'warning',
       });
     }
-    
+
     // Check error rate threshold
     if (report.metrics.errorRate > budget.errorRateThreshold) {
       violations.push({
@@ -282,10 +282,10 @@ class PerformanceBudgetMonitor {
         currentValue: report.metrics.errorRate,
         threshold: budget.errorRateThreshold,
         timestamp: new Date(),
-        severity: report.metrics.errorRate > budget.errorRateThreshold * 2 ? 'critical' : 'warning'
+        severity: report.metrics.errorRate > budget.errorRateThreshold * 2 ? 'critical' : 'warning',
       });
     }
-    
+
     // Check timeout rate threshold
     if (report.metrics.timeoutRate > budget.timeoutRateThreshold) {
       violations.push({
@@ -294,36 +294,38 @@ class PerformanceBudgetMonitor {
         currentValue: report.metrics.timeoutRate,
         threshold: budget.timeoutRateThreshold,
         timestamp: new Date(),
-        severity: report.metrics.timeoutRate > budget.timeoutRateThreshold * 2 ? 'critical' : 'warning'
+        severity:
+          report.metrics.timeoutRate > budget.timeoutRateThreshold * 2 ? 'critical' : 'warning',
       });
     }
-    
+
     // Record violations
-    violations.forEach(violation => {
+    violations.forEach((violation) => {
       this.violations.push(violation);
       this.alertOnViolation(violation);
     });
   }
-  
+
   /**
    * Alert on performance budget violations
    */
   private alertOnViolation(violation: BudgetViolation): void {
-    const message = `Performance budget violation: ${violation.budget.service}.${violation.budget.operation} ` +
+    const message =
+      `Performance budget violation: ${violation.budget.service}.${violation.budget.operation} ` +
       `${violation.violationType} is ${violation.currentValue} (threshold: ${violation.threshold})`;
-    
+
     if (violation.severity === 'critical') {
       console.error('[CRITICAL] ' + message);
     } else {
       console.warn('[WARNING] ' + message);
     }
-    
+
     // Could integrate with external alerting systems here
-    this.sendToAlertingSystem(violation).catch(error => {
+    this.sendToAlertingSystem(violation).catch((error) => {
       console.warn('Failed to send alert:', error);
     });
   }
-  
+
   /**
    * Send alert to external system (Slack, email, etc.)
    */
@@ -334,51 +336,48 @@ class PerformanceBudgetMonitor {
     const alertData = {
       type: 'performance_budget_violation',
       violation,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-    
+
     await redis.lpush(alertKey, JSON.stringify(alertData));
   }
-  
+
   /**
    * Get recent metrics for analysis
    */
   private getRecentMetrics(
     service: string,
     operation: string,
-    windowMinutes: number
+    windowMinutes: number,
   ): PerformanceMetric[] {
     const cutoffTime = new Date(Date.now() - windowMinutes * 60 * 1000);
-    
-    return this.metrics.filter(metric =>
-      metric.service === service &&
-      metric.operationName.includes(operation) &&
-      metric.timestamp > cutoffTime
+
+    return this.metrics.filter(
+      (metric) =>
+        metric.service === service &&
+        metric.operationName.includes(operation) &&
+        metric.timestamp > cutoffTime,
     );
   }
-  
+
   /**
    * Generate performance report for a service/operation
    */
-  public generateReport(
-    service: string,
-    operation: string,
-    timeWindow: string
-  ): PerformanceReport {
+  public generateReport(service: string, operation: string, timeWindow: string): PerformanceReport {
     const windowMinutes = this.parseTimeWindow(timeWindow);
     const metrics = this.getRecentMetrics(service, operation, windowMinutes);
-    
+
     if (metrics.length === 0) {
       return this.createEmptyReport(service, operation, timeWindow);
     }
-    
-    const durations = metrics.map(m => m.duration).sort((a, b) => a - b);
+
+    const durations = metrics.map((m) => m.duration).sort((a, b) => a - b);
     const totalRequests = metrics.length;
-    const successfulRequests = metrics.filter(m => m.success).length;
+    const successfulRequests = metrics.filter((m) => m.success).length;
     const failedRequests = totalRequests - successfulRequests;
-    const timeoutRequests = metrics.filter(m => m.timeout).length;
-    const fallbackRequests = metrics.filter(m => m.fallbackUsed).length;
-    
+    const timeoutRequests = metrics.filter((m) => m.timeout).length;
+    const fallbackRequests = metrics.filter((m) => m.fallbackUsed).length;
+
     const p50 = this.calculatePercentile(durations, 50);
     const p95 = this.calculatePercentile(durations, 95);
     const p99 = this.calculatePercentile(durations, 99);
@@ -386,41 +385,42 @@ class PerformanceBudgetMonitor {
     const timeoutRate = timeoutRequests / totalRequests;
     const fallbackRate = fallbackRequests / totalRequests;
     const averageLatency = durations.reduce((sum, d) => sum + d, 0) / durations.length;
-    
+
     // Check budget status
     const budgetKey = `${service}:${operation}`;
     const budget = this.budgets.get(budgetKey);
     let budgetStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
-    
+
     if (budget) {
       const criticalViolations = [
         p95 > budget.p95Threshold * 1.5,
         p99 > budget.p99Threshold * 1.5,
         errorRate > budget.errorRateThreshold * 2,
-        timeoutRate > budget.timeoutRateThreshold * 2
+        timeoutRate > budget.timeoutRateThreshold * 2,
       ].some(Boolean);
-      
+
       const warningViolations = [
         p95 > budget.p95Threshold,
         p99 > budget.p99Threshold,
         errorRate > budget.errorRateThreshold,
-        timeoutRate > budget.timeoutRateThreshold
+        timeoutRate > budget.timeoutRateThreshold,
       ].some(Boolean);
-      
+
       if (criticalViolations) {
         budgetStatus = 'critical';
       } else if (warningViolations) {
         budgetStatus = 'warning';
       }
     }
-    
+
     // Get recent violations
-    const recentViolations = this.violations.filter(v =>
-      v.budget.service === service &&
-      v.budget.operation === operation &&
-      v.timestamp > new Date(Date.now() - windowMinutes * 60 * 1000)
+    const recentViolations = this.violations.filter(
+      (v) =>
+        v.budget.service === service &&
+        v.budget.operation === operation &&
+        v.timestamp > new Date(Date.now() - windowMinutes * 60 * 1000),
     );
-    
+
     return {
       service,
       operation,
@@ -437,55 +437,59 @@ class PerformanceBudgetMonitor {
         errorRate,
         timeoutRate,
         fallbackRate,
-        averageLatency
+        averageLatency,
       },
       budgetStatus,
-      violations: recentViolations
+      violations: recentViolations,
     };
   }
-  
+
   /**
    * Calculate percentile from sorted array of durations
    */
   private calculatePercentile(sortedDurations: number[], percentile: number): number {
     if (sortedDurations.length === 0) return 0;
-    
+
     const index = (percentile / 100) * (sortedDurations.length - 1);
-    
+
     if (Number.isInteger(index)) {
       return sortedDurations[index];
     }
-    
+
     const lower = sortedDurations[Math.floor(index)];
     const upper = sortedDurations[Math.ceil(index)];
     return lower + (upper - lower) * (index - Math.floor(index));
   }
-  
+
   /**
    * Parse time window string to minutes
    */
   private parseTimeWindow(timeWindow: string): number {
     const match = timeWindow.match(/^(\d+)([mhd])$/);
     if (!match) return 5; // Default 5 minutes
-    
+
     const value = parseInt(match[1]);
     const unit = match[2];
-    
+
     switch (unit) {
-      case 'm': return value;
-      case 'h': return value * 60;
-      case 'd': return value * 60 * 24;
-      default: return 5;
+      case 'm':
+        return value;
+      case 'h':
+        return value * 60;
+      case 'd':
+        return value * 60 * 24;
+      default:
+        return 5;
     }
   }
-  
+
   /**
    * Create empty report for when no metrics are available
    */
   private createEmptyReport(
     service: string,
     operation: string,
-    timeWindow: string
+    timeWindow: string,
   ): PerformanceReport {
     return {
       service,
@@ -503,13 +507,13 @@ class PerformanceBudgetMonitor {
         errorRate: 0,
         timeoutRate: 0,
         fallbackRate: 0,
-        averageLatency: 0
+        averageLatency: 0,
       },
       budgetStatus: 'healthy',
-      violations: []
+      violations: [],
     };
   }
-  
+
   /**
    * Get all performance reports
    */
@@ -517,7 +521,7 @@ class PerformanceBudgetMonitor {
     const services = ['redis', 'clerk', 'database'];
     const operations = ['fast', 'standard', 'slow'];
     const reports: PerformanceReport[] = [];
-    
+
     for (const service of services) {
       for (const operation of operations) {
         const report = this.generateReport(service, operation, timeWindow);
@@ -526,41 +530,43 @@ class PerformanceBudgetMonitor {
         }
       }
     }
-    
+
     return reports;
   }
-  
+
   /**
    * Get current violations
    */
   public getViolations(severity?: 'warning' | 'critical'): BudgetViolation[] {
-    const recentViolations = this.violations.filter(v =>
-      v.timestamp > new Date(Date.now() - 60 * 60 * 1000) // Last hour
+    const recentViolations = this.violations.filter(
+      (v) => v.timestamp > new Date(Date.now() - 60 * 60 * 1000), // Last hour
     );
-    
+
     if (severity) {
-      return recentViolations.filter(v => v.severity === severity);
+      return recentViolations.filter((v) => v.severity === severity);
     }
-    
+
     return recentViolations;
   }
-  
+
   /**
    * Periodic cleanup of old data
    */
   private startPeriodicCleanup(): void {
-    setInterval(() => {
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      
-      // Clean up old metrics
-      this.metrics = this.metrics.filter(m => m.timestamp > oneDayAgo);
-      
-      // Clean up old violations
-      this.violations = this.violations.filter(v => v.timestamp > oneDayAgo);
-      
-    }, 60 * 60 * 1000); // Run every hour
+    setInterval(
+      () => {
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        // Clean up old metrics
+        this.metrics = this.metrics.filter((m) => m.timestamp > oneDayAgo);
+
+        // Clean up old violations
+        this.violations = this.violations.filter((v) => v.timestamp > oneDayAgo);
+      },
+      60 * 60 * 1000,
+    ); // Run every hour
   }
-  
+
   /**
    * Health check for performance monitoring system
    */
@@ -574,21 +580,21 @@ class PerformanceBudgetMonitor {
       budgetsConfigured: number;
     };
   }> {
-    const recentMetrics = this.metrics.filter(m =>
-      m.timestamp > new Date(Date.now() - 5 * 60 * 1000) // Last 5 minutes
+    const recentMetrics = this.metrics.filter(
+      (m) => m.timestamp > new Date(Date.now() - 5 * 60 * 1000), // Last 5 minutes
     );
-    
+
     const violations = this.getViolations();
-    const criticalViolations = violations.filter(v => v.severity === 'critical').length;
-    
+    const criticalViolations = violations.filter((v) => v.severity === 'critical').length;
+
     let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
-    
+
     if (criticalViolations > 0) {
       status = 'unhealthy';
     } else if (violations.length > 5) {
       status = 'degraded';
     }
-    
+
     return {
       status,
       details: {
@@ -596,8 +602,8 @@ class PerformanceBudgetMonitor {
         violationsCount: violations.length,
         criticalViolations,
         recentMetrics: recentMetrics.length,
-        budgetsConfigured: this.budgets.size
-      }
+        budgetsConfigured: this.budgets.size,
+      },
     };
   }
 }
@@ -610,36 +616,33 @@ export const performanceMonitor = PerformanceBudgetMonitor.getInstance();
 /**
  * Decorator to automatically track performance metrics
  */
-export function trackPerformance(
-  service: string,
-  operationName: string
-) {
+export function trackPerformance(service: string, operationName: string) {
   return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
-    
+
     descriptor.value = async function (...args: unknown[]) {
       const startTime = performance.now();
       let success = true;
       let errorType: string | undefined;
       let timeout = false;
       let fallbackUsed = false;
-      
+
       try {
         const result = await originalMethod.apply(this, args);
         return result;
       } catch (error) {
         success = false;
-        
+
         if (error instanceof Error) {
           errorType = error.constructor.name;
           timeout = error.message.toLowerCase().includes('timeout');
           fallbackUsed = error.message.toLowerCase().includes('fallback');
         }
-        
+
         throw error;
       } finally {
         const duration = performance.now() - startTime;
-        
+
         performanceMonitor.recordMetric({
           operationName,
           service,
@@ -648,11 +651,11 @@ export function trackPerformance(
           success,
           errorType,
           timeout,
-          fallbackUsed
+          fallbackUsed,
         });
       }
     };
-    
+
     return descriptor;
   };
 }

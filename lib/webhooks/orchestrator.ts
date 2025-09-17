@@ -55,7 +55,7 @@ export class WebhookOrchestratorService {
    */
   async processWebhook(
     request: NextRequest,
-    processor: (event: WebhookEvent, correlationId: string) => Promise<boolean>
+    processor: (event: WebhookEvent, correlationId: string) => Promise<boolean>,
   ): Promise<WebhookProcessingResult> {
     const startTime = performance.now();
     const correlationId = crypto.randomUUID();
@@ -74,7 +74,9 @@ export class WebhookOrchestratorService {
         });
       }
 
-      const verificationResult = await this.webhookSecurity.verifyWebhook(request, { correlationId });
+      const verificationResult = await this.webhookSecurity.verifyWebhook(request, {
+        correlationId,
+      });
 
       if (!verificationResult.success) {
         const error = `Webhook verification failed: ${verificationResult.error?.message || 'Unknown error'}`;
@@ -96,12 +98,17 @@ export class WebhookOrchestratorService {
       userId = this.extractUserId(event);
 
       if (this.config.enableLogging) {
-        await webhookLogger.log('info', 'webhook_verified', 'Webhook signature verified successfully', {
-          correlationId,
-          userId,
-          source: 'orchestrator',
-          metadata: { eventType: event.type },
-        });
+        await webhookLogger.log(
+          'info',
+          'webhook_verified',
+          'Webhook signature verified successfully',
+          {
+            correlationId,
+            userId,
+            source: 'orchestrator',
+            metadata: { eventType: event.type },
+          },
+        );
       }
 
       // Step 2: Check for duplicate processing (idempotency) - TODO: Implement later
@@ -138,20 +145,24 @@ export class WebhookOrchestratorService {
       } else {
         throw new Error('Webhook processing returned false');
       }
-
     } catch (error) {
       const processingTime = performance.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
       if (this.config.enableLogging) {
-        await webhookLogger.log('error', 'webhook_processing_failed', `Webhook processing failed: ${errorMessage}`, {
-          correlationId,
-          userId,
-          source: 'orchestrator',
-          duration: processingTime,
-          error: error instanceof Error ? error : new Error(errorMessage),
-          metadata: { processingTime, eventType: event?.type },
-        });
+        await webhookLogger.log(
+          'error',
+          'webhook_processing_failed',
+          `Webhook processing failed: ${errorMessage}`,
+          {
+            correlationId,
+            userId,
+            source: 'orchestrator',
+            duration: processingTime,
+            error: error instanceof Error ? error : new Error(errorMessage),
+            metadata: { processingTime, eventType: event?.type },
+          },
+        );
       }
 
       // Step 4: Handle failure - either retry or move to DLQ
@@ -162,26 +173,36 @@ export class WebhookOrchestratorService {
             error instanceof Error ? error : new Error(errorMessage),
             correlationId,
             this.extractHeaders(request),
-            processingTime
+            processingTime,
           );
 
           if (this.config.enableLogging) {
-            await webhookLogger.log('info', 'webhook_moved_to_dlq', 'Webhook moved to dead letter queue', {
-              correlationId,
-              userId,
-              source: 'orchestrator',
-              metadata: { eventType: event?.type },
-            });
+            await webhookLogger.log(
+              'info',
+              'webhook_moved_to_dlq',
+              'Webhook moved to dead letter queue',
+              {
+                correlationId,
+                userId,
+                source: 'orchestrator',
+                metadata: { eventType: event?.type },
+              },
+            );
           }
         } catch (dlqError) {
           if (this.config.enableLogging) {
-            await webhookLogger.log('error', 'dlq_failure', 'Failed to add webhook to dead letter queue', {
-              correlationId,
-              userId,
-              source: 'orchestrator',
-              error: dlqError instanceof Error ? dlqError : new Error('DLQ error'),
-              metadata: { eventType: event?.type },
-            });
+            await webhookLogger.log(
+              'error',
+              'dlq_failure',
+              'Failed to add webhook to dead letter queue',
+              {
+                correlationId,
+                userId,
+                source: 'orchestrator',
+                error: dlqError instanceof Error ? dlqError : new Error('DLQ error'),
+                metadata: { eventType: event?.type },
+              },
+            );
           }
         }
       }
@@ -200,7 +221,11 @@ export class WebhookOrchestratorService {
   /**
    * Process pending retries
    */
-  async processPendingRetries(): Promise<{ processed: number; successful: number; failed: number }> {
+  async processPendingRetries(): Promise<{
+    processed: number;
+    successful: number;
+    failed: number;
+  }> {
     if (!this.config.enableLogging) {
       return { processed: 0, successful: 0, failed: 0 };
     }
@@ -218,11 +243,16 @@ export class WebhookOrchestratorService {
 
     const processingTime = performance.now() - startTime;
 
-    await webhookLogger.log('info', 'retry_processing_completed', 'Completed processing pending retries', {
-      source: 'orchestrator',
-      duration: processingTime,
-      metadata: result,
-    });
+    await webhookLogger.log(
+      'info',
+      'retry_processing_completed',
+      'Completed processing pending retries',
+      {
+        source: 'orchestrator',
+        duration: processingTime,
+        metadata: result,
+      },
+    );
 
     return result;
   }
@@ -258,10 +288,15 @@ export class WebhookOrchestratorService {
     ]);
 
     if (this.config.enableLogging) {
-      await webhookLogger.log('info', 'cleanup_completed', 'Completed cleanup of old webhook data', {
-        source: 'orchestrator',
-        metadata: { logsCleaned, dlqCleaned },
-      });
+      await webhookLogger.log(
+        'info',
+        'cleanup_completed',
+        'Completed cleanup of old webhook data',
+        {
+          source: 'orchestrator',
+          metadata: { logsCleaned, dlqCleaned },
+        },
+      );
     }
 
     return { logsCleaned, dlqCleaned };
@@ -300,7 +335,7 @@ export class WebhookOrchestratorService {
   private async processWithTimeout(
     processor: (event: WebhookEvent, correlationId: string) => Promise<boolean>,
     event: WebhookEvent,
-    correlationId: string
+    correlationId: string,
   ): Promise<boolean> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -375,9 +410,13 @@ export class WebhookOrchestratorService {
     const services = await Promise.allSettled([
       this.webhookSecurity.getHealthStatus(),
       this.idempotencyService.getHealthStatus(),
-      this.config.enableDLQ ? deadLetterQueue.getHealthStatus() : Promise.resolve({ status: 'disabled' }),
+      this.config.enableDLQ
+        ? deadLetterQueue.getHealthStatus()
+        : Promise.resolve({ status: 'disabled' }),
       retryService.getHealthStatus(),
-      this.config.enableLogging ? webhookLogger.getHealthStatus() : Promise.resolve({ status: 'disabled' }),
+      this.config.enableLogging
+        ? webhookLogger.getHealthStatus()
+        : Promise.resolve({ status: 'disabled' }),
     ]);
 
     const serviceStatuses = services.map((result, index) => ({
@@ -386,7 +425,9 @@ export class WebhookOrchestratorService {
       details: result.status === 'fulfilled' ? result.value : result.reason,
     }));
 
-    const overallStatus = serviceStatuses.every(s => s.status === 'healthy' || s.status === 'disabled')
+    const overallStatus = serviceStatuses.every(
+      (s) => s.status === 'healthy' || s.status === 'disabled',
+    )
       ? 'healthy'
       : 'degraded';
 
@@ -394,11 +435,13 @@ export class WebhookOrchestratorService {
       status: overallStatus,
       uptime: process.uptime(),
       services: serviceStatuses,
-      alerts: serviceStatuses.filter(s => s.status === 'error').map(s => ({
-        service: s.service,
-        message: `Service ${s.service} is unhealthy`,
-        timestamp: Date.now(),
-      })),
+      alerts: serviceStatuses
+        .filter((s) => s.status === 'error')
+        .map((s) => ({
+          service: s.service,
+          message: `Service ${s.service} is unhealthy`,
+          timestamp: Date.now(),
+        })),
       lastChecked: Date.now(),
     };
   }
@@ -408,7 +451,11 @@ export class WebhookOrchestratorService {
    */
   async getDeadLetterQueueContents() {
     if (!this.config.enableDLQ) {
-      return { items: [], stats: { size: 0, oldest: null }, pagination: { total: 0, page: 1, limit: 50 } };
+      return {
+        items: [],
+        stats: { size: 0, oldest: null },
+        pagination: { total: 0, page: 1, limit: 50 },
+      };
     }
 
     const [items, stats] = await Promise.all([
@@ -459,7 +506,9 @@ export class WebhookOrchestratorService {
     }
 
     try {
-      const webhook = await deadLetterQueue.getWebhookById(options.correlationId || options.webhookId!);
+      const webhook = await deadLetterQueue.getWebhookById(
+        options.correlationId || options.webhookId!,
+      );
       if (!webhook) {
         return { success: false, message: 'Webhook not found in dead letter queue' };
       }
@@ -495,7 +544,12 @@ export class WebhookOrchestratorService {
    */
   async clearDeadLetterQueue(options: { olderThan?: number; correlationIds?: string[] }) {
     if (!this.config.enableDLQ) {
-      return { success: false, message: 'Dead letter queue is disabled', clearedCount: 0, remainingCount: 0 };
+      return {
+        success: false,
+        message: 'Dead letter queue is disabled',
+        clearedCount: 0,
+        remainingCount: 0,
+      };
     }
 
     try {
@@ -538,7 +592,13 @@ export class WebhookOrchestratorService {
    */
   async retryAllFailedWebhooks() {
     if (!this.config.enableDLQ) {
-      return { success: false, message: 'Dead letter queue is disabled', totalRetried: 0, successfulRetries: 0, failedRetries: 0 };
+      return {
+        success: false,
+        message: 'Dead letter queue is disabled',
+        totalRetried: 0,
+        successfulRetries: 0,
+        failedRetries: 0,
+      };
     }
 
     try {
@@ -583,14 +643,17 @@ export class WebhookOrchestratorService {
     }
   }
 
-  private createDefaultProcessor(): (event: WebhookEvent, correlationId: string) => Promise<boolean> {
+  private createDefaultProcessor(): (
+    event: WebhookEvent,
+    correlationId: string,
+  ) => Promise<boolean> {
     // Default processor that just logs the event
     // In a real implementation, this would be the actual webhook processing logic
     return async (event: WebhookEvent, correlationId: string): Promise<boolean> => {
       console.log(`Processing webhook event: ${event.type}`, { correlationId });
 
       // Simulate some processing
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Return true for success, false for failure
       return Math.random() > 0.1; // 90% success rate for testing

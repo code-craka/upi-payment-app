@@ -1,6 +1,6 @@
 /**
  * Fallback Authentication Strategies
- * 
+ *
  * Provides robust fallback strategies for the hybrid authentication system
  * to ensure user experience is preserved during partial service outages.
  */
@@ -42,64 +42,64 @@ class FallbackAuthService {
     maxStaleAgeMinutes: 30,
     allowReadOnlyMode: true,
     allowGuestMode: false,
-    cacheExtendedTTL: 3600 // 1 hour
+    cacheExtendedTTL: 3600, // 1 hour
   };
-  
+
   private constructor() {}
-  
+
   public static getInstance(): FallbackAuthService {
     if (!FallbackAuthService.instance) {
       FallbackAuthService.instance = new FallbackAuthService();
     }
     return FallbackAuthService.instance;
   }
-  
+
   /**
    * Main authentication method with comprehensive fallback chain
    */
   public async authenticate(userId?: string): Promise<AuthContext> {
     const startTime = performance.now();
-    
+
     // Create fallback strategies in priority order
     const fallbackStrategies: FallbackStrategy<AuthContext>[] = [
       {
         name: 'redis-cache',
         priority: 1,
         canRetry: true,
-        execute: () => this.authenticateFromRedis(userId)
+        execute: () => this.authenticateFromRedis(userId),
       },
       {
         name: 'clerk-api',
         priority: 2,
         canRetry: true,
-        execute: () => this.authenticateFromClerk(userId)
+        execute: () => this.authenticateFromClerk(userId),
       },
       {
         name: 'database',
         priority: 3,
         canRetry: false,
-        execute: () => this.authenticateFromDatabase(userId)
+        execute: () => this.authenticateFromDatabase(userId),
       },
       {
         name: 'stale-cache',
         priority: 4,
         canRetry: false,
-        execute: () => this.authenticateFromStaleCache(userId)
+        execute: () => this.authenticateFromStaleCache(userId),
       },
       {
         name: 'degraded-mode',
         priority: 5,
         canRetry: false,
-        execute: () => this.authenticateInDegradedMode(userId)
-      }
+        execute: () => this.authenticateInDegradedMode(userId),
+      },
     ];
-    
+
     try {
       // Try primary strategy first (Redis)
       return await this.tryFallbackStrategies(fallbackStrategies, startTime);
     } catch (error) {
       console.error('All authentication strategies failed:', error);
-      
+
       // Final emergency fallback
       const latency = performance.now() - startTime;
       performanceMonitor.recordMetric({
@@ -109,50 +109,49 @@ class FallbackAuthService {
         timestamp: new Date(),
         success: false,
         errorType: 'AuthenticationFailure',
-        fallbackUsed: true
+        fallbackUsed: true,
       });
-      
+
       return {
         isAuthenticated: false,
         source: 'degraded',
         cached: false,
         latency,
-        fallbackLevel: 5
+        fallbackLevel: 5,
       };
     }
   }
-  
+
   /**
    * Try fallback strategies in order until one succeeds
    */
   private async tryFallbackStrategies(
     strategies: FallbackStrategy<AuthContext>[],
-    startTime: number
+    startTime: number,
   ): Promise<AuthContext> {
     const errors: Error[] = [];
-    
+
     for (let i = 0; i < strategies.length; i++) {
       const strategy = strategies[i];
-      
+
       try {
-        console.log(`Trying authentication strategy: ${strategy.name} (priority ${strategy.priority})`);
-        
-        const result = await withTimeoutAndDegradation(
-          strategy.execute,
-          {
-            operationConfig: OPERATION_CONFIGS.CLERK_AUTH_CHECK,
-            enableGracefulDegradation: false, // We're handling fallbacks ourselves
-            timeoutMessage: `Authentication strategy ${strategy.name} timed out`
-          }
+        console.log(
+          `Trying authentication strategy: ${strategy.name} (priority ${strategy.priority})`,
         );
-        
+
+        const result = await withTimeoutAndDegradation(strategy.execute, {
+          operationConfig: OPERATION_CONFIGS.CLERK_AUTH_CHECK,
+          enableGracefulDegradation: false, // We're handling fallbacks ourselves
+          timeoutMessage: `Authentication strategy ${strategy.name} timed out`,
+        });
+
         // Add fallback level to result
         const finalResult = {
           ...result,
           latency: performance.now() - startTime,
-          fallbackLevel: i
+          fallbackLevel: i,
         };
-        
+
         // Record successful authentication
         performanceMonitor.recordMetric({
           operationName: `auth_${strategy.name}`,
@@ -160,16 +159,15 @@ class FallbackAuthService {
           duration: finalResult.latency,
           timestamp: new Date(),
           success: true,
-          fallbackUsed: i > 0
+          fallbackUsed: i > 0,
         });
-        
+
         console.log(`Authentication successful using strategy: ${strategy.name}`);
         return finalResult;
-        
       } catch (error) {
         errors.push(error as Error);
         console.warn(`Authentication strategy ${strategy.name} failed:`, error);
-        
+
         // Record failed attempt
         performanceMonitor.recordMetric({
           operationName: `auth_${strategy.name}`,
@@ -178,17 +176,19 @@ class FallbackAuthService {
           timestamp: new Date(),
           success: false,
           errorType: (error as Error).constructor.name,
-          fallbackUsed: i > 0
+          fallbackUsed: i > 0,
         });
-        
+
         // Continue to next strategy
       }
     }
-    
+
     // All strategies failed
-    throw new Error(`All authentication strategies failed: ${errors.map(e => e.message).join(', ')}`);
+    throw new Error(
+      `All authentication strategies failed: ${errors.map((e) => e.message).join(', ')}`,
+    );
   }
-  
+
   /**
    * Primary: Authenticate from Redis cache
    */
@@ -198,23 +198,23 @@ class FallbackAuthService {
       const user = await currentUser();
       userId = user?.id;
     }
-    
+
     if (!userId) {
       throw new Error('No user ID available for Redis authentication');
     }
-    
+
     const roleKey = `user_role:${userId}`;
     const role = await redis.get(roleKey);
-    
+
     if (!role) {
       throw new Error('No cached role found in Redis');
     }
-    
+
     // Get additional cached user data if available
     const userDataKey = `user_data:${userId}`;
     const cachedUserData = await redis.get(userDataKey);
     const userData = cachedUserData ? JSON.parse(cachedUserData as string) : {};
-    
+
     return {
       userId,
       role: role as string,
@@ -223,29 +223,29 @@ class FallbackAuthService {
       source: 'redis',
       cached: true,
       latency: 0, // Will be set by caller
-      fallbackLevel: 0
+      fallbackLevel: 0,
     };
   }
-  
+
   /**
    * Secondary: Authenticate from Clerk API
    */
   private async authenticateFromClerk(userId?: string): Promise<AuthContext> {
     const user = await currentUser();
-    
+
     if (!user) {
       throw new Error('No authenticated user from Clerk');
     }
-    
-    const role = user.publicMetadata?.role as string || 'user';
-    
+
+    const role = (user.publicMetadata?.role as string) || 'user';
+
     // Cache the result for future use
     await this.cacheUserData(user.id, {
       role,
       email: user.emailAddresses[0]?.emailAddress,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
-    
+
     return {
       userId: user.id,
       role,
@@ -254,10 +254,10 @@ class FallbackAuthService {
       source: 'clerk',
       cached: false,
       latency: 0, // Will be set by caller
-      fallbackLevel: 1
+      fallbackLevel: 1,
     };
   }
-  
+
   /**
    * Tertiary: Authenticate from database
    */
@@ -265,21 +265,21 @@ class FallbackAuthService {
     if (!userId) {
       throw new Error('No user ID available for database authentication');
     }
-    
+
     await connectDB();
     const user = await UserModel.findById(userId);
-    
+
     if (!user) {
       throw new Error('User not found in database');
     }
-    
+
     // Cache the result
     await this.cacheUserData(userId, {
       role: user.role,
       email: user.email,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
-    
+
     return {
       userId,
       role: user.role,
@@ -288,10 +288,10 @@ class FallbackAuthService {
       source: 'database',
       cached: false,
       latency: 0, // Will be set by caller
-      fallbackLevel: 2
+      fallbackLevel: 2,
     };
   }
-  
+
   /**
    * Quaternary: Authenticate from stale cache
    */
@@ -299,24 +299,28 @@ class FallbackAuthService {
     if (!userId || !this.degradedMode.allowStaleData) {
       throw new Error('Stale cache authentication not allowed or no user ID');
     }
-    
+
     const staleDataKey = `stale_user_data:${userId}`;
     const staleData = await redis.get(staleDataKey);
-    
+
     if (!staleData) {
       throw new Error('No stale cached data available');
     }
-    
+
     const userData = JSON.parse(staleData as string);
     const updatedAt = new Date(userData.updatedAt);
     const ageMinutes = (Date.now() - updatedAt.getTime()) / (1000 * 60);
-    
+
     if (ageMinutes > this.degradedMode.maxStaleAgeMinutes) {
-      throw new Error(`Stale data too old: ${ageMinutes} minutes (max: ${this.degradedMode.maxStaleAgeMinutes})`);
+      throw new Error(
+        `Stale data too old: ${ageMinutes} minutes (max: ${this.degradedMode.maxStaleAgeMinutes})`,
+      );
     }
-    
-    console.warn(`Using stale cached data (${ageMinutes.toFixed(1)} minutes old) for user ${userId}`);
-    
+
+    console.warn(
+      `Using stale cached data (${ageMinutes.toFixed(1)} minutes old) for user ${userId}`,
+    );
+
     return {
       userId,
       role: userData.role,
@@ -325,17 +329,17 @@ class FallbackAuthService {
       source: 'cache',
       cached: true,
       latency: 0, // Will be set by caller
-      fallbackLevel: 3
+      fallbackLevel: 3,
     };
   }
-  
+
   /**
    * Final: Authenticate in degraded mode
    */
   private async authenticateInDegradedMode(userId?: string): Promise<AuthContext> {
     if (this.degradedMode.allowGuestMode) {
       console.warn('Falling back to guest mode authentication');
-      
+
       return {
         userId: userId || 'guest',
         role: 'guest',
@@ -343,13 +347,13 @@ class FallbackAuthService {
         source: 'degraded',
         cached: false,
         latency: 0, // Will be set by caller
-        fallbackLevel: 4
+        fallbackLevel: 4,
       };
     }
-    
+
     if (this.degradedMode.allowReadOnlyMode && userId) {
       console.warn('Falling back to read-only mode for existing user');
-      
+
       return {
         userId,
         role: 'readonly',
@@ -357,39 +361,38 @@ class FallbackAuthService {
         source: 'degraded',
         cached: false,
         latency: 0, // Will be set by caller
-        fallbackLevel: 4
+        fallbackLevel: 4,
       };
     }
-    
+
     throw new Error('Degraded mode authentication not configured');
   }
-  
+
   /**
    * Cache user data for future fallback use
    */
   private async cacheUserData(
     userId: string,
-    userData: { role: string; email?: string; updatedAt: string }
+    userData: { role: string; email?: string; updatedAt: string },
   ): Promise<void> {
     try {
       // Cache fresh data with standard TTL
       const userDataKey = `user_data:${userId}`;
       await redis.setex(userDataKey, 300, JSON.stringify(userData)); // 5 minutes
-      
+
       // Cache as stale data with extended TTL for emergency use
       const staleDataKey = `stale_user_data:${userId}`;
       await redis.setex(staleDataKey, this.degradedMode.cacheExtendedTTL, JSON.stringify(userData));
-      
+
       // Cache role separately for faster access
       const roleKey = `user_role:${userId}`;
       await redis.setex(roleKey, 300, userData.role);
-      
     } catch (error) {
       console.warn('Failed to cache user data:', error);
       // Don't throw - caching failure shouldn't break authentication
     }
   }
-  
+
   /**
    * Check if authentication result should be trusted for sensitive operations
    */
@@ -398,10 +401,10 @@ class FallbackAuthService {
     if (authContext.fallbackLevel > 1) return false;
     if (authContext.source === 'cache' && !authContext.cached) return false;
     if (authContext.latency > 5000) return false; // Very slow responses are suspicious
-    
+
     return authContext.isAuthenticated;
   }
-  
+
   /**
    * Get user-friendly degradation explanation
    */
@@ -427,7 +430,7 @@ class FallbackAuthService {
         return 'Authentication status unknown';
     }
   }
-  
+
   /**
    * Configure degraded mode settings
    */
@@ -435,14 +438,14 @@ class FallbackAuthService {
     this.degradedMode = { ...this.degradedMode, ...config };
     console.log('Degraded mode configuration updated:', this.degradedMode);
   }
-  
+
   /**
    * Get current degraded mode configuration
    */
   public getDegradedModeConfig(): DegradedAuthMode {
     return { ...this.degradedMode };
   }
-  
+
   /**
    * Health check for fallback authentication system
    */
@@ -458,31 +461,41 @@ class FallbackAuthService {
   }> {
     const checks = await Promise.allSettled([
       // Test Redis
-      redis.ping().then(() => true).catch(() => false),
-      
+      redis
+        .ping()
+        .then(() => true)
+        .catch(() => false),
+
       // Test Clerk
-      currentUser().then(() => true).catch(() => false),
-      
+      currentUser()
+        .then(() => true)
+        .catch(() => false),
+
       // Test Database
-      connectDB().then(() => true).catch(() => false),
-      
+      connectDB()
+        .then(() => true)
+        .catch(() => false),
+
       // Check stale cache size
-      redis.keys('stale_user_data:*').then(keys => keys.length).catch(() => 0)
+      redis
+        .keys('stale_user_data:*')
+        .then((keys) => keys.length)
+        .catch(() => 0),
     ]);
-    
+
     const redisAvailable = checks[0].status === 'fulfilled' && checks[0].value === true;
     const clerkAvailable = checks[1].status === 'fulfilled' && checks[1].value === true;
     const databaseAvailable = checks[2].status === 'fulfilled' && checks[2].value === true;
-    const staleCacheSize = checks[3].status === 'fulfilled' ? checks[3].value as number : 0;
-    
+    const staleCacheSize = checks[3].status === 'fulfilled' ? (checks[3].value as number) : 0;
+
     let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
-    
+
     if (!redisAvailable && !clerkAvailable && !databaseAvailable) {
       status = 'unhealthy';
     } else if (!redisAvailable || !clerkAvailable) {
       status = 'degraded';
     }
-    
+
     return {
       status,
       details: {
@@ -490,8 +503,9 @@ class FallbackAuthService {
         clerkAvailable,
         databaseAvailable,
         staleCacheSize,
-        degradedModeEnabled: this.degradedMode.allowStaleData || this.degradedMode.allowReadOnlyMode
-      }
+        degradedModeEnabled:
+          this.degradedMode.allowStaleData || this.degradedMode.allowReadOnlyMode,
+      },
     };
   }
 }
@@ -513,32 +527,34 @@ export async function getAuthContextWithFallbacks(userId?: string): Promise<Auth
  */
 export function shouldAllowOperation(
   authContext: AuthContext,
-  operationType: 'read' | 'write' | 'admin' | 'sensitive'
+  operationType: 'read' | 'write' | 'admin' | 'sensitive',
 ): boolean {
   if (!authContext.isAuthenticated && operationType !== 'read') {
     return false;
   }
-  
+
   // Guest mode restrictions
   if (authContext.role === 'guest') {
     return operationType === 'read';
   }
-  
+
   // Read-only mode restrictions
   if (authContext.role === 'readonly') {
     return operationType === 'read';
   }
-  
+
   // Sensitive operations require fresh authentication
   if (operationType === 'sensitive' || operationType === 'admin') {
     return fallbackAuth.shouldTrustForSensitiveOperations(authContext);
   }
-  
+
   // Standard role-based checks for admin operations
   if (operationType === 'admin') {
-    return (authContext.role === 'admin' || authContext.role === 'super_admin') &&
-           fallbackAuth.shouldTrustForSensitiveOperations(authContext);
+    return (
+      (authContext.role === 'admin' || authContext.role === 'super_admin') &&
+      fallbackAuth.shouldTrustForSensitiveOperations(authContext)
+    );
   }
-  
+
   return true;
 }

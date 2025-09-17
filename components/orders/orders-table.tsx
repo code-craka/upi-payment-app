@@ -1,11 +1,18 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { formatCurrency } from "@/lib/utils"
+import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { formatCurrency } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,171 +20,183 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { MoreHorizontal, Search, Eye, CheckCircle, XCircle, Clock, Copy } from "lucide-react"
-import type { OrderTable } from "@/lib/types"
-import { useToast } from "@/hooks/use-toast"
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { MoreHorizontal, Search, Eye, CheckCircle, XCircle, Clock, Copy } from 'lucide-react';
+import type { OrderTable } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 // Mock data - replace with actual API calls
 const mockOrders: OrderTable[] = [
   {
-    _id: "1",
-    id: "1",
-    orderId: "ORD-2024-001",
+    _id: '1',
+    id: '1',
+    orderId: 'ORD-2024-001',
     amount: 1500,
     description: "Payment to John's Store",
-    upiId: "john@paytm",
+    upiId: 'john@paytm',
     merchantName: "John's Store",
-    vpa: "john@paytm",
-    status: "pending-verification",
-    utr: "123456789012",
-    createdBy: "user1",
-    createdAt: new Date("2024-01-20T10:30:00"),
-    updatedAt: new Date("2024-01-20T10:30:00"),
-    expiresAt: new Date("2024-01-20T10:39:00"),
-    paymentPageUrl: "/pay/ORD-2024-001",
+    vpa: 'john@paytm',
+    status: 'pending-verification',
+    utr: '123456789012',
+    createdBy: 'user1',
+    createdAt: new Date('2024-01-20T10:30:00'),
+    updatedAt: new Date('2024-01-20T10:30:00'),
+    expiresAt: new Date('2024-01-20T10:39:00'),
+    paymentPageUrl: '/pay/ORD-2024-001',
     upiDeepLink: "upi://pay?pa=john@paytm&pn=John's Store&am=1500",
   },
   {
-    _id: "2",
-    id: "2",
-    orderId: "ORD-2024-002",
+    _id: '2',
+    id: '2',
+    orderId: 'ORD-2024-002',
     amount: 2500,
-    description: "Payment to Tech Solutions",
-    upiId: "tech@gpay",
-    merchantName: "Tech Solutions",
-    vpa: "tech@gpay",
-    status: "completed",
-    utr: "987654321098",
-    createdBy: "user2",
-    createdAt: new Date("2024-01-20T09:15:00"),
-    updatedAt: new Date("2024-01-20T09:15:00"),
-    expiresAt: new Date("2024-01-20T09:24:00"),
-    paymentPageUrl: "/pay/ORD-2024-002",
-    upiDeepLink: "upi://pay?pa=tech@gpay&pn=Tech Solutions&am=2500",
+    description: 'Payment to Tech Solutions',
+    upiId: 'tech@gpay',
+    merchantName: 'Tech Solutions',
+    vpa: 'tech@gpay',
+    status: 'completed',
+    utr: '987654321098',
+    createdBy: 'user2',
+    createdAt: new Date('2024-01-20T09:15:00'),
+    updatedAt: new Date('2024-01-20T09:15:00'),
+    expiresAt: new Date('2024-01-20T09:24:00'),
+    paymentPageUrl: '/pay/ORD-2024-002',
+    upiDeepLink: 'upi://pay?pa=tech@gpay&pn=Tech Solutions&am=2500',
   },
   {
-    _id: "3",
-    id: "3",
-    orderId: "ORD-2024-003",
+    _id: '3',
+    id: '3',
+    orderId: 'ORD-2024-003',
     amount: 750,
-    description: "Payment to Coffee Shop",
-    upiId: "coffee@phonepe",
-    merchantName: "Coffee Shop",
-    vpa: "coffee@phonepe",
-    status: "expired",
-    createdBy: "user3",
-    createdAt: new Date("2024-01-20T08:00:00"),
-    updatedAt: new Date("2024-01-20T08:00:00"),
-    expiresAt: new Date("2024-01-20T08:09:00"),
-    paymentPageUrl: "/pay/ORD-2024-003",
-    upiDeepLink: "upi://pay?pa=coffee@phonepe&pn=Coffee Shop&am=750",
+    description: 'Payment to Coffee Shop',
+    upiId: 'coffee@phonepe',
+    merchantName: 'Coffee Shop',
+    vpa: 'coffee@phonepe',
+    status: 'expired',
+    createdBy: 'user3',
+    createdAt: new Date('2024-01-20T08:00:00'),
+    updatedAt: new Date('2024-01-20T08:00:00'),
+    expiresAt: new Date('2024-01-20T08:09:00'),
+    paymentPageUrl: '/pay/ORD-2024-003',
+    upiDeepLink: 'upi://pay?pa=coffee@phonepe&pn=Coffee Shop&am=750',
   },
   {
-    _id: "4",
-    id: "4",
-    orderId: "ORD-2024-004",
+    _id: '4',
+    id: '4',
+    orderId: 'ORD-2024-004',
     amount: 3200,
-    description: "Payment to Electronics Hub",
-    upiId: "electronics@bhim",
-    merchantName: "Electronics Hub",
-    vpa: "electronics@bhim",
-    status: "pending",
-    createdBy: "user1",
-    createdAt: new Date("2024-01-20T11:45:00"),
-    updatedAt: new Date("2024-01-20T11:45:00"),
-    expiresAt: new Date("2024-01-20T11:54:00"),
-    paymentPageUrl: "/pay/ORD-2024-004",
-    upiDeepLink: "upi://pay?pa=electronics@bhim&pn=Electronics Hub&am=3200",
+    description: 'Payment to Electronics Hub',
+    upiId: 'electronics@bhim',
+    merchantName: 'Electronics Hub',
+    vpa: 'electronics@bhim',
+    status: 'pending',
+    createdBy: 'user1',
+    createdAt: new Date('2024-01-20T11:45:00'),
+    updatedAt: new Date('2024-01-20T11:45:00'),
+    expiresAt: new Date('2024-01-20T11:54:00'),
+    paymentPageUrl: '/pay/ORD-2024-004',
+    upiDeepLink: 'upi://pay?pa=electronics@bhim&pn=Electronics Hub&am=3200',
   },
-]
+];
 
 interface OrdersTableProps {
-  showAllOrders?: boolean
-  userId?: string
+  showAllOrders?: boolean;
+  userId?: string;
 }
 
 export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [orders, setOrders] = useState<OrderTable[]>(mockOrders)
-  const { toast } = useToast()
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [orders, setOrders] = useState<OrderTable[]>(mockOrders);
+  const { toast } = useToast();
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.merchantName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.vpa || "").toLowerCase().includes(searchTerm.toLowerCase())
+      (order.merchantName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.vpa || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter
-    const matchesUser = showAllOrders || order.createdBy === userId
+    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+    const matchesUser = showAllOrders || order.createdBy === userId;
 
-    return matchesSearch && matchesStatus && matchesUser
-  })
+    return matchesSearch && matchesStatus && matchesUser;
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "pending":
+      case 'pending':
         return (
-          <Badge variant="outline" className="text-blue-600 border-blue-200">
+          <Badge variant="outline" className="border-blue-200 text-blue-600">
             Pending
           </Badge>
-        )
-      case "pending-verification":
+        );
+      case 'pending-verification':
         return (
-          <Badge variant="outline" className="text-yellow-600 border-yellow-200">
+          <Badge variant="outline" className="border-yellow-200 text-yellow-600">
             Pending Verification
           </Badge>
-        )
-      case "completed":
+        );
+      case 'completed':
         return (
-          <Badge variant="outline" className="text-green-600 border-green-200">
+          <Badge variant="outline" className="border-green-200 text-green-600">
             Completed
           </Badge>
-        )
-      case "expired":
+        );
+      case 'expired':
         return (
-          <Badge variant="outline" className="text-red-600 border-red-200">
+          <Badge variant="outline" className="border-red-200 text-red-600">
             Expired
           </Badge>
-        )
-      case "failed":
+        );
+      case 'failed':
         return (
-          <Badge variant="outline" className="text-red-600 border-red-200">
+          <Badge variant="outline" className="border-red-200 text-red-600">
             Failed
           </Badge>
-        )
+        );
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline">{status}</Badge>;
     }
-  }
+  };
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
-      setOrders(orders.map((order) => (order._id === orderId || order.id === orderId ? { ...order, status: newStatus as any } : order)))
+      setOrders(
+        orders.map((order) =>
+          order._id === orderId || order.id === orderId
+            ? { ...order, status: newStatus as any }
+            : order,
+        ),
+      );
 
       toast({
-        title: "Order status updated",
+        title: 'Order status updated',
         description: `Order ${orderId} has been marked as ${newStatus}.`,
-      })
+      });
     } catch (error) {
       toast({
-        title: "Error updating order",
-        description: "There was a problem updating the order status.",
-        variant: "destructive",
-      })
+        title: 'Error updating order',
+        description: 'There was a problem updating the order status.',
+        variant: 'destructive',
+      });
     }
-  }
+  };
 
   const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text)
+    navigator.clipboard.writeText(text);
     toast({
-      title: "Copied to clipboard",
+      title: 'Copied to clipboard',
       description: `${label} has been copied to your clipboard.`,
-    })
-  }
+    });
+  };
 
   return (
     <Card>
@@ -186,13 +205,13 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
           <div>
             <CardTitle>Orders Management</CardTitle>
             <CardDescription>
-              {showAllOrders ? "View and manage all orders in the system" : "Your payment orders"}
+              {showAllOrders ? 'View and manage all orders in the system' : 'Your payment orders'}
             </CardDescription>
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <div className="relative max-w-sm flex-1">
+            <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
             <Input
               placeholder="Search orders..."
               value={searchTerm}
@@ -235,7 +254,11 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     {order.orderId}
-                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(order.orderId, "Order ID")}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(order.orderId, 'Order ID')}
+                    >
                       <Copy className="h-3 w-3" />
                     </Button>
                   </div>
@@ -245,7 +268,11 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {order.vpa}
-                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(order.vpa || "", "UPI ID")}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(order.vpa || '', 'UPI ID')}
+                    >
                       <Copy className="h-3 w-3" />
                     </Button>
                   </div>
@@ -255,7 +282,11 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
                   {order.utr ? (
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-sm">{order.utr}</span>
-                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(order.utr!, "UTR")}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(order.utr!, 'UTR')}
+                      >
                         <Copy className="h-3 w-3" />
                       </Button>
                     </div>
@@ -266,7 +297,9 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
                 <TableCell>
                   <div className="text-sm">
                     <div>{order.createdAt.toLocaleDateString()}</div>
-                    <div className="text-muted-foreground">{order.createdAt.toLocaleTimeString()}</div>
+                    <div className="text-muted-foreground">
+                      {order.createdAt.toLocaleTimeString()}
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
@@ -279,7 +312,7 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => window.open(order.paymentPageUrl, "_blank")}>
+                      <DropdownMenuItem onClick={() => window.open(order.paymentPageUrl, '_blank')}>
                         <Eye className="mr-2 h-4 w-4" />
                         View Payment Page
                       </DropdownMenuItem>
@@ -288,22 +321,24 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
                         <>
                           <DropdownMenuLabel>Update Status</DropdownMenuLabel>
                           <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(order._id || order.id, "completed")}
-                            disabled={order.status === "completed"}
+                            onClick={() => handleStatusUpdate(order._id || order.id, 'completed')}
+                            disabled={order.status === 'completed'}
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Mark Completed
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(order._id || order.id, "failed")}
-                            disabled={order.status === "failed"}
+                            onClick={() => handleStatusUpdate(order._id || order.id, 'failed')}
+                            disabled={order.status === 'failed'}
                           >
                             <XCircle className="mr-2 h-4 w-4" />
                             Mark Failed
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(order._id || order.id, "pending-verification")}
-                            disabled={order.status === "pending-verification"}
+                            onClick={() =>
+                              handleStatusUpdate(order._id || order.id, 'pending-verification')
+                            }
+                            disabled={order.status === 'pending-verification'}
                           >
                             <Clock className="mr-2 h-4 w-4" />
                             Pending Verification
@@ -319,11 +354,11 @@ export function OrdersTable({ showAllOrders = true, userId }: OrdersTableProps) 
         </Table>
 
         {filteredOrders.length === 0 && (
-          <div className="text-center py-8">
+          <div className="py-8 text-center">
             <p className="text-muted-foreground">No orders found matching your criteria.</p>
           </div>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

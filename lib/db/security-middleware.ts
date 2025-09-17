@@ -1,42 +1,40 @@
 /**
  * Enhanced Database Security Middleware
- * 
+ *
  * Provides comprehensive protection against Mongoose vulnerabilities including:
  * - Search injection attacks
  * - Prototype pollution
  * - Schema path pollution
  * - Improper input validation
- * 
+ *
  * Author: Sayem Abdullah Rihan (@code-craka)
  * Contact: hello@techsci.io
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  sanitizeMongoQuery, 
-  sanitizeUserInput, 
+import {
+  sanitizeMongoQuery,
+  sanitizeUserInput,
   sanitizeObjectId,
-  sanitizePaginationParams,
-  sanitizeSortParameter 
 } from './security';
 
 /**
  * Enhanced security middleware for API routes
  * Prevents all known Mongoose vulnerabilities
  */
-export function withDatabaseSecurity(handler: Function) {
-  return async (req: NextRequest, context?: any) => {
+export function withDatabaseSecurity(handler: (req: NextRequest, context?: Record<string, unknown>) => Promise<NextResponse>) {
+  return async (req: NextRequest, context?: Record<string, unknown>) => {
     try {
       // 1. Sanitize query parameters to prevent search injection
       const url = new URL(req.url);
-      const queryParams: any = {};
-      
+      const queryParams: Record<string, string | string[]> = {};
+
       for (const [key, value] of url.searchParams.entries()) {
         // Prevent prototype pollution in query params
         if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
           continue;
         }
-        
+
         // Sanitize the query parameter
         queryParams[key] = sanitizeMongoQuery(value);
       }
@@ -47,19 +45,19 @@ export function withDatabaseSecurity(handler: Function) {
         try {
           const body = await req.json();
           sanitizedBody = sanitizeUserInput(body);
-        } catch (error) {
+        } catch {
           // Body might not be JSON, skip sanitization
         }
       }
 
       // 3. Sanitize path parameters if they exist
-      const sanitizedParams: any = {};
+      const sanitizedParams: Record<string, unknown> = {};
       if (context?.params) {
         for (const [key, value] of Object.entries(context.params)) {
           if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
             continue;
           }
-          
+
           // Special handling for ObjectId parameters
           if (key.toLowerCase().includes('id')) {
             const objectId = sanitizeObjectId(value as string);
@@ -80,20 +78,22 @@ export function withDatabaseSecurity(handler: Function) {
         headers: {
           ...req.headers,
           'x-security-sanitized': 'true',
-          'x-security-timestamp': new Date().toISOString()
-        }
+          'x-security-timestamp': new Date().toISOString(),
+        },
       };
 
       // 5. Call the original handler with sanitized data
       return await handler(sanitizedRequest, context);
-
     } catch (error) {
       console.error('Database security middleware error:', error);
-      return NextResponse.json({
-        error: 'Security validation failed',
-        code: 'SECURITY_ERROR',
-        message: 'Request contains potentially dangerous data'
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: 'Security validation failed',
+          code: 'SECURITY_ERROR',
+          message: 'Request contains potentially dangerous data',
+        },
+        { status: 400 },
+      );
     }
   };
 }
@@ -101,12 +101,12 @@ export function withDatabaseSecurity(handler: Function) {
 /**
  * Specific middleware for preventing Mongoose search injection
  */
-export function preventSearchInjection(handler: Function) {
-  return async (req: NextRequest, context?: any) => {
+export function preventSearchInjection(handler: (req: NextRequest, context?: Record<string, unknown>) => Promise<NextResponse>) {
+  return async (req: NextRequest, context?: Record<string, unknown>) => {
     try {
       const url = new URL(req.url);
       const searchParam = url.searchParams.get('search');
-      
+
       if (searchParam) {
         // Remove MongoDB operators from search queries
         const sanitizedSearch = searchParam
@@ -114,26 +114,29 @@ export function preventSearchInjection(handler: Function) {
           .replace(/[{}]/g, '') // Remove braces
           .replace(/eval|function|javascript:/gi, '') // Remove script injections
           .trim();
-        
+
         url.searchParams.set('search', sanitizedSearch);
-        
+
         // Create new request with sanitized search
         const newRequest = new NextRequest(url.toString(), {
           method: req.method,
           headers: req.headers,
-          body: req.body
+          body: req.body,
         });
-        
+
         return await handler(newRequest, context);
       }
-      
+
       return await handler(req, context);
     } catch (error) {
       console.error('Search injection prevention error:', error);
-      return NextResponse.json({
-        error: 'Search validation failed',
-        code: 'SEARCH_INJECTION_ERROR'
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: 'Search validation failed',
+          code: 'SEARCH_INJECTION_ERROR',
+        },
+        { status: 400 },
+      );
     }
   };
 }
@@ -141,15 +144,15 @@ export function preventSearchInjection(handler: Function) {
 /**
  * Middleware to prevent prototype pollution in schema paths
  */
-export function preventSchemaPathPollution(handler: Function) {
-  return async (req: NextRequest, context?: any) => {
+export function preventSchemaPathPollution(handler: (req: NextRequest, context?: Record<string, unknown>) => Promise<NextResponse>) {
+  return async (req: NextRequest, context?: Record<string, unknown>) => {
     try {
       let body = null;
-      
+
       if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
         try {
           body = await req.json();
-          
+
           if (body && typeof body === 'object') {
             // Remove dangerous schema path manipulations
             const dangerousFields = [
@@ -158,50 +161,53 @@ export function preventSchemaPathPollution(handler: Function) {
               'prototype',
               'schema',
               'model',
-              'collection'
+              'collection',
             ];
-            
-            function cleanObject(obj: any): any {
+
+            function cleanObject(obj: unknown): unknown {
               if (!obj || typeof obj !== 'object') return obj;
-              
+
               if (Array.isArray(obj)) {
                 return obj.map(cleanObject);
               }
-              
-              const cleaned: any = {};
-              for (const [key, value] of Object.entries(obj)) {
+
+              const cleaned: Record<string, unknown> = {};
+              for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
                 if (!dangerousFields.includes(key) && !key.startsWith('$')) {
                   cleaned[key] = cleanObject(value);
                 }
               }
               return cleaned;
             }
-            
+
             body = cleanObject(body);
           }
-        } catch (error) {
+        } catch {
           // Body is not JSON, skip
         }
       }
-      
+
       // Create request with cleaned body
       if (body) {
         const cleanedRequest = new NextRequest(req.url, {
           method: req.method,
           headers: req.headers,
-          body: JSON.stringify(body)
+          body: JSON.stringify(body),
         });
-        
+
         return await handler(cleanedRequest, context);
       }
-      
+
       return await handler(req, context);
     } catch (error) {
       console.error('Schema path pollution prevention error:', error);
-      return NextResponse.json({
-        error: 'Schema validation failed',
-        code: 'SCHEMA_PATH_ERROR'
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: 'Schema validation failed',
+          code: 'SCHEMA_PATH_ERROR',
+        },
+        { status: 400 },
+      );
     }
   };
 }
@@ -209,12 +215,12 @@ export function preventSchemaPathPollution(handler: Function) {
 /**
  * Comprehensive input validation for all Mongoose operations
  */
-export function validateMongooseInput(handler: Function) {
-  return async (req: NextRequest, context?: any) => {
+export function validateMongooseInput(handler: (req: NextRequest, context?: Record<string, unknown>) => Promise<NextResponse>) {
+  return async (req: NextRequest, context?: Record<string, unknown>) => {
     try {
       // Validate common dangerous patterns
       const requestText = req.url + (req.body ? await req.text() : '');
-      
+
       const dangerousPatterns = [
         /\$where/gi,
         /eval\(/gi,
@@ -222,26 +228,32 @@ export function validateMongooseInput(handler: Function) {
         /this\./gi,
         /__proto__/gi,
         /constructor/gi,
-        /prototype/gi
+        /prototype/gi,
       ];
-      
+
       for (const pattern of dangerousPatterns) {
         if (pattern.test(requestText)) {
           console.warn('Dangerous pattern detected in request:', pattern);
-          return NextResponse.json({
-            error: 'Request contains potentially dangerous content',
-            code: 'DANGEROUS_PATTERN_ERROR'
-          }, { status: 400 });
+          return NextResponse.json(
+            {
+              error: 'Request contains potentially dangerous content',
+              code: 'DANGEROUS_PATTERN_ERROR',
+            },
+            { status: 400 },
+          );
         }
       }
-      
+
       return await handler(req, context);
     } catch (error) {
       console.error('Mongoose input validation error:', error);
-      return NextResponse.json({
-        error: 'Input validation failed',
-        code: 'INPUT_VALIDATION_ERROR'
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: 'Input validation failed',
+          code: 'INPUT_VALIDATION_ERROR',
+        },
+        { status: 400 },
+      );
     }
   };
 }
@@ -249,13 +261,9 @@ export function validateMongooseInput(handler: Function) {
 /**
  * Complete security wrapper combining all protections
  */
-export function withCompleteMongooseSecurity(handler: Function) {
+export function withCompleteMongooseSecurity(handler: (req: NextRequest, context?: Record<string, unknown>) => Promise<NextResponse>) {
   return withDatabaseSecurity(
-    preventSearchInjection(
-      preventSchemaPathPollution(
-        validateMongooseInput(handler)
-      )
-    )
+    preventSearchInjection(preventSchemaPathPollution(validateMongooseInput(handler))),
   );
 }
 
@@ -265,47 +273,47 @@ export function withCompleteMongooseSecurity(handler: Function) {
 export const MONGOOSE_SECURE_CONFIG = {
   // Disable autoIndex in production to prevent index manipulation
   autoIndex: process.env.NODE_ENV !== 'production',
-  
+
   // Use strict mode
   strict: true,
-  
+
   // Disable automatic type casting for security
   typecast: false,
-  
+
   // Set maximum connection pool size
   maxPoolSize: 10,
-  
+
   // Enable query sanitization
   sanitizeFilter: true,
-  
+
   // Disable deprecated features that could be exploited
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  
+
   // Set timeouts to prevent DoS
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
-  
+
   // Enable query logging in development
-  debug: process.env.NODE_ENV === 'development'
+  debug: process.env.NODE_ENV === 'development',
 };
 
 /**
  * Audit function to log potentially dangerous queries
  */
-export function auditDatabaseQuery(operation: string, query: any, userId?: string) {
+export function auditDatabaseQuery(operation: string, query: Record<string, unknown>, userId?: string) {
   const auditData = {
     timestamp: new Date().toISOString(),
     operation,
     userId,
     queryKeys: Object.keys(query || {}),
     hasDangerousOperators: JSON.stringify(query || {}).includes('$where'),
-    ipAddress: process.env.REQUEST_IP || 'unknown'
+    ipAddress: process.env.REQUEST_IP || 'unknown',
   };
-  
+
   // Log audit data (in production, send to monitoring service)
-  console.log('Database Query Audit:', auditData);
-  
+  console.warn('Database Query Audit:', auditData);
+
   // In production, you might want to send this to a monitoring service
   if (process.env.NODE_ENV === 'production' && auditData.hasDangerousOperators) {
     console.warn('SECURITY ALERT: Dangerous database operation detected', auditData);
@@ -320,16 +328,16 @@ const dbOperationCounts = new Map<string, { count: number; resetTime: number }>(
 export function rateLimitDatabaseOperations(identifier: string, maxOps = 100, windowMs = 60000) {
   const now = Date.now();
   const current = dbOperationCounts.get(identifier);
-  
+
   if (!current || now > current.resetTime) {
     dbOperationCounts.set(identifier, { count: 1, resetTime: now + windowMs });
     return true;
   }
-  
+
   if (current.count >= maxOps) {
     return false;
   }
-  
+
   current.count++;
   return true;
 }

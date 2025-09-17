@@ -62,38 +62,46 @@ export async function POST(request: NextRequest) {
         }
 
         // Simulate processing time and potential failures
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+        await new Promise((resolve) => setTimeout(resolve, Math.random() * 100));
 
         // Return success (90% success rate for testing)
         return Math.random() > 0.1;
-      }
+      },
     );
 
     if (result.success) {
-      return NextResponse.json({
-        success: true,
-        correlationId: result.correlationId,
-        processingTime: result.processingTime,
-        message: 'Webhook processed successfully',
-      }, { status: 200 });
+      return NextResponse.json(
+        {
+          success: true,
+          correlationId: result.correlationId,
+          processingTime: result.processingTime,
+          message: 'Webhook processed successfully',
+        },
+        { status: 200 },
+      );
     } else {
-      return NextResponse.json({
-        success: false,
-        correlationId: result.correlationId,
-        processingTime: result.processingTime,
-        error: result.error,
-        message: 'Webhook processing failed',
-      }, { status: 500 });
+      return NextResponse.json(
+        {
+          success: false,
+          correlationId: result.correlationId,
+          processingTime: result.processingTime,
+          error: result.error,
+          message: 'Webhook processing failed',
+        },
+        { status: 500 },
+      );
     }
-
   } catch (error) {
     console.error('Webhook processing error:', error);
 
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      message: 'Webhook processing failed',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        message: 'Webhook processing failed',
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -102,20 +110,25 @@ export async function GET() {
   try {
     const stats = await webhookOrchestrator.getProcessingStats();
 
-    return NextResponse.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      stats,
-    }, { status: 200 });
-
+    return NextResponse.json(
+      {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        stats,
+      },
+      { status: 200 },
+    );
   } catch (error) {
     console.error('Webhook status check failed:', error);
 
-    return NextResponse.json({
-      status: 'unhealthy',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
-    }, { status: 503 });
+    return NextResponse.json(
+      {
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      },
+      { status: 503 },
+    );
   }
 }
 
