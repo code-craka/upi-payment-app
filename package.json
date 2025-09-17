@@ -1,6 +1,6 @@
 {
   "name": "upi-admin-dashboard",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Enterprise-grade UPI payment system with Redis-powered session management, real-time role updates, and comprehensive admin dashboard for payment processing, order management, and user administration.",
   "private": false,
   "author": {
@@ -99,6 +99,7 @@
     "@radix-ui/react-toggle": "1.1.1",
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "latest",
+    "@tanstack/react-query": "^5.89.0",
     "@types/qrcode": "^1.5.5",
     "@upstash/redis": "^1.35.3",
     "@vercel/analytics": "latest",
@@ -133,6 +134,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
+    "@tanstack/react-query-devtools": "^5.89.0",
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",

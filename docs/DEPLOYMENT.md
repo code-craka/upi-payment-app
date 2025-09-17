@@ -509,6 +509,98 @@ server {
 
 ## Monitoring and Logging
 
+### Performance Benchmarking Setup
+
+The system includes comprehensive performance benchmarking capabilities to validate production performance and monitor system health.
+
+#### Performance Benchmarking Configuration
+
+\`\`\`env
+# Performance Testing Configuration (Optional)
+BENCHMARK_MAX_CONCURRENT_USERS=200
+BENCHMARK_DEFAULT_ITERATIONS=1000
+BENCHMARK_TIMEOUT_MS=30000
+BENCHMARK_ENABLE_STRESS_TEST=true
+BENCHMARK_TARGET_LATENCY_MS=30
+
+# Performance Monitoring
+PERFORMANCE_MONITORING_ENABLED=true
+PERFORMANCE_ALERT_THRESHOLD=100  # Alert if p95 > 100ms
+PERFORMANCE_REPORT_RETENTION_DAYS=30
+\`\`\`
+
+#### Post-Deployment Performance Validation
+
+After deployment, run these benchmarks to validate system performance:
+
+\`\`\`bash
+# 1. Validate Redis vs Clerk performance
+curl -X POST https://your-domain.com/api/performance/benchmark/redis-vs-clerk \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"iterations": 1000, "regions": ["us-east-1", "eu-west-1"]}'
+
+# 2. Validate cache hit ratios
+curl -X POST https://your-domain.com/api/performance/benchmark/cache-hit-ratio \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"testDuration": 300, "targetHitRatio": 0.8}'
+
+# 3. Validate sub-30ms response times
+curl -X POST https://your-domain.com/api/performance/benchmark/sub-30ms \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"sampleSize": 5000, "confidenceLevel": 0.99}'
+
+# 4. Run full benchmark suite
+curl -X POST https://your-domain.com/api/performance/benchmark/full-suite \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"configuration": {"iterations": 1000, "includeLoadTest": true}}'
+\`\`\`
+
+#### Performance Targets for Production
+
+Ensure your deployment meets these performance targets:
+
+| Metric | Target | Alert Threshold | Critical Threshold |
+|--------|---------|----------------|-------------------|
+| Redis Response (p50) | < 5ms | > 15ms | > 30ms |
+| Cache Hit Ratio | > 80% | < 70% | < 60% |
+| Hybrid Auth (p95) | < 100ms | > 200ms | > 500ms |
+| Concurrent Users | 200+ | < 100 | < 50 |
+| System Recovery | < 30s | > 60s | > 120s |
+
+#### Performance Dashboard Access
+
+Access the performance dashboard at:
+\`\`\`
+https://your-domain.com/admin -> Performance Benchmarking tab
+\`\`\`
+
+**Requirements**: Admin role access required for performance testing.
+
+#### Automated Performance Monitoring
+
+Set up automated performance monitoring with alerts:
+
+\`\`\`javascript
+// Add to your monitoring setup
+const performanceMonitor = {
+  schedule: '0 */6 * * *', // Every 6 hours
+  endpoints: [
+    '/api/performance/benchmark/redis-vs-clerk',
+    '/api/performance/benchmark/cache-hit-ratio',
+    '/api/performance/benchmark/sub-30ms'
+  ],
+  alertThresholds: {
+    responseTime: { p95: 100 }, // Alert if p95 > 100ms
+    cacheHitRatio: { min: 0.7 }, // Alert if < 70%
+    errorRate: { max: 0.01 } // Alert if > 1%
+  }
+};
+\`\`\`
+
 ### Application Monitoring
 
 \`\`\`javascript

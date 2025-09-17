@@ -4,8 +4,8 @@ Thank you for your interest in contributing to the UPI Admin Dashboard! This gui
 
 **Author**: Sayem Abdullah Rihan (@code-craka)  
 **Contributor**: Sajjadul Islam  
-**Contact**: hello@techsci.io  
-**Repository**: https://github.com/code-craka/upi-payment-app
+**Contact**: <hello@techsci.io>  
+**Repository**: <https://github.com/code-craka/upi-payment-app>
 
 ## 🚀 Quick Start
 
@@ -60,25 +60,31 @@ Before you begin, ensure you have the following installed:
    ```
 
 5. **Verify Setup**
-   - Visit http://localhost:3000
-   - Check API health: http://localhost:3000/api/test-db
-   - Verify Redis connection: http://localhost:3000/api/debug/session
+   - Visit <http://localhost:3000>
+   - Check API health: <http://localhost:3000/api/test-db>
+   - Verify Redis connection: <http://localhost:3000/api/debug/session>
 - Integration tests for API endpoints
 - E2E tests for critical user flows
 
 ### Running Tests
+
 \`\`\`bash
+
 # Run all tests
+
 pnpm test
 
 # Run tests in watch mode
+
 pnpm test:watch
 
 # Generate coverage report
+
 pnpm test:coverage
 \`\`\`
 
 ### Writing Tests
+
 - Use Jest for unit and integration tests
 - Use React Testing Library for component tests
 - Use Playwright for E2E tests
@@ -87,12 +93,14 @@ pnpm test:coverage
 ## 🔒 Security Considerations
 
 ### Security Requirements
+
 - Never commit sensitive data (API keys, passwords)
 - Implement proper input validation
 - Use parameterized queries to prevent injection
 - Follow OWASP security guidelines
 
 ### Authentication & Authorization
+
 - All protected routes must verify user authentication
 - Implement role-based access control
 - Use secure session management
@@ -101,12 +109,14 @@ pnpm test:coverage
 ## 📝 Pull Request Process
 
 ### Before Submitting
+
 1. Ensure all tests pass
 2. Update documentation if needed
 3. Follow the commit message format
 4. Rebase your branch on the latest main
 
 ### Commit Message Format
+
 \`\`\`
 type(scope): description
 
@@ -129,6 +139,7 @@ Closes #123
 \`\`\`
 
 ### Pull Request Template
+
 - Use the provided PR template
 - Include screenshots for UI changes
 - Reference related issues
@@ -137,6 +148,7 @@ Closes #123
 ## 🐛 Bug Reports
 
 ### Bug Report Template
+
 When reporting bugs, please include:
 - **Environment**: OS, Node.js version, browser
 - **Steps to Reproduce**: Clear, numbered steps
@@ -148,6 +160,7 @@ When reporting bugs, please include:
 ## 💡 Feature Requests
 
 ### Feature Request Template
+
 - **Problem**: What problem does this solve?
 - **Solution**: Proposed solution
 - **Alternatives**: Alternative solutions considered
@@ -156,12 +169,14 @@ When reporting bugs, please include:
 ## 📚 Documentation
 
 ### Documentation Standards
+
 - Update README.md for significant changes
 - Include JSDoc comments for functions
 - Update API documentation for new endpoints
 - Provide examples for complex features
 
 ### Documentation Structure
+
 - README.md: Project overview and setup
 - API.md: Detailed API documentation
 - DEPLOYMENT.md: Deployment instructions
@@ -170,6 +185,7 @@ When reporting bugs, please include:
 ## 🏗️ Architecture Guidelines
 
 ### Folder Structure
+
 \`\`\`
 ├── app/                 # Next.js App Router
 │   ├── api/            # API routes
@@ -187,6 +203,7 @@ When reporting bugs, please include:
 \`\`\`
 
 ### Component Organization
+
 - Group related components in folders
 - Use index.ts files for clean imports
 - Separate business logic from UI components
@@ -195,12 +212,14 @@ When reporting bugs, please include:
 ## 🔄 Release Process
 
 ### Version Management
+
 - Follow Semantic Versioning (SemVer)
 - Update CHANGELOG.md for each release
 - Tag releases in Git
 - Update package.json version
 
 ### Release Checklist
+
 - [ ] All tests pass
 - [ ] Documentation updated
 - [ ] CHANGELOG.md updated
@@ -211,12 +230,14 @@ When reporting bugs, please include:
 ## 🤝 Community Guidelines
 
 ### Code of Conduct
+
 - Be respectful and inclusive
 - Provide constructive feedback
 - Help others learn and grow
 - Follow the project's code of conduct
 
 ### Communication
+
 - Use GitHub issues for bug reports and feature requests
 - Use GitHub discussions for questions and ideas
 - Be clear and concise in communications
@@ -225,12 +246,14 @@ When reporting bugs, please include:
 ## 📞 Getting Help
 
 ### Resources
+
 - Project documentation
 - GitHub issues and discussions
 - Code comments and examples
 - Community forums
 
 ### Contact
+
 - Create an issue for bugs or feature requests
 - Use discussions for questions
 - Tag maintainers for urgent issues

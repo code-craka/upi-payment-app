@@ -11,6 +11,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Enable experimental Edge runtime features if needed
+  serverExternalPackages: [],
   headers() {
     return [
       {

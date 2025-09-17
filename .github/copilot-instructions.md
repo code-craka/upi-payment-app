@@ -2,399 +2,629 @@
 
 ## Architecture Overview
 
-Enterprise-grade UPI payment system built with **Next.js 14 App Router**.
-Supports multi-role authentication, audit logging, and advanced security for payment processing, order management, and administrative operations.
+Enterprise-grade UPI payment system with **hybrid authentication architecture** combining Clerk + Upstash Redis for instant role access and bulletproof reliability. Built with Next.js 14 App Router, production-grade security, and comprehensive monitoring.
 
 ### Core Technology Stack
 
 - **Framework**: Next.js 14 with App Router (never use pages/ or _app.tsx)
-- **Authentication**: Clerk with role-based permissions (`admin`, `merchant`, `viewer`)
+- **Authentication**: Hybrid Clerk + Upstash Redis with 30-second TTL caching
 - **Database**: MongoDB with Mongoose ODM and optimized indexes
-- **Security**: CSRF protection, rate limiting, and comprehensive audit logging
+- **Cache Layer**: Upstash Redis for role caching and circuit breaker state
+- **Security**: CSRF protection, rate limiting, webhook verification, audit logging
 - **UI**: TailwindCSS v4 with ShadCN components and custom styling
 - **TypeScript**: 100% TypeScript coverage with Zod validation
+- **Monitoring**: Comprehensive observability with health checks and alerting
 
 ---
 
-## 🔐 Authentication & Authorization
+## 🔐 Hybrid Authentication & Role Management
 
-### Core Authentication Patterns
+### Authentication Architecture Pattern
 
 ```typescript
-import { getSafeUser, requireRole, requirePermission } from "@/lib/auth/safe-auth";
+import { getHybridAuthContext, getCachedUserRole } from "@/lib/auth/hybrid-auth";
+import { RedisCircuitBreaker } from "@/lib/circuit-breaker";
 import { currentUser } from "@clerk/nextjs/server";
-import { hasPermission, PERMISSIONS } from "@/lib/types";
+
+// Hybrid authentication: Redis-first, Clerk fallback
+const authContext = await getHybridAuthContext(userId);
+if (authContext.redis.cached && authContext.redis.ttl > 0) {
+  return authContext.redis.role; // Sub-30ms response
+}
+// Fallback to Clerk if Redis unavailable
+if (authContext.clerk.authenticated) {
+  await syncRoleToRedis(userId, authContext.clerk.role);
+  return authContext.clerk.role;
+}
 ```
 
-### Implementation Rules
+### Core Authentication Rules
 
-- **✅ Always use**: `currentUser()` from `@clerk/nextjs/server` for auth checks
-- **✅ Clerk Provider**: Wrap app in `<ClerkProvider>` in `app/layout.tsx`
-- **✅ Type Safety**: Use `getSafeUser()` for type-safe authentication
-- **✅ Role Storage**: Roles stored in `user.publicMetadata?.role`
-- **✅ Role Validation**: Via `publicMetadata?.role` string comparison
-- **✅ Permissions**: Enforce via `requireRole()` and `requirePermission()`
-- **❌ Never use**: Old Clerk APIs, pages/ directory, or _app.tsx
+- **✅ Hybrid System**: Always implement Redis-first with Clerk fallback
+- **✅ 30-Second TTL**: Role cache expires after 30 seconds for security
+- **✅ Circuit Breaker**: Use circuit breaker for Redis operations
+- **✅ Dual Write**: Update both Clerk (source) and Redis (cache) for role changes
+- **✅ Atomic Operations**: Use Lua scripts for race condition prevention
+- **✅ Auto-Sync**: Background sync between Clerk and Redis
+- **❌ Never**: Rely on single authentication source in production
 
-### Role-Based UI Rendering
+### Role Management Implementation
 
 ```typescript
-const userRole = user.publicMetadata?.role as string;
-if (userRole === "admin") {
-  // Admin-specific UI components
+// Dual-write role updates with atomic operations
+async function updateUserRole(userId: string, newRole: string) {
+  const luaScript = `
+    local version = redis.call('incr', KEYS[2])
+    redis.call('setex', KEYS[1], 30, ARGV[1])
+    return version
+  `;
+  
+  try {
+    // 1. Update Clerk (source of truth)
+    await clerkClient.users.updateUser(userId, {
+      publicMetadata: { role: newRole }
+    });
+    
+    // 2. Update Redis cache atomically
+    await redis.eval(luaScript, 2, `role:${userId}`, `role_version:${userId}`, newRole);
+    
+    // 3. Audit logging
+    await auditLog('role_updated', { userId, newRole, timestamp: Date.now() });
+    
+  } catch (error) {
+    // Implement rollback strategy
+    await handleRoleUpdateFailure(userId, newRole, error);
+  }
 }
 ```
 
 ---
 
-## 🛡️ Middleware & Security Chain
+## 🛡️ Production Security & Circuit Breaker
 
-### Middleware Execution Order (Critical)
+### Circuit Breaker Implementation (Required)
 
 ```typescript
-// middleware.ts - EXACT ORDER REQUIRED:
-export default clerkMiddleware((auth, req) => {
-  // 1. Security middleware: Rate limiting, basic protections
-  // 2. CSRF validation: Skip GET requests and public routes
-  // 3. Clerk authentication: Session validation
-  // 4. Role-based protection: Admin routes require admin role
-});
+// lib/circuit-breaker.ts
+export class ServerlessCircuitBreaker {
+  private async getState(): Promise<CircuitState> {
+    const state = await redis.get('circuit_breaker:redis');
+    return state ? JSON.parse(state) : { 
+      failures: 0, 
+      state: 'CLOSED', 
+      lastFailure: 0 
+    };
+  }
+  
+  private async updateState(newState: CircuitState): Promise<void> {
+    await redis.setex('circuit_breaker:redis', 300, JSON.stringify(newState));
+  }
+  
+  async execute<T>(operation: () => Promise<T>): Promise<T> {
+    const state = await this.getState();
+    
+    if (state.state === 'OPEN') {
+      if (Date.now() - state.lastFailure > 60000) { // 1 minute timeout
+        state.state = 'HALF_OPEN';
+        await this.updateState(state);
+      } else {
+        throw new Error('Circuit breaker is OPEN');
+      }
+    }
+    
+    try {
+      const result = await operation();
+      if (state.state === 'HALF_OPEN') {
+        state.state = 'CLOSED';
+        state.failures = 0;
+        await this.updateState(state);
+      }
+      return result;
+    } catch (error) {
+      state.failures++;
+      state.lastFailure = Date.now();
+      if (state.failures >= 5) {
+        state.state = 'OPEN';
+      }
+      await this.updateState(state);
+      throw error;
+    }
+  }
+}
 ```
 
-### Security Configuration
-
-- **Rate Limiting**: Apply to all routes
-- **CSRF Protection**: Required for POST/PUT/PATCH/DELETE requests
-- **Public Routes**: System-status, diagnostic APIs can skip auth
-- **Admin Protection**: `/admin/*` routes require exact `admin` role
-- **Request Validation**: Basic security headers and input sanitization
-
-### CSRF Implementation
+### Webhook Security Implementation
 
 ```typescript
-// Skip CSRF for specific routes
-if (request.nextUrl.pathname === "/api/system-status") {
-  return NextResponse.next()
+import { Webhook } from 'svix';
+
+export async function verifyClerkWebhook(request: Request) {
+  const webhook = new Webhook(process.env.CLERK_WEBHOOK_SECRET!);
+  const payload = await request.text();
+  const headers = Object.fromEntries(request.headers.entries());
+  
+  try {
+    const event = webhook.verify(payload, headers);
+    return event;
+  } catch (error) {
+    // Log to dead letter queue
+    await redis.lpush('webhook:dlq', JSON.stringify({
+      payload,
+      error: error.message,
+      timestamp: Date.now(),
+      headers
+    }));
+    throw new Error('Invalid webhook signature');
+  }
+}
+```
+
+### Dead Letter Queue Pattern
+
+```typescript
+// Handle failed webhook processing
+export async function handleWebhookFailure(
+  event: WebhookEvent, 
+  error: Error
+) {
+  await redis.lpush('webhook:dlq', JSON.stringify({
+    event,
+    error: error.message,
+    timestamp: Date.now(),
+    retryCount: 0
+  }));
+  
+  // Alert if DLQ size exceeds threshold
+  const dlqSize = await redis.llen('webhook:dlq');
+  if (dlqSize > 10) {
+    await sendAlert('Webhook DLQ overflow', { size: dlqSize });
+  }
 }
 ```
 
 ---
 
-## 🗄️ Database & Models
+## 📊 Monitoring & Health Checks
 
-### Database Operations Pattern
+### Comprehensive Health Check Implementation
+
+```typescript
+// app/api/health/route.ts
+export async function GET() {
+  const checks = await Promise.allSettled([
+    checkDatabase(),
+    checkRedisWithLatency(),
+    checkClerkConnectivity(),
+    validateCacheHitRatio()
+  ]);
+  
+  const results = checks.map((check, index) => ({
+    service: ['database', 'redis', 'clerk', 'cache'][index],
+    status: check.status === 'fulfilled' ? 'healthy' : 'unhealthy',
+    details: check.status === 'fulfilled' ? check.value : check.reason
+  }));
+  
+  const overallHealth = results.every(r => r.status === 'healthy');
+  
+  return NextResponse.json({
+    status: overallHealth ? 'healthy' : 'degraded',
+    services: results,
+    timestamp: new Date().toISOString()
+  }, { 
+    status: overallHealth ? 200 : 503 
+  });
+}
+
+async function checkRedisWithLatency() {
+  const start = performance.now();
+  await redis.ping();
+  const latency = performance.now() - start;
+  
+  return {
+    connected: true,
+    latency: `${latency.toFixed(2)}ms`,
+    status: latency < 100 ? 'optimal' : 'slow'
+  };
+}
+```
+
+### Cache Hit Ratio Monitoring
+
+```typescript
+// Track cache performance metrics
+export async function trackCacheHit(key: string, hit: boolean) {
+  const date = new Date().toISOString().split('T')[0];
+  await redis.incr(`cache:${hit ? 'hits' : 'misses'}:${date}`);
+}
+
+export async function getCacheStats() {
+  const date = new Date().toISOString().split('T')[0];
+  const hits = await redis.get(`cache:hits:${date}`) || '0';
+  const misses = await redis.get(`cache:misses:${date}`) || '0';
+  
+  const hitRatio = parseInt(hits) / (parseInt(hits) + parseInt(misses));
+  
+  // Alert if cache hit ratio drops below 60%
+  if (hitRatio < 0.6) {
+    await sendAlert('Low cache hit ratio', { ratio: hitRatio });
+  }
+  
+  return { hits: parseInt(hits), misses: parseInt(misses), ratio: hitRatio };
+}
+```
+
+---
+
+## 🗄️ Database & Models with Redis Integration
+
+### Enhanced Database Operations
 
 ```typescript
 import { connectDB } from "@/lib/db/connection";
+import { getCachedUserRole } from "@/lib/auth/hybrid-auth";
 
-// Always connect before queries
-await connectDB();
-
-// Use static methods for queries
-const activeOrders = await OrderModel.findActiveOrders(userId);
-const stats = await OrderModel.getOrderStats();
-
-// Instance methods for business logic
-order.isExpired();        // Instance method
-order.canBeVerified();    // Business logic validation
+// Database operations with caching layer
+export class UserService {
+  static async getUserWithRole(userId: string) {
+    // Try cache first
+    const cachedRole = await getCachedUserRole(userId);
+    if (cachedRole) {
+      return { userId, role: cachedRole, cached: true };
+    }
+    
+    // Fallback to database
+    await connectDB();
+    const user = await UserModel.findById(userId);
+    
+    // Cache the result
+    if (user?.role) {
+      await cacheUserRole(userId, user.role, 30);
+    }
+    
+    return { ...user, cached: false };
+  }
+}
 ```
 
-### Model Structure Requirements
+### Audit Logging with Context
 
-- **Location**: `lib/db/models/`
-- **Features**: Include validation, indexes, static methods, and instance methods
-- **Performance**: Create indexes for frequently queried fields
-- **Business Logic**: Implement domain logic as instance/static methods
-
-### Data Validation
-
-- **Input Validation**: Always use Zod schemas for request validation
-- **Runtime Safety**: Zod for runtime type checking
-- **Sanitization**: Automatic via Zod validation pipelines
+```typescript
+// Enhanced audit logging with Redis metrics
+await AuditLogModel.create({
+  action: 'role_updated',
+  entityType: 'User',
+  entityId: userId,
+  userId: adminId,
+  ipAddress: request.headers.get('x-forwarded-for'),
+  metadata: {
+    previousRole,
+    newRole,
+    cacheHit: cachedRole !== null,
+    latency: `${performanceMetrics.totalLatency}ms`,
+    source: cachedRole ? 'redis' : 'clerk'
+  },
+  timestamp: new Date()
+});
+```
 
 ---
 
-## 🚀 API Route Development
+## 🚀 API Route Patterns with Resilience
 
-### Standard API Route Structure
+### Production API Route Template
 
 ```typescript
 export async function POST(request: NextRequest) {
+  const circuitBreaker = new ServerlessCircuitBreaker();
+  
   try {
-    // 1. Authentication check
-    const user = await currentUser();
-    if (!user) {
+    // 1. Hybrid authentication with circuit breaker
+    const authContext = await circuitBreaker.execute(() => 
+      getHybridAuthContext(request)
+    );
+    
+    if (!authContext.authenticated) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    // 2. Role validation
-    const userRole = user.publicMetadata?.role as string;
-    if (userRole !== "admin") {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    // 2. Role validation from cache or Clerk
+    const userRole = await getUserRoleWithFallback(authContext.userId);
+    if (!hasPermission(userRole, 'required_permission')) {
+      await auditLog('permission_denied', { 
+        userId: authContext.userId, 
+        permission: 'required_permission',
+        source: authContext.source 
+      });
+      return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
-    // 3. Request validation
+    // 3. Request validation with Zod
     const schema = z.object({ /* schema definition */ });
     const validatedData = schema.parse(await request.json());
 
-    // 4. Database operations
+    // 4. Database operations with monitoring
     await connectDB();
+    const start = performance.now();
     const result = await Model.performOperation(validatedData);
+    const dbLatency = performance.now() - start;
 
-    // 5. Audit logging
+    // 5. Update cache if needed
+    if (result.affectsUserRole) {
+      await syncRoleToRedis(authContext.userId, result.newRole);
+    }
+
+    // 6. Comprehensive audit logging
     await AuditLogModel.create({
       action: 'operation_performed',
       entityType: 'Entity',
       entityId: result.id,
-      userId: user.id,
+      userId: authContext.userId,
       ipAddress: request.headers.get('x-forwarded-for'),
+      metadata: {
+        dbLatency: `${dbLatency.toFixed(2)}ms`,
+        authSource: authContext.source,
+        cacheHit: authContext.cached
+      }
     });
 
-    // 6. Success response
-    return NextResponse.json({ success: true, data: result }, { status: 200 });
+    // 7. Performance monitoring
+    if (dbLatency > 1000) {
+      await sendAlert('Slow database operation', { 
+        operation: 'performOperation', 
+        latency: dbLatency 
+      });
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      data: result,
+      performance: {
+        authLatency: authContext.latency,
+        dbLatency: `${dbLatency.toFixed(2)}ms`
+      }
+    }, { status: 200 });
 
   } catch (error) {
-    // 7. Error handling
-    console.error('Operation failed:', error);
+    // Enhanced error handling with context
+    console.error('Operation failed:', {
+      error: error.message,
+      stack: error.stack,
+      userId: authContext?.userId,
+      timestamp: new Date().toISOString()
+    });
+
+    // Circuit breaker may have triggered
+    if (error.message.includes('Circuit breaker is OPEN')) {
+      return NextResponse.json({
+        error: "Service temporarily unavailable",
+        retryAfter: 60
+      }, { status: 503 });
+    }
+
     return NextResponse.json({
       error: "Operation failed",
-      details: error instanceof Error ? error.message : "Unknown error"
+      details: error instanceof Error ? error.message : "Unknown error",
+      requestId: crypto.randomUUID()
     }, { status: 500 });
   }
 }
 ```
 
-### HTTP Status Code Standards
-
-- **200**: Success with data
-- **201**: Resource created successfully
-- **400**: Bad request / validation error
-- **401**: Authentication required
-- **403**: Insufficient permissions
-- **500**: Server error
-
 ---
 
-## 🎨 Component Development
+## 🎨 Component Development with Role Caching
 
-### Component Guidelines
-
-- **Server Components**: Default choice for static content and data fetching
-- **Client Components**: Use `"use client"` only when absolutely necessary
-- **ShadCN Integration**: Use `@/components/ui/` consistently
-- **Role Rendering**: Conditional rendering based on user roles
-- **Hydration Safety**: Use `NoSSR` wrapper for client-only components
-
-### Component Structure
+### Role-Aware Components
 
 ```typescript
-// Server Component (preferred)
-export default async function AdminDashboard() {
-  const user = await currentUser();
-  
-  if (!user) {
-    redirect("/sign-in");
-  }
-  
-  const userRole = user.publicMetadata?.role as string;
-  if (userRole !== "admin") {
-    redirect("/unauthorized");
-  }
+// components/role-aware-dashboard.tsx
+import { useHybridRole } from '@/hooks/useHybridRole';
 
-  return <AdminContent />;
+export function RoleAwareDashboard() {
+  const { 
+    role, 
+    isLoading, 
+    isAdmin, 
+    cacheHit, 
+    refresh,
+    latency 
+  } = useHybridRole({
+    refreshInterval: 30000, // 30 seconds
+    onRoleChange: (oldRole, newRole) => {
+      console.log(`Role updated: ${oldRole} → ${newRole}`);
+      // Trigger UI updates
+    }
+  });
+
+  if (isLoading) return <LoadingSpinner />;
+  
+  return (
+    <div>
+      <AdminPanel visible={isAdmin} />
+      <div className="text-xs text-gray-500">
+        Auth: {cacheHit ? 'cached' : 'live'} ({latency}ms)
+      </div>
+    </div>
+  );
 }
+```
 
-// Client Component (when needed)
+### Hydration-Safe Authentication
+
+```typescript
+// components/hybrid-auth-provider.tsx
 "use client"
-export function InteractiveComponent() {
-  // Use hooks and browser APIs here
+import { useEffect, useState } from 'react';
+
+export function HybridAuthProvider({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div suppressHydrationWarning>{children}</div>;
+  }
+
+  return (
+    <div>
+      {children}
+      <RoleRefreshHandler />
+    </div>
+  );
 }
 ```
 
-### Hydration Prevention Patterns
+---
+
+## 💼 Payment Flow with Enhanced Security
+
+### Secure Payment Processing
 
 ```typescript
-// Wrap client-only components to prevent hydration issues
-import { NoSSR } from "@/components/no-ssr"
-import { AuthNavigation } from "@/components/auth-navigation"
+// Enhanced payment flow with audit trails
+export async function createPaymentOrder(orderData: CreateOrderRequest) {
+  const orderId = crypto.randomUUID();
+  
+  try {
+    // 1. Create order with timeout
+    const order = await OrderModel.create({
+      ...orderData,
+      orderId,
+      status: 'pending',
+      expiresAt: new Date(Date.now() + 540000), // 9 minutes
+      createdAt: new Date()
+    });
 
-<NoSSR fallback={<StaticFallback />}>
-  <AuthNavigation />
-</NoSSR>
+    // 2. Generate secure QR code
+    const qrData = generateSecureUPIQR({
+      payeeAddress: process.env.UPI_ID,
+      payeeName: process.env.MERCHANT_NAME,
+      amount: orderData.amount,
+      transactionRef: orderId,
+      currency: 'INR'
+    });
 
-// Use suppressHydrationWarning for dynamic content
-<html lang="en" suppressHydrationWarning>
-  <body suppressHydrationWarning>
+    // 3. Cache order data for quick access
+    await redis.setex(`order:${orderId}`, 600, JSON.stringify(order));
+
+    // 4. Comprehensive audit logging
+    await AuditLogModel.create({
+      action: 'payment_order_created',
+      entityType: 'Order',
+      entityId: orderId,
+      userId: orderData.userId,
+      metadata: {
+        amount: orderData.amount,
+        customerEmail: orderData.customerInfo.email,
+        expiresAt: order.expiresAt
+      }
+    });
+
+    return {
+      orderId,
+      paymentUrl: `/pay/${orderId}`,
+      qrCode: qrData,
+      expiresAt: order.expiresAt
+    };
+
+  } catch (error) {
+    await auditLog('payment_order_failed', { 
+      error: error.message, 
+      orderData 
+    });
+    throw error;
+  }
+}
 ```
 
-### Authentication Components
-
-- **AuthNavigation**: Client component for `<UserButton>`, `<SignedIn>`, `<SignedOut>`
-- **RoleGuard**: Conditional rendering based on user roles
-- **ClientProviders**: Wraps theme and other client providers
-- **NoSSR**: Prevents hydration mismatches for client-only content
-
 ---
 
-## 💼 Payment Flow Integration
-
-### Core Payment Workflow
-
-1. **Order Creation** → Generate unique order ID and QR code
-2. **QR Code Display** → Show payment QR with countdown timer
-3. **Payment Processing** → User completes UPI payment
-4. **UTR Verification** → Validate payment with UTR number
-5. **Status Update** → Update order status and notify user
-6. **Audit Logging** → Log each step with user context
-
-### Payment Components
-
-- **QR Code Generation**: Dynamic QR with order details
-- **Countdown Timer**: Automatic expiration handling
-- **UTR Form**: User input for payment verification
-- **Status Tracking**: Real-time payment status updates
-
----
-
-## 📊 Audit Logging Pattern
-
-### Audit Implementation
-
-```typescript
-await AuditLogModel.create({
-  action: 'order_created',           // Action identifier
-  entityType: 'Order',               // Entity type
-  entityId: orderId,                 // Entity ID
-  userId: user.id,                   // User performing action
-  ipAddress: request.headers.get('x-forwarded-for'), // IP tracking
-  metadata: { /* additional context */ }, // Extra data
-});
-```
-
-### Audit Requirements
-
-- **All Sensitive Operations**: Track data modifications
-- **User Context**: Include user ID and IP address
-- **Action Details**: Descriptive action names
-- **Entity Tracking**: Link to affected entities
-
----
-
-## 📁 Project Structure & Conventions
-
-### Directory Organization
+## 📁 Enhanced Project Structure
 
 ```bash
 lib/
-├── types.ts                 # TypeScript interfaces & Zod schemas
-├── utils.ts                 # Utility functions
-├── auth/                    # Authentication utilities & safe wrappers
+├── types.ts                    # TypeScript interfaces & Zod schemas
+├── utils.ts                    # Utility functions
+├── auth/
+│   ├── hybrid-auth.ts          # Redis + Clerk hybrid authentication
+│   ├── safe-auth.ts           # Safe auth wrappers
+│   └── permissions.ts         # Role-based permissions
+├── cache/
+│   ├── redis-client.ts        # Upstash Redis client
+│   └── circuit-breaker.ts     # Circuit breaker implementation
 ├── db/
-│   ├── connection.ts        # Database connection
-│   └── models/             # Mongoose models
-└── middleware/             # Security middleware
+│   ├── connection.ts          # Database connection
+│   └── models/               # Mongoose models with caching
+├── monitoring/
+│   ├── health-checks.ts       # Comprehensive health monitoring
+│   ├── metrics.ts            # Performance metrics collection
+│   └── alerts.ts             # Alert system integration
+└── security/
+    ├── webhook-verification.ts # Webhook signature verification
+    ├── rate-limiting.ts       # Advanced rate limiting
+    └── audit-logging.ts       # Enhanced audit trails
 
-components/
-├── ui/                     # ShadCN UI components
-├── admin/                  # Admin-specific components
-├── landing/               # Landing page components (header, footer, hero, etc.)
-├── payment/               # Payment-related components
-├── user-management/       # User management components
-├── auth-navigation.tsx    # Client-side auth components (UserButton, SignedIn/Out)
-├── client-providers.tsx   # Client-side providers wrapper
-├── dashboard-header.tsx   # Dashboard header with breadcrumbs
-├── no-ssr.tsx            # Hydration prevention wrapper
-└── role-protected-page.tsx # Role-based page protection
-
-app/                       # Next.js App Router structure
-├── api/                   # API routes
-├── admin/                 # Admin dashboard pages
-├── dashboard/            # User dashboard
-└── (auth)/              # Authentication pages
+hooks/
+├── useHybridRole.ts           # Real-time role management hook
+├── useHealthCheck.ts          # System health monitoring hook
+└── usePerformanceMetrics.ts   # Performance tracking hook
 ```
-
-### Import Conventions
-
-- **Absolute Imports**: Always use `@/` prefix
-- **Type Imports**: Use `import type` for type-only imports
-- **Consistent Paths**: Reference `lib/types.ts` for shared types
 
 ---
 
-## ⚡ Development Commands
+## 🚨 Production-Grade Requirements
+
+### Mandatory Implementation Checklist
+
+- **✅ Circuit Breaker**: Redis operations must use circuit breaker
+- **✅ Atomic Operations**: Use Lua scripts for race condition prevention
+- **✅ Dead Letter Queue**: Failed webhooks go to Redis DLQ
+- **✅ Health Monitoring**: Comprehensive health checks with alerting
+- **✅ Cache Metrics**: Track hit ratios and performance
+- **✅ Graceful Degradation**: System works when Redis is unavailable
+- **✅ Webhook Security**: Verify signatures with svix library
+- **✅ Performance Budget**: Alert on operations exceeding thresholds
+
+### Error Recovery Patterns
+
+```typescript
+// Rollback strategy for dual-write failures
+async function handleDualWriteFailure(
+  operation: string, 
+  clerkSuccess: boolean, 
+  redisSuccess: boolean,
+  context: any
+) {
+  if (clerkSuccess && !redisSuccess) {
+    // Clerk succeeded, Redis failed - log for manual sync
+    await auditLog('redis_sync_failed', { 
+      operation, 
+      context,
+      requiresManualSync: true 
+    });
+    // Don't rollback Clerk - it's source of truth
+  } else if (!clerkSuccess && redisSuccess) {
+    // Redis succeeded, Clerk failed - rollback Redis
+    await redis.del(`role:${context.userId}`);
+    await auditLog('clerk_update_failed_redis_rolled_back', context);
+  }
+}
+```
+
+---
+
+## ⚡ Development & Testing Commands
 
 ```bash
-pnpm dev      # Development with hot reload
-pnpm build    # Production build
-pnpm lint     # ESLint checking
-pnpm start    # Production server
+pnpm dev              # Development with Redis connection
+pnpm build            # Production build with cache warming
+pnpm test:integration # Integration tests with Redis
+pnpm test:circuit     # Circuit breaker failure tests
+pnpm monitor          # Health check and metrics dashboard
 ```
 
 ---
 
-## 🚨 Critical Rules & Gotchas
-
-### Absolute Requirements
-
-- **✅ Database Connection**: Always `await connectDB()` before queries
-- **✅ Role Validation**: Check roles via `publicMetadata?.role`
-- **✅ CSRF Protection**: Required for state-changing requests
-- **✅ Audit Logging**: Track all sensitive operations
-- **✅ Error Handling**: Use try-catch with descriptive errors
-- **✅ TypeScript**: 100% coverage with proper typing
-
-### Common Pitfalls to Avoid
-
-- **❌ Server Components**: Cannot use hooks or browser APIs
-- **❌ Old Patterns**: Never use pages/, _app.tsx, or old Clerk APIs
-- **❌ Missing Auth**: All admin routes must verify exact "admin" role
-- **❌ Direct DB**: Always use model methods, not direct MongoDB calls
-- **❌ Hardcoded Values**: Use environment variables for configuration
-
-### Security Checklist
-
-- **✅ Input Validation**: Zod schemas for all request bodies
-- **✅ Role Verification**: Exact role matching for protected routes
-- **✅ Rate Limiting**: Applied to all API endpoints
-- **✅ CSRF Tokens**: Required for state-changing operations
-- **✅ Audit Trails**: Logged with user context and IP addresses
-
----
-
-## 🧪 Testing Approach
-
-### Testing Standards
-
-- **Clerk Auth**: Mock Clerk authentication in tests
-- **Database**: Use separate test database
-- **Role-Based Access**: Test all permission levels
-- **Audit Verification**: Ensure sensitive actions create audit logs
-- **Integration**: Test complete user workflows
-
----
-
-## 🔧 Environment & Configuration
-
-### Required Environment Variables
-
-```bash
-# Database
-MONGODB_URI=mongodb://...
-
-# Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
-CLERK_SECRET_KEY=sk_...
-
-# Security
-NEXTAUTH_SECRET=...
-```
-
-### Configuration Validation
-
-- All environment variables must be validated at startup
-- Missing configuration should fail gracefully with clear error messages
-- Development vs production configuration handling
-
----
-
-This comprehensive guide ensures consistent, secure, and maintainable code generation for the UPI Admin Dashboard. Always follow these patterns and conventions when creating or modifying any part of the system.
+This enhanced instruction set ensures AI agents generate production-ready code with proper resilience, monitoring, and security patterns for the hybrid authentication architecture.

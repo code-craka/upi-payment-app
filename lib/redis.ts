@@ -1,22 +1,32 @@
 import { Redis } from '@upstash/redis';
+import { redisCircuitBreaker } from './redis/circuit-breaker';
 
 // Edge-safe Redis client for hybrid role management
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+if (!redisUrl || !redisToken) {
+  throw new Error('Redis environment variables not configured');
+}
+
 export const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+  url: redisUrl,
+  token: redisToken,
 });
 
 // Redis keys for role management
 export const REDIS_KEYS = {
-  USER_ROLE: (userId: string) => `user:${userId}:role`,
-  SESSION_SYNC: (userId: string) => `session:${userId}:sync`,
-  ROLE_CACHE: (userId: string) => `role:${userId}:cache`,
+  USER_ROLE: (userId: string) => `user_role:${userId}`,
+  USER_ROLE_VERSION: (userId: string) => `user_role_version:${userId}`,
+  SESSION_SYNC: (userId: string) => `session_sync:${userId}`,
+  ROLE_CACHE: (userId: string) => `role_cache:${userId}`,
   ADMIN_BOOTSTRAP: 'admin:bootstrap:status',
   ROLE_STATS: 'roles:stats',
+  ROLE_UPDATES_CHANNEL: 'role-updates',
 } as const;
 
-// Role cache TTL (30 seconds for real-time feel)
-export const ROLE_CACHE_TTL = 30;
+// Role cache TTL (5 minutes for real-time feel)
+export const ROLE_CACHE_TTL = 300; // 5 minutes
 
 // Session data interface
 export interface RedisSessionData {
@@ -24,7 +34,8 @@ export interface RedisSessionData {
   role: string;
   lastSync: number;
   clerkSync: boolean;
-  metadata?: Record<string, any>;
+  version: number;
+  metadata?: Record<string, unknown>;
 }
 
 // Role statistics interface
@@ -43,36 +54,50 @@ export interface RoleStats {
  * @param metadata - Additional role metadata
  */
 export async function cacheUserRole(
-  userId: string, 
+  userId: string,
   role: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): Promise<void> {
   try {
+    // Get current version
+    const currentVersion = await redis.incr(REDIS_KEYS.USER_ROLE_VERSION(userId));
+
     const sessionData: RedisSessionData = {
       userId,
       role,
       lastSync: Date.now(),
       clerkSync: true,
+      version: currentVersion,
       metadata,
     };
 
     // Set user role with TTL
-    await redis.setex(
-      REDIS_KEYS.USER_ROLE(userId),
-      ROLE_CACHE_TTL,
-      JSON.stringify(sessionData)
+    await redisCircuitBreaker.execute(() =>
+      redis.setex(
+        REDIS_KEYS.USER_ROLE(userId),
+        ROLE_CACHE_TTL,
+        JSON.stringify(sessionData)
+      )
     );
 
     // Update session sync timestamp
-    await redis.setex(
-      REDIS_KEYS.SESSION_SYNC(userId),
-      ROLE_CACHE_TTL * 2, // Longer TTL for sync tracking
-      Date.now().toString()
+    await redisCircuitBreaker.execute(() =>
+      redis.setex(
+        REDIS_KEYS.SESSION_SYNC(userId),
+        ROLE_CACHE_TTL * 2, // Longer TTL for sync tracking
+        Date.now().toString()
+      )
     );
 
-    console.log(`[Redis] Cached role for user ${userId}: ${role}`);
+    // Log successful cache operation (server-side only)
+    if (typeof window === 'undefined') {
+      console.log(`[Redis] Cached role for user ${userId}: ${role}`);
+    }
   } catch (error) {
-    console.error('[Redis] Failed to cache user role:', error);
+    // Log error (server-side only)
+    if (typeof window === 'undefined') {
+      console.error('[Redis] Failed to cache user role:', error);
+    }
     // Don't throw - Redis is supplementary
   }
 }
@@ -84,23 +109,29 @@ export async function cacheUserRole(
  */
 export async function getCachedUserRole(userId: string): Promise<RedisSessionData | null> {
   try {
-    const cached = await redis.get(REDIS_KEYS.USER_ROLE(userId));
-    
+    const cached = await redisCircuitBreaker.execute(() =>
+      redis.get(REDIS_KEYS.USER_ROLE(userId))
+    );
+
     if (!cached) {
       return null;
     }
 
     const sessionData: RedisSessionData = JSON.parse(cached as string);
-    
+
     // Verify data integrity
     if (!sessionData.userId || !sessionData.role) {
-      console.warn(`[Redis] Invalid cached data for user ${userId}`);
+      if (typeof window === 'undefined') {
+        console.warn(`[Redis] Invalid cached data for user ${userId}`);
+      }
       return null;
     }
 
     return sessionData;
   } catch (error) {
-    console.error('[Redis] Failed to get cached role:', error);
+    if (typeof window === 'undefined') {
+      console.error('[Redis] Failed to get cached role:', error);
+    }
     return null;
   }
 }
@@ -117,7 +148,10 @@ export async function invalidateUserRole(userId: string): Promise<void> {
       redis.del(REDIS_KEYS.ROLE_CACHE(userId)),
     ]);
 
-    console.log(`[Redis] Invalidated role cache for user ${userId}`);
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log(`[Redis] Invalidated role cache for user ${userId}`);
+    }
   } catch (error) {
     console.error('[Redis] Failed to invalidate role cache:', error);
   }
@@ -132,7 +166,7 @@ export async function invalidateUserRole(userId: string): Promise<void> {
 export async function syncUserRole(
   userId: string,
   clerkRole: string,
-  force: boolean = false
+  force = false
 ): Promise<boolean> {
   try {
     // Check if recently synced (unless forced)
@@ -175,7 +209,7 @@ export async function updateRoleStats(roleChange: {
   try {
     // Get current stats
     const statsData = await redis.get(REDIS_KEYS.ROLE_STATS);
-    let stats: RoleStats = statsData ? JSON.parse(statsData as string) : {
+    const stats: RoleStats = statsData ? JSON.parse(statsData as string) : {
       admin: 0,
       merchant: 0,
       viewer: 0,
@@ -203,7 +237,10 @@ export async function updateRoleStats(roleChange: {
       JSON.stringify(stats)
     );
 
-    console.log(`[Redis] Updated role stats:`, stats);
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log('[Redis] Updated role stats:', stats);
+    }
   } catch (error) {
     console.error('[Redis] Failed to update role stats:', error);
   }
@@ -268,7 +305,10 @@ export async function batchInvalidateRoles(userIds: string[]): Promise<void> {
 
     if (keys.length > 0) {
       await redis.del(...keys);
-      console.log(`[Redis] Batch invalidated ${userIds.length} user roles`);
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.log(`[Redis] Batch invalidated ${userIds.length} user roles`);
+      }
     }
   } catch (error) {
     console.error('[Redis] Failed to batch invalidate roles:', error);

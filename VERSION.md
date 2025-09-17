@@ -4,8 +4,8 @@ This document outlines the version control strategy, release process, and versio
 
 **Author**: Sayem Abdullah Rihan (@code-craka)  
 **Contributor**: Sajjadul Islam  
-**Contact**: hello@techsci.io  
-**Repository**: https://github.com/code-craka/upi-payment-app
+**Contact**: <hello@techsci.io>  
+**Repository**: <https://github.com/code-craka/upi-payment-app>
 
 ## Semantic Versioning
 
@@ -54,6 +54,7 @@ graph LR
 ### Release Steps
 
 #### 1. Pre-Release Preparation
+
 ```bash
 # Create release branch from development
 git checkout development
@@ -68,6 +69,7 @@ npm version minor --no-git-tag-version
 ```
 
 #### 2. Release Testing
+
 ```bash
 # Run comprehensive tests
 pnpm test
@@ -85,6 +87,7 @@ pnpm test:performance
 ```
 
 #### 3. Release Finalization
+
 ```bash
 # Merge to main
 git checkout main
@@ -104,6 +107,7 @@ git branch -d release/1.1.0
 ```
 
 #### 4. Post-Release Actions
+
 - Create GitHub release with release notes
 - Update deployment environments
 - Notify team and stakeholders
@@ -118,6 +122,7 @@ git branch -d release/1.1.0
 **Major Release - Redis Session Management System**
 
 ##### 🚀 New Features
+
 - **Redis-First Session Management**: Instant role updates without logout
 - **Enhanced Permission System**: 25+ granular permissions with real-time updates
 - **Hybrid Authentication**: Redis primary with Clerk fallback
@@ -125,12 +130,14 @@ git branch -d release/1.1.0
 - **Debug Session API**: Comprehensive session diagnostics
 
 ##### 🔧 Technical Improvements
+
 - **Performance**: Redis caching with optimized connection pooling
 - **Security**: Enhanced session encryption and validation
 - **Architecture**: Middleware improvements with Redis-first validation
 - **Monitoring**: Structured logging and health checks
 
 ##### 📦 Dependencies
+
 - Added `ioredis` for Redis client management
 - Enhanced security middleware
 - Improved error handling and fallback systems
@@ -140,6 +147,7 @@ git branch -d release/1.1.0
 ### Development Versions
 
 #### [0.9.0] - 2025-09-01 - Foundation Release
+
 - Core payment system implementation
 - Basic authentication with Clerk
 - MongoDB integration with Mongoose
@@ -147,12 +155,14 @@ git branch -d release/1.1.0
 - Security middleware and CSRF protection
 
 #### [0.8.0] - 2025-08-15 - Beta Release
+
 - Payment processing workflows
 - QR code generation and UTR validation
 - User management system
 - Audit logging implementation
 
 #### [0.7.0] - 2025-08-01 - Alpha Release
+
 - Next.js 14 App Router setup
 - Database schema design
 - Authentication infrastructure
@@ -161,16 +171,19 @@ git branch -d release/1.1.0
 ## Release Planning
 
 ### Version 1.1.0 - Enhanced Analytics (Planned: Q4 2025)
+
 - **Features**: Advanced analytics dashboard, export functionality
 - **Improvements**: Performance optimizations, mobile responsiveness
 - **Dependencies**: Chart.js integration, enhanced reporting
 
 ### Version 1.2.0 - Multi-Language Support (Planned: Q1 2026)
+
 - **Features**: i18n implementation (Hindi, Bengali, Tamil)
 - **Improvements**: Localized UI components, currency formatting
 - **Dependencies**: react-i18next, locale management
 
 ### Version 2.0.0 - Architecture Evolution (Planned: Q2 2026)
+
 - **Breaking Changes**: API versioning, database schema updates
 - **Features**: Microservices architecture, advanced webhook system
 - **Migration**: Automated migration tools and guides
@@ -178,6 +191,7 @@ git branch -d release/1.1.0
 ## Version Management Commands
 
 ### Development Commands
+
 ```bash
 # Check current version
 npm version
@@ -196,6 +210,7 @@ npm version prerelease --preid=alpha
 ```
 
 ### Release Commands
+
 ```bash
 # Build for production
 pnpm build
@@ -213,7 +228,9 @@ git log --oneline --since="2025-09-01"
 ## Breaking Changes Policy
 
 ### Major Version Changes
+
 Breaking changes are only introduced in major versions and include:
+
 - API endpoint changes or removals
 - Database schema modifications requiring migration
 - Configuration format changes
@@ -221,14 +238,18 @@ Breaking changes are only introduced in major versions and include:
 - Authentication/authorization changes
 
 ### Migration Support
+
 For each major version:
+
 - **Migration Guide**: Step-by-step upgrade instructions
 - **Deprecation Warnings**: One major version notice before removal
 - **Migration Tools**: Automated migration scripts when possible
 - **Support Period**: Previous major version supported for 6 months
 
 ### Communication
+
 Breaking changes are communicated through:
+
 - CHANGELOG.md with detailed migration notes
 - GitHub releases with breaking change highlights
 - Email notifications to users and maintainers
@@ -237,16 +258,19 @@ Breaking changes are communicated through:
 ## Support Lifecycle
 
 ### Long-Term Support (LTS)
+
 - **Current LTS**: Version 1.0.0 (supported until Sept 2026)
 - **Next LTS**: Version 2.0.0 (planned for Q2 2026)
 - **Support Duration**: 18 months from release date
 
 ### Security Updates
+
 - **Critical Security**: All supported versions receive immediate patches
 - **Security Patches**: Released within 48 hours of discovery
 - **CVE Management**: Proper CVE reporting and tracking
 
 ### End of Life (EOL)
+
 - **Notice Period**: 6 months advance notice before EOL
 - **Final Updates**: Security patches until EOL date
 - **Migration Path**: Clear upgrade path to supported versions
@@ -279,24 +303,28 @@ GET /api/version
 Each release must pass the following quality gates:
 
 ### Code Quality
+
 - ✅ TypeScript compilation without errors
 - ✅ ESLint passing with zero warnings
 - ✅ Prettier formatting applied
 - ✅ No security vulnerabilities in dependencies
 
 ### Testing
+
 - ✅ Unit test coverage ≥ 80%
 - ✅ Integration tests passing
 - ✅ E2E tests covering critical paths
 - ✅ Performance regression tests
 
 ### Security
+
 - ✅ Security audit passing
 - ✅ Authentication and authorization tests
 - ✅ CSRF protection verified
 - ✅ Input validation comprehensive
 
 ### Documentation
+
 - ✅ CHANGELOG.md updated
 - ✅ API documentation current
 - ✅ Migration guides prepared
@@ -304,6 +332,6 @@ Each release must pass the following quality gates:
 
 ---
 
-**Version Management Contact**: hello@techsci.io  
+**Version Management Contact**: <hello@techsci.io>  
 **Last Updated**: September 16, 2025  
 **Next Review**: December 16, 2025

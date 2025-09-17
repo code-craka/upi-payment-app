@@ -76,6 +76,22 @@ class ServerLogger {
     }
   }
 
+  audit(action: string, entityType: string, entityId: string, userId: string, context?: LogContext): void {
+    if (!this.isServer) return
+
+    const auditContext = {
+      action,
+      entityType,
+      entityId,
+      userId,
+      timestamp: new Date().toISOString(),
+      ...context
+    }
+
+    // eslint-disable-next-line no-console
+    console.log(`[AUDIT] ${action} on ${entityType}:${entityId} by user:${userId}`, auditContext)
+  }
+
   debug(message: string, context?: LogContext): void {
     if (!this.isServer || process.env.NODE_ENV !== 'development') return
     

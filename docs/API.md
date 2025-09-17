@@ -6,14 +6,14 @@ The UPI Admin Dashboard provides a comprehensive RESTful API for payment process
 
 **Author**: Sayem Abdullah Rihan (@code-craka)  
 **Contributor**: Sajjadul Islam  
-**Contact**: hello@techsci.io  
-**Repository**: https://github.com/code-craka/upi-payment-app
+**Contact**: <hello@techsci.io>  
+**Repository**: <https://github.com/code-craka/upi-payment-app>
 
 ## Base URL
 
 \`\`\`
-Production: https://your-domain.com/api
-Development: http://localhost:3000/api
+Production: <https://your-domain.com/api>
+Development: <http://localhost:3000/api>
 \`\`\`
 
 ## Authentication
@@ -47,7 +47,7 @@ POST /api/admin-bootstrap
 
 \`\`\`json
 {
-  "userEmail": "user@example.com",
+  "userEmail": "<user@example.com>",
   "targetRole": "admin",
   "reason": "Initial admin setup",
   "force": false
@@ -114,7 +114,7 @@ GET /api/debug/session
 \`\`\`json
 {
   "userId": "user_123",
-  "userEmail": "user@example.com",
+  "userEmail": "<user@example.com>",
   "clerkData": {
     "role": "admin",
     "publicMetadata": {},
@@ -447,6 +447,229 @@ GET /api/csrf-token
   "success": true,
   "data": {
     "token": "csrf_token_here"
+  }
+}
+\`\`\`
+
+## Role Management API
+
+### Update User Role (Dual Write)
+
+Update a user's role with automatic synchronization between Clerk and Redis cache.
+
+\`\`\`http
+PUT /api/users/{userId}/role
+\`\`\`
+
+**Request Body:**
+\`\`\`json
+{
+  "role": "admin" | "merchant" | "viewer"
+}
+\`\`\`
+
+**Response:**
+\`\`\`json
+{
+  "success": true,
+  "data": {
+    "userId": "user_123",
+    "role": "admin",
+    "updatedAt": "2024-01-15T10:30:00Z",
+    "syncedToRedis": true,
+    "syncedToClerk": true
+  }
+}
+\`\`\`
+
+**Error Response:**
+\`\`\`json
+{
+  "error": {
+    "code": "ROLE_UPDATE_FAILED",
+    "message": "Failed to update user role",
+    "details": {
+      "userId": "user_123",
+      "reason": "Redis synchronization failed"
+    }
+  }
+}
+\`\`\`
+
+### Get User Role
+
+Retrieve a user's current role with Redis caching information.
+
+\`\`\`http
+GET /api/users/{userId}/role
+\`\`\`
+
+**Response:**
+\`\`\`json
+{
+  "success": true,
+  "data": {
+    "userId": "user_123",
+    "role": "admin",
+    "cached": true,
+    "lastUpdated": "2024-01-15T10:30:00Z",
+    "cacheExpiry": "2024-01-15T10:30:30Z"
+  }
+}
+\`\`\`
+
+## Session Management API
+
+### Refresh Session
+
+Refresh user session with role validation and cache update.
+
+\`\`\`http
+POST /api/session/refresh
+\`\`\`
+
+**Response:**
+\`\`\`json
+{
+  "success": true,
+  "data": {
+    "sessionId": "sess_123",
+    "expiresAt": "2024-01-15T11:30:00Z",
+    "roleValidated": true,
+    "cacheRefreshed": true
+  }
+}
+\`\`\`
+
+## Performance Benchmarking API
+
+The Performance Benchmarking API provides comprehensive testing capabilities for validating system performance, cache efficiency, and authentication speed. All endpoints require admin-level authentication.
+
+### Redis vs Clerk Performance Comparison
+
+Compare response times between Redis cache and Clerk authentication across different regions.
+
+\`\`\`http
+POST /api/performance/benchmark/redis-vs-clerk
+\`\`\`
+
+**Request Body:**
+\`\`\`json
+{
+  "iterations": 1000,
+  "regions": ["us-east-1", "eu-west-1", "ap-south-1"],
+  "includeStatistics": true
+}
+\`\`\`
+
+**Response:**
+\`\`\`json
+{
+  "success": true,
+  "data": {
+    "redisMetrics": {
+      "averageLatency": 12.5,
+      "p50": 10.2,
+      "p95": 28.1,
+      "p99": 42.3,
+      "successRate": 99.8
+    },
+    "clerkMetrics": {
+      "averageLatency": 156.7,
+      "p50": 142.1,
+      "p95": 298.5,
+      "p99": 445.2,
+      "successRate": 99.2
+    },
+    "comparison": {
+      "speedImprovement": "92.0%",
+      "latencyReduction": "144.2ms",
+      "reliability": "0.6% better"
+    },
+    "insights": [
+      "Redis provides 12x faster response times",
+      "Sub-30ms response achieved in 95% of cases"
+    ]
+  }
+}
+\`\`\`
+
+### Cache Hit Ratio Validation
+
+Test cache performance under different load patterns and validate hit ratios.
+
+\`\`\`http
+POST /api/performance/benchmark/cache-hit-ratio
+\`\`\`
+
+### Sub-30ms Response Validation
+
+Validate system's ability to respond within 30 milliseconds with statistical analysis.
+
+\`\`\`http
+POST /api/performance/benchmark/sub-30ms
+\`\`\`
+
+### Concurrent User Testing
+
+Test system behavior under high concurrency with race condition detection.
+
+\`\`\`http
+POST /api/performance/benchmark/concurrent-users
+\`\`\`
+
+### Network Failure Simulation
+
+Simulate network failures and test system recovery with circuit breaker validation.
+
+\`\`\`http
+POST /api/performance/benchmark/network-failures
+\`\`\`
+
+### Load Testing
+
+Comprehensive load testing with realistic traffic patterns and stress testing.
+
+\`\`\`http
+POST /api/performance/benchmark/load-test
+\`\`\`
+
+### Full Benchmark Suite
+
+Execute all performance benchmarks in a comprehensive test suite.
+
+\`\`\`http
+POST /api/performance/benchmark/full-suite
+\`\`\`
+
+### Performance Status
+
+Get real-time status of running benchmark operations.
+
+\`\`\`http
+GET /api/performance/benchmark/status
+\`\`\`
+
+**Response:**
+\`\`\`json
+{
+  "success": true,
+  "data": {
+    "running": [
+      {
+        "id": "bench_123",
+        "type": "full-suite",
+        "progress": 0.65,
+        "startTime": "2024-12-15T10:20:00Z",
+        "estimatedCompletion": "2024-12-15T10:35:00Z"
+      }
+    ],
+    "systemHealth": {
+      "cpu": 0.45,
+      "memory": 0.62,
+      "redis": "healthy",
+      "database": "healthy"
+    }
   }
 }
 \`\`\`

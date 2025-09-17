@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge)](http://makeapullrequest.com)
 
-> A comprehensive, enterprise-grade UPI payment management system with **hybrid role management**, Upstash Redis caching, and enterprise-level security features.
+> A comprehensive, enterprise-grade UPI payment management system with **hybrid role management**, Upstash Redis caching, circuit breaker pattern, and enterprise-level security features.
 
 ---
 
@@ -19,11 +19,13 @@ The UPI Admin Dashboard is a next-generation payment processing platform built w
 
 ### ✨ **Key Highlights**
 
-- 🔄 **Hybrid Role Management** - Upstash Redis + Clerk with instant role updates (no sign-out required)
-- 🛡️ **Enterprise Security** - CSRF protection, rate limiting, and comprehensive audit trails
+- 🔄 **Hybrid Role Management** - Upstash Redis (30s cache) + Clerk with instant role updates (no sign-out required)
+- 🛡️ **Enterprise Security** - CSRF protection, rate limiting, circuit breaker pattern, and comprehensive audit trails
+- ⚡ **Circuit Breaker Pattern** - Fault-tolerant Redis operations with automatic failure recovery
+- 🔄 **Dual Write Operations** - Real-time synchronization between Clerk and Redis
 - 📊 **Real-time Analytics** - Advanced payment insights with interactive dashboards
-- 🎯 **Edge Performance** - Sub-50ms role validation globally with Redis-first caching
-- ⚡ **High Availability** - Automatic failover from Redis to Clerk for reliability
+- 🎯 **Edge Performance** - Sub-30ms role validation globally with Redis-first caching
+- 🛡️ **High Availability** - Automatic failover from Redis to Clerk for reliability
 - 🔍 **Full Audit Trail** - Complete activity tracking with IP and user context
 
 ---
@@ -37,8 +39,9 @@ The UPI Admin Dashboard is a next-generation payment processing platform built w
 | **Next.js** | Full-stack React framework | 14 (App Router) |
 | **TypeScript** | Type-safe development | 5.0+ |
 | **MongoDB** | Primary database | 5.0+ |
-| **Upstash Redis** | Hybrid role management cache | Edge optimized |
-| **Clerk** | Authentication provider | Latest |
+| **Upstash Redis** | Hybrid role management cache with circuit breaker | Edge optimized |
+| **Circuit Breaker** | Fault-tolerant Redis operations | Custom implementation |
+| **Clerk** | Authentication provider with webhook integration | Latest |
 | **TailwindCSS** | Styling framework | v4 |
 | **ShadCN/UI** | Component library | Latest |
 
@@ -47,16 +50,18 @@ The UPI Admin Dashboard is a next-generation payment processing platform built w
 ```mermaid
 graph TB
     A[User Login] --> B[Clerk Authentication]
-    B --> C{Role Assignment}
-    C -->|Admin| D[Redis Session + Clerk Metadata]
-    C -->|Merchant| E[Redis Session + Clerk Metadata]
-    C -->|Viewer| F[Redis Session + Clerk Metadata]
-    D --> G[Middleware Validation]
-    E --> G
-    F --> G
-    G --> H[API Route Access]
-    H --> I[Audit Logging]
-    I --> J[MongoDB Storage]
+    B --> C{Circuit Breaker}
+    C -->|CLOSED| D[Redis Cache Check]
+    C -->|OPEN| E[Direct Clerk Fallback]
+    D -->|Cache Hit| F[Return Cached Role]
+    D -->|Cache Miss| G[Fetch from Clerk]
+    G --> H[Dual Write to Redis]
+    H --> I[Return Role]
+    E --> I
+    F --> J[Webhook Sync]
+    I --> J
+    J --> K[Audit Logging]
+    K --> L[MongoDB Storage]
 ```
 
 ---
@@ -76,12 +81,25 @@ graph TB
 
 ### **🔐 Authentication & Authorization**
 
-- ✅ **Hybrid Role Management** - Upstash Redis (30s cache) + Clerk (source of truth)
+- ✅ **Hybrid Role Management** - Upstash Redis (30s cache) + Clerk with instant role updates (no sign-out required)
+- ✅ **Circuit Breaker Protection** - Fault-tolerant Redis operations with automatic recovery
+- ✅ **Dual Write Operations** - Real-time synchronization between Clerk and Redis
 - ✅ **Instant Role Updates** - No logout required after role changes via Redis sync
-- ✅ **Edge Performance** - Global role validation in <50ms via Upstash Edge
-- ✅ **High Availability** - Automatic fallback to Clerk when Redis unavailable  
+- ✅ **Edge Performance** - Sub-30ms role validation globally with Redis-first caching
+- ✅ **High Availability** - Automatic failover from Redis to Clerk for reliability
 - ✅ **Granular Permissions** - 25+ distinct permissions across roles
 - ✅ **Multi-factor Authentication** - Enhanced security options via Clerk
+
+### **📊 Performance Benchmarking & Validation**
+
+- ✅ **Redis vs Clerk Benchmarking** - Multi-region performance comparison with statistical analysis
+- ✅ **Cache Hit Ratio Validation** - Real-time cache performance monitoring under various load patterns
+- ✅ **Sub-30ms Response Validation** - Statistical validation of response time claims with percentile analysis
+- ✅ **Concurrent User Testing** - Race condition detection and system behavior under high concurrency
+- ✅ **Network Failure Simulation** - Circuit breaker effectiveness testing with recovery time measurement
+- ✅ **Load Testing Framework** - Peak traffic simulation with realistic user patterns
+- ✅ **Performance Analytics** - Comprehensive performance reports with actionable insights
+- ✅ **Real-time Monitoring** - Live system health indicators and performance metrics
 
 ### **📊 Admin Dashboard**
 
@@ -93,11 +111,14 @@ graph TB
 
 ### **🛡️ Security Features**
 
+- ✅ **Circuit Breaker Pattern** - Fault-tolerant Redis operations with automatic recovery
+- ✅ **Dual Write Operations** - Real-time synchronization between Clerk and Redis
 - ✅ **CSRF Protection** - Token-based request validation
-- ✅ **Rate Limiting** - IP-based request throttling
+- ✅ **Rate Limiting** - IP-based request throttling with Redis backing
 - ✅ **Input Sanitization** - XSS prevention with DOMPurify
-- ✅ **Audit Logging** - Complete user activity tracking
+- ✅ **Audit Logging** - Complete user activity tracking with dual write audit trails
 - ✅ **Session Invalidation** - Immediate role change enforcement
+- ✅ **IP Tracking** - Enhanced security context in all operations
 
 ---
 
@@ -245,6 +266,16 @@ function AdminComponent() {
 | `GET` | `/api/admin/audit-logs` | View activity logs | Admin only |
 | `POST` | `/api/session/refresh` | Refresh user session | ✅ |
 | `GET` | `/api/debug/session` | Debug session info | ✅ |
+| `PUT` | `/api/users/[userId]/role` | Update user role (Dual Write) | Admin only |
+| `GET` | `/api/users/[userId]/role` | Get user role | Admin only |
+| `POST` | `/api/performance/benchmark/redis-vs-clerk` | Redis vs Clerk performance benchmark | Admin/Manager |
+| `POST` | `/api/performance/benchmark/cache-hit-ratio` | Cache hit ratio validation | Admin/Manager |
+| `POST` | `/api/performance/benchmark/sub-30ms` | Sub-30ms response validation | Admin/Manager |
+| `POST` | `/api/performance/benchmark/concurrent-users` | Concurrent user testing | Admin/Manager |
+| `POST` | `/api/performance/benchmark/load-test` | Comprehensive load testing | Admin/Manager |
+| `POST` | `/api/performance/benchmark/network-failures` | Network failure simulation | Admin only |
+| `POST` | `/api/performance/benchmark/full-suite` | Complete benchmark suite | Admin/Manager |
+| `GET` | `/api/performance/benchmark/status` | Performance testing status | ✅ |
 
 ### **Role Permissions**
 
@@ -535,6 +566,67 @@ Query: { period: 'day' | 'week' | 'month' | 'year' }
 // Get CSRF token
 GET /api/csrf-token
 Response: { token: string }
+\`\`\`
+
+#### Role Management APIs
+
+\`\`\`typescript
+// Update user role (Dual Write - Redis + Clerk)
+PUT /api/users/[userId]/role
+Authorization: Bearer <admin-token>
+Body: { role: 'admin' | 'merchant' | 'viewer' }
+Response: {
+  success: true,
+  data: {
+    userId: string,
+    role: string,
+    updatedAt: string,
+    syncedToRedis: boolean
+  }
+}
+
+// Get user role (with Redis caching)
+GET /api/users/[userId]/role
+Authorization: Bearer <token>
+Response: {
+  success: true,
+  data: {
+    userId: string,
+    role: string,
+    cached: boolean,
+    lastUpdated: string
+  }
+}
+\`\`\`
+
+#### Session Management APIs
+
+\`\`\`typescript
+// Refresh user session with role validation
+POST /api/session/refresh
+Authorization: Bearer <token>
+Response: {
+  success: true,
+  data: {
+    sessionId: string,
+    expiresAt: string,
+    roleValidated: boolean
+  }
+}
+
+// Debug session information
+GET /api/debug/session
+Authorization: Bearer <token>
+Response: {
+  success: true,
+  data: {
+    userId: string,
+    role: string,
+    redisStatus: 'connected' | 'disconnected',
+    sessionValid: boolean,
+    lastRoleCheck: string
+  }
+}
 \`\`\`
 
 ## 🏗️ Architecture

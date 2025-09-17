@@ -2,14 +2,15 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 import { createSecurityMiddleware } from "@/lib/middleware/security"
 import { createCSRFMiddleware } from "@/lib/middleware/csrf"
+import { createAuthMiddleware } from "@/lib/middleware/auth"
 import { serverLogger } from "@/lib/utils/server-logger"
 import type { UserRole } from "@/lib/types"
 
 // Define route matchers
 const isPublicRoute = createRouteMatcher([
-  "/", 
-  "/sign-in(.*)", 
-  "/sign-up(.*)", 
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
   "/pay(.*)",
   "/api/admin-bootstrap", // Allow bootstrap API for initial admin setup
   "/api/system-status", // Allow system status API for diagnostics
@@ -21,7 +22,7 @@ const isPublicRoute = createRouteMatcher([
 
 const isAdminRoute = createRouteMatcher(["/admin(.*)", "/api/admin(.*)"])
 
-// Security middleware setup
+// Initialize middleware instances
 const securityMiddleware = createSecurityMiddleware({
   rateLimit: {
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -34,6 +35,24 @@ const securityMiddleware = createSecurityMiddleware({
 })
 
 const csrfMiddleware = createCSRFMiddleware()
+
+const authMiddleware = createAuthMiddleware({
+  redirectOnAuthFailure: true,
+  redirectUrl: "/sign-in",
+  publicRoutes: [
+    "/",
+    "/sign-in(.*)",
+    "/sign-up(.*)",
+    "/pay(.*)",
+    "/api/admin-bootstrap",
+    "/api/system-status",
+    "/api/debug/user",
+    "/api/debug/session-claims",
+    "/api/debug/session",
+    "/api/csrf-token"
+  ],
+  adminRoutes: ["/admin(.*)", "/api/admin(.*)"],
+})
 
 export default clerkMiddleware(async (auth, req) => {
   try {
@@ -51,81 +70,10 @@ export default clerkMiddleware(async (auth, req) => {
       }
     }
 
-    // Allow public routes to bypass authentication
-    if (isPublicRoute(req)) {
-      return NextResponse.next()
-    }
-
-    // Get authentication details using the auth() from middleware context
-    const authObj = await auth()
-    const { userId, sessionClaims } = authObj
-    
-    // Redirect to sign-in if not authenticated
-    if (!userId) {
-      serverLogger.middleware(`Unauthenticated access attempt to: ${req.nextUrl.pathname}`)
-      return NextResponse.redirect(new URL("/sign-in", req.url))
-    }
-
-    // Admin route protection with hybrid role management
-    if (isAdminRoute(req)) {
-      // Use simpler approach - get role directly from Clerk session claims first
-      const publicMetadata = sessionClaims?.publicMetadata as { role?: UserRole } | undefined
-      const role = publicMetadata?.role
-      
-      if (!role) {
-        serverLogger.middleware("No role found for admin route access", {
-          pathname: req.nextUrl.pathname,
-          userId,
-          source: 'clerk',
-          confidence: 0
-        })
-        
-        if (req.nextUrl.pathname.startsWith('/api/')) {
-          return NextResponse.json(
-            { 
-              error: "Access Denied",
-              message: "No role assigned. Please contact administrator.",
-              needsBootstrap: true
-            }, 
-            { status: 403 }
-          )
-        }
-        
-        return NextResponse.redirect(new URL("/unauthorized", req.url))
-      }
-      
-      // Check if user has admin role
-      if (role !== "admin") {
-        serverLogger.middleware("Access denied for admin route - insufficient role", {
-          pathname: req.nextUrl.pathname,
-          userId,
-          currentRole: role,
-          requiredRole: "admin"
-        })
-        
-        if (req.nextUrl.pathname.startsWith('/api/')) {
-          return NextResponse.json(
-            { 
-              error: "Access Denied",
-              message: "Admin privileges required to access this resource",
-              requiredRole: "admin",
-              currentRole: role
-            }, 
-            { status: 403 }
-          )
-        }
-        
-        return NextResponse.redirect(new URL("/unauthorized", req.url))
-      }
-
-      // Log successful admin access
-      serverLogger.middleware("Admin access granted", {
-        pathname: req.nextUrl.pathname,
-        userId,
-        role
-      })
-      
-      return NextResponse.next()
+    // Apply authentication middleware
+    const authResponse = await authMiddleware(req)
+    if (authResponse.status !== 200) {
+      return authResponse
     }
 
     return NextResponse.next()
@@ -133,10 +81,10 @@ export default clerkMiddleware(async (auth, req) => {
   } catch (error) {
     serverLogger.error("Error processing request in middleware", error)
     return NextResponse.json(
-      { 
+      {
         error: "Internal Server Error",
         message: "An error occurred while processing your request"
-      }, 
+      },
       { status: 500 }
     )
   }
