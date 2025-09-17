@@ -54,24 +54,24 @@ The system implements a **hybrid authentication architecture** with enterprise-g
 
 #### Assign User Role
 
-\`\`\`http
+```http
 POST /api/admin-bootstrap
-\`\`\`
+```
 
 **Request Body:**
 
-\`\`\`json
+```json
 {
 "userEmail": "<user@example.com>",
 "targetRole": "admin",
 "reason": "Initial admin setup",
 "force": false
 }
-\`\`\`
+```
 
 **Response:**
 
-\`\`\`json
+```json
 {
 "success": true,
 "userId": "user_123",
@@ -82,17 +82,17 @@ POST /api/admin-bootstrap
 "message": "Successfully assigned role to admin",
 "timestamp": 1726574400000
 }
-\`\`\`
+```
 
 #### Get Bootstrap Statistics
 
-\`\`\`http
+```http
 GET /api/admin-bootstrap
-\`\`\`
+```
 
 **Response:**
 
-\`\`\`json
+```json
 {
 "success": true,
 "stats": {
@@ -114,19 +114,19 @@ GET /api/admin-bootstrap
 "unsyncedUsers": ["user_456", "user_789"],
 "timestamp": 1726574400000
 }
-\`\`\`
+```
 
 ### Session Debug API
 
 #### Debug Session (Development & Admin)
 
-\`\`\`http
+```http
 GET /api/debug/session
-\`\`\`
+```
 
 **Response:**
 
-\`\`\`json
+```json
 {
 "userId": "user_123",
 "userEmail": "<user@example.com>",
@@ -154,22 +154,22 @@ GET /api/debug/session
 },
 "timestamp": 1726574400000
 }
-\`\`\`
+```
 
 #### Manual Role Sync
 
-\`\`\`http
+```http
 POST /api/debug/session
-\`\`\`
+```
 
 **Request Body:**
 
-\`\`\`json
+```json
 {
 "action": "sync",
 "force": true
 }
-\`\`\`
+```
 
 ## Rate Limiting
 
@@ -181,7 +181,7 @@ POST /api/debug/session
 
 ### Error Response Format
 
-\`\`\`json
+```json
 {
 "error": {
 "code": "VALIDATION_ERROR",
@@ -192,7 +192,7 @@ POST /api/debug/session
 }
 }
 }
-\`\`\`
+```
 
 ### HTTP Status Codes
 
@@ -211,12 +211,12 @@ POST /api/debug/session
 
 Create a new payment order.
 
-\`\`\`http
+```http
 POST /api/orders
-\`\`\`
+```
 
 **Request Body:**
-\`\`\`json
+```json
 {
 "amount": 1000,
 "description": "Product purchase",
@@ -231,10 +231,10 @@ POST /api/orders
 "category": "electronics"
 }
 }
-\`\`\`
+```
 
 **Response:**
-\`\`\`json
+```json
 {
 "success": true,
 "data": {
@@ -250,18 +250,18 @@ POST /api/orders
 "createdAt": "2024-12-15T10:21:00Z"
 }
 }
-\`\`\`
+```
 
 ### Get Order
 
 Retrieve order details.
 
-\`\`\`http
+```http
 GET /api/orders/{orderId}
-\`\`\`
+```
 
 **Response:**
-\`\`\`json
+```json
 {
 "success": true,
 "data": {
@@ -277,27 +277,27 @@ GET /api/orders/{orderId}
 "expiresAt": "2024-12-15T10:30:00Z"
 }
 }
-\`\`\`
+```
 
 ### Submit UTR
 
 Submit UTR for order verification.
 
-\`\`\`http
+```http
 POST /api/orders/{orderId}/utr
-\`\`\`
+```
 
 **Request Body:**
-\`\`\`json
+```json
 {
 "utr": "123456789012",
 "paymentMethod": "gpay",
 "notes": "Payment completed via Google Pay"
 }
-\`\`\`
+```
 
 **Response:**
-\`\`\`json
+```json
 {
 "success": true,
 "data": {
@@ -307,7 +307,7 @@ POST /api/orders/{orderId}/utr
 "submittedAt": "2024-12-15T10:25:00Z"
 }
 }
-\`\`\`
+```
 
 ## Dashboard API
 
@@ -315,17 +315,17 @@ POST /api/orders/{orderId}/utr
 
 Retrieve comprehensive dashboard analytics with role-based data filtering.
 
-\`\`\`http
+```http
 GET /api/dashboard
-\`\`\`
+```
 
 **Headers:**
-\`\`\`
+```
 Authorization: Bearer {clerk_session_token}
-\`\`\`
+```
 
 **Response:**
-\`\`\`json
+```json
 {
 "success": true,
 "data": {
@@ -357,7 +357,7 @@ Authorization: Bearer {clerk_session_token}
 "description": "Order ORD-1234 completed",
 "timestamp": "2024-12-15T10:30:00Z",
 "userId": "user_123",
-"userEmail": "merchant@example.com"
+    "userEmail": "<merchant@example.com>"
 }
 ],
 "systemHealth": {
@@ -385,7 +385,7 @@ Authorization: Bearer {clerk_session_token}
 "role": "admin",
 "timestamp": "2024-12-15T10:30:00Z"
 }
-\`\`\`
+```
 
 **Role-based Filtering:**
 
@@ -399,9 +399,9 @@ Authorization: Bearer {clerk_session_token}
 
 Get comprehensive system health status with service metrics.
 
-\`\`\`http
+```http
 GET /api/health
-\`\`\`
+```
 
 **Query Parameters:**
 
@@ -409,7 +409,7 @@ GET /api/health
 - `history=true` - Include historical data
 
 **Response:**
-\`\`\`json
+```json
 {
 "status": "healthy",
 "timestamp": "2024-12-15T10:30:00Z",
@@ -437,18 +437,18 @@ GET /api/health
 }
 }
 }
-\`\`\`
+```
 
 ### Circuit Breaker Status
 
 Get circuit breaker health for all services.
 
-\`\`\`http
+```http
 GET /api/circuit-breaker
-\`\`\`
+```
 
 **Response:**
-\`\`\`json
+```json
 {
 "metrics": {
 "redis": {
@@ -462,7 +462,7 @@ GET /api/circuit-breaker
 },
 "timestamp": 1702634400000
 }
-\`\`\`
+```
 
 ## Payment Interface
 
@@ -513,9 +513,9 @@ The payment interface includes:
 
 Retrieve orders with filtering and pagination.
 
-\`\`\`http
+```http
 GET /api/admin/orders
-\`\`\`
+```
 
 **Query Parameters:**
 
@@ -527,7 +527,7 @@ GET /api/admin/orders
 - `search` - Search in order ID or customer info
 
 **Response:**
-\`\`\`json
+```json
 {
 "success": true,
 "data": {
@@ -540,32 +540,32 @@ GET /api/admin/orders
 }
 }
 }
-\`\`\`
+```
 
 ### Update Order Status
 
 Update order status (Admin only).
 
-\`\`\`http
+```http
 PATCH /api/admin/orders/{orderId}/status
-\`\`\`
+```
 
 **Request Body:**
-\`\`\`json
+```json
 {
 "status": "completed",
 "notes": "Payment verified successfully",
 "verifiedBy": "admin_user_id"
 }
-\`\`\`
+```
 
 ### Get Analytics
 
 Retrieve payment analytics.
 
-\`\`\`http
+```http
 GET /api/admin/analytics
-\`\`\`
+```
 
 **Query Parameters:**
 
@@ -574,7 +574,7 @@ GET /api/admin/analytics
 - `endDate` - Custom end date
 
 **Response:**
-\`\`\`json
+```json
 {
 "success": true,
 "data": {
@@ -587,15 +587,15 @@ GET /api/admin/analytics
 "chartData": [...]
 }
 }
-\`\`\`
+```
 
 ### Get Audit Logs
 
 Retrieve audit logs (Admin only).
 
-\`\`\`http
+```http
 GET /api/admin/audit-logs
-\`\`\`
+```
 
 **Query Parameters:**
 
@@ -613,19 +613,19 @@ GET /api/admin/audit-logs
 
 Retrieve CSRF token for state-changing operations.
 
-\`\`\`http
+```http
 GET /api/csrf-token
-\`\`\`
+```
 
 **Response:**
-\`\`\`json
+```json
 {
 "success": true,
 "data": {
 "token": "csrf_token_here"
 }
 }
-\`\`\`
+```
 
 ## Role Management API
 
@@ -633,19 +633,19 @@ GET /api/csrf-token
 
 Update a user's role with automatic synchronization between Clerk and Redis cache.
 
-\`\`\`http
+```http
 PUT /api/users/{userId}/role
-\`\`\`
+```
 
 **Request Body:**
-\`\`\`json
+```json
 {
 "role": "admin" | "merchant" | "viewer"
 }
-\`\`\`
+```
 
 **Response:**
-\`\`\`json
+```json
 {
 "success": true,
 "data": {
@@ -656,10 +656,10 @@ PUT /api/users/{userId}/role
 "syncedToClerk": true
 }
 }
-\`\`\`
+```
 
 **Error Response:**
-\`\`\`json
+```json
 {
 "error": {
 "code": "ROLE_UPDATE_FAILED",
@@ -670,18 +670,18 @@ PUT /api/users/{userId}/role
 }
 }
 }
-\`\`\`
+```
 
 ### Get User Role
 
 Retrieve a user's current role with Redis caching information.
 
-\`\`\`http
+```http
 GET /api/users/{userId}/role
-\`\`\`
+```
 
 **Response:**
-\`\`\`json
+```json
 {
 "success": true,
 "data": {
@@ -692,7 +692,7 @@ GET /api/users/{userId}/role
 "cacheExpiry": "2024-01-15T10:30:30Z"
 }
 }
-\`\`\`
+```
 
 ## Session Management API
 
@@ -700,12 +700,12 @@ GET /api/users/{userId}/role
 
 Refresh user session with role validation and cache update.
 
-\`\`\`http
+```http
 POST /api/session/refresh
-\`\`\`
+```
 
 **Response:**
-\`\`\`json
+```json
 {
 "success": true,
 "data": {
@@ -715,7 +715,7 @@ POST /api/session/refresh
 "cacheRefreshed": true
 }
 }
-\`\`\`
+```
 
 ## Performance Benchmarking API
 
@@ -725,21 +725,21 @@ The Performance Benchmarking API provides comprehensive testing capabilities for
 
 Compare response times between Redis cache and Clerk authentication across different regions.
 
-\`\`\`http
+```http
 POST /api/performance/benchmark/redis-vs-clerk
-\`\`\`
+```
 
 **Request Body:**
-\`\`\`json
+```json
 {
 "iterations": 1000,
 "regions": ["us-east-1", "eu-west-1", "ap-south-1"],
 "includeStatistics": true
 }
-\`\`\`
+```
 
 **Response:**
-\`\`\`json
+```json
 {
 "success": true,
 "data": {
@@ -768,66 +768,66 @@ POST /api/performance/benchmark/redis-vs-clerk
 ]
 }
 }
-\`\`\`
+```
 
 ### Cache Hit Ratio Validation
 
 Test cache performance under different load patterns and validate hit ratios.
 
-\`\`\`http
+```http
 POST /api/performance/benchmark/cache-hit-ratio
-\`\`\`
+```
 
 ### Sub-30ms Response Validation
 
 Validate system's ability to respond within 30 milliseconds with statistical analysis.
 
-\`\`\`http
+```http
 POST /api/performance/benchmark/sub-30ms
-\`\`\`
+```
 
 ### Concurrent User Testing
 
 Test system behavior under high concurrency with race condition detection.
 
-\`\`\`http
+```http
 POST /api/performance/benchmark/concurrent-users
-\`\`\`
+```
 
 ### Network Failure Simulation
 
 Simulate network failures and test system recovery with circuit breaker validation.
 
-\`\`\`http
+```http
 POST /api/performance/benchmark/network-failures
-\`\`\`
+```
 
 ### Load Testing
 
 Comprehensive load testing with realistic traffic patterns and stress testing.
 
-\`\`\`http
+```http
 POST /api/performance/benchmark/load-test
-\`\`\`
+```
 
 ### Full Benchmark Suite
 
 Execute all performance benchmarks in a comprehensive test suite.
 
-\`\`\`http
+```http
 POST /api/performance/benchmark/full-suite
-\`\`\`
+```
 
 ### Performance Status
 
 Get real-time status of running benchmark operations.
 
-\`\`\`http
+```http
 GET /api/performance/benchmark/status
-\`\`\`
+```
 
 **Response:**
-\`\`\`json
+```json
 {
 "success": true,
 "data": {
@@ -848,7 +848,7 @@ GET /api/performance/benchmark/status
 }
 }
 }
-\`\`\`
+```
 
 ## Webhooks
 
@@ -856,7 +856,7 @@ GET /api/performance/benchmark/status
 
 Webhook payload for order status changes.
 
-\`\`\`json
+```json
 {
 "event": "order.status_updated",
 "data": {
@@ -867,13 +867,13 @@ Webhook payload for order status changes.
 },
 "timestamp": "2024-12-15T10:30:00Z"
 }
-\`\`\`
+```
 
 ### Payment Received
 
 Webhook payload for payment confirmation.
 
-\`\`\`json
+```json
 {
 "event": "payment.received",
 "data": {
@@ -884,13 +884,13 @@ Webhook payload for payment confirmation.
 },
 "timestamp": "2024-12-15T10:25:00Z"
 }
-\`\`\`
+```
 
 ## SDK Examples
 
 ### JavaScript/Node.js
 
-\`\`\`javascript
+```javascript
 const UPIPaymentAPI = require('upi-payment-sdk');
 
 const client = new UPIPaymentAPI({
@@ -909,11 +909,11 @@ email: '<john@example.com>'
 });
 
 console.log('Payment URL:', order.paymentUrl);
-\`\`\`
+```
 
 ### Python
 
-\`\`\`python
+```python
 from upi_payment_sdk import UPIPaymentClient
 
 client = UPIPaymentClient(
@@ -933,16 +933,16 @@ order = client.orders.create({
 })
 
 print(f"Payment URL: {order['paymentUrl']}")
-\`\`\`
+```
 
 ## Testing
 
 ### Test Environment
 
-\`\`\`
+```
 Base URL: <https://test.your-domain.com/api>
 Test API Key: test_key_123
-\`\`\`
+```
 
 ### Test Cards
 

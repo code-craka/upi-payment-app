@@ -36,7 +36,7 @@ export interface CircuitBreakerStats {
 export class RedisCircuitBreaker {
   private serviceName: string;
 
-  constructor(config: Partial<CircuitBreakerConfig> = {}) {
+  constructor(_config: Partial<CircuitBreakerConfig> = {}) {
     // Use the persistent circuit breaker for Redis operations
     this.serviceName = 'redis-service';
   }

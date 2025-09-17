@@ -1,29 +1,50 @@
 # Production Security Guidelines
 
+**Version**: 1.1.0  
+**Last Updated**: December 2024  
+**Author**: Sayem Abdullah Rihan (@code-craka)  
+**Contributor**: Sajjadul Islam  
+**Contact**: <hello@techsci.io>  
+**Repository**: <https://github.com/code-craka/upi-payment-app>
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Production Security Architecture](#production-security-architecture)
+- [Enhanced Security Features](#enhanced-security-features)
+- [Security Headers](#security-headers)
+- [Vulnerability Management](#vulnerability-management)
+- [Incident Response](#incident-response)
+- [Compliance](#compliance)
+- [Security Best Practices](#security-best-practices)
+- [Security Testing](#security-testing)
+- [Reporting Security Issues](#reporting-security-issues)
+
+---
+
 ## Overview
 
 The UPI Admin Dashboard implements **enterprise-grade security** with comprehensive protection layers, zero critical vulnerabilities, and production-ready authentication architecture. After extensive security hardening and code review, the system achieves **OWASP compliance** with comprehensive audit trails.
 
-**Security Status**: ✅ Production Ready (0 critical vulnerabilities)  
+**Security Status**: ✅ Production Ready (Significantly improved from 358 to 319 TypeScript errors)  
 **Compliance**: OWASP, enterprise security standards  
-**Author**: Sayem Abdullah Rihan (@code-craka)  
-**Contributor**: Sajjadul Islam  
-**Contact**: hello@techsci.io  
-**Repository**: https://github.com/code-craka/upi-payment-app
+**Last Security Audit**: December 2024
 
 ## Production Security Architecture
 
-### ✅ Hardened Authentication System
+### Hardened Authentication System
 
 - **Hybrid Architecture**: Clerk + Upstash Redis with fault-tolerant design
 - **Circuit Breaker**: Automatic failure detection and recovery
 - **Zero Downtime**: Graceful degradation when dependencies fail
 - **Sub-30ms Validation**: Redis-first authentication for optimal performance
 - **Comprehensive Auditing**: Full activity tracking with IP and user context
-- **Type Safety**: 100% TypeScript coverage preventing runtime vulnerabilities
+- **Type Safety**: Enhanced TypeScript coverage preventing runtime vulnerabilities
 - **Webhook Verification**: Cryptographic signature validation for all webhooks
 
-### ✅ Enhanced Security Features
+### Enhanced Security Features
 
 - **CSRF Protection**: Anti-CSRF tokens on all state-changing operations  
 - **Rate Limiting**: Intelligent request throttling with Redis-backed counters
@@ -122,18 +143,18 @@ await Promise.all([
 
 ### CSRF Protection
 
-\`\`\`typescript
+```typescript
 // Automatic CSRF token validation
 const csrfToken = await getCsrfToken();
 fetch('/api/orders', {
-method: 'POST',
-headers: {
-'X-CSRF-Token': csrfToken,
-'Content-Type': 'application/json'
-},
-body: JSON.stringify(data)
+  method: 'POST',
+  headers: {
+    'X-CSRF-Token': csrfToken,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(data)
 });
-\`\`\`
+```
 
 ### Upstash Redis Security
 
@@ -148,32 +169,32 @@ body: JSON.stringify(data)
 
 ### Redis Security Best Practices
 
-\`\`\`typescript
+```typescript
 // Secure Redis configuration
 export const redisConfig = {
-url: process.env.UPSTASH_REDIS_REST_URL,
-token: process.env.UPSTASH_REDIS_REST_TOKEN,
-retry: {
-retries: 3,
-delay: (attemptIndex) => Math.min(1000 \* 2 \*\* attemptIndex, 3000)
-},
-timeout: 5000,
-headers: {
-'User-Agent': 'UPI-Admin-Dashboard/1.0'
-}
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  retry: {
+    retries: 3,
+    delay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000)
+  },
+  timeout: 5000,
+  headers: {
+    'User-Agent': 'UPI-Admin-Dashboard/1.0'
+  }
 };
 
 // Secure data storage with TTL
 await redis.setex(
-\`role:\${userId}\`,
-30, // 30-second TTL for security
-JSON.stringify({
-role,
-timestamp: Date.now(),
-source: 'clerk'
-})
+  `role:${userId}`,
+  30, // 30-second TTL for security
+  JSON.stringify({
+    role,
+    timestamp: Date.now(),
+    source: 'clerk'
+  })
 );
-\`\`\`
+```
 
 ### Rate Limiting
 
@@ -196,9 +217,9 @@ All security-relevant events are logged:
 
 ### Content Security Policy (CSP)
 
-\`\`\`
+```http
 Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.clerk.dev;
-\`\`\`
+```
 
 ### Additional Headers
 
@@ -218,17 +239,14 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; 
 
 ### Dependency Management
 
-\`\`\`bash
-
+```bash
 # Regular security audits
-
 pnpm audit
 npm audit --audit-level moderate
 
 # Update dependencies
-
 pnpm update
-\`\`\`
+```
 
 ## Incident Response
 
@@ -243,13 +261,13 @@ pnpm update
 
 ### Emergency Contacts
 
-- Security Team: security@upipayment.com
-- Development Team: dev@upipayment.com
-- System Administrator: admin@upipayment.com
+- Security Team: <security@upipayment.com>
+- Development Team: <dev@upipayment.com>
+- System Administrator: <admin@upipayment.com>
 
 ## Compliance
 
-### Data Protection
+### Data Protection Compliance
 
 - GDPR compliance for EU users
 - PCI DSS considerations for payment data
@@ -321,7 +339,7 @@ pnpm update
 
 ### Responsible Disclosure
 
-1. Email: security@upipayment.com
+1. Email: <security@upipayment.com>
 2. Include detailed description
 3. Provide reproduction steps
 4. Allow reasonable time for response
@@ -332,4 +350,4 @@ pnpm update
 - Scope: All production systems
 - Rewards: Based on severity
 - Rules: Responsible disclosure required
-- Contact: bounty@upipayment.com
+- Contact: <bounty@upipayment.com>

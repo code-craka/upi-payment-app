@@ -699,7 +699,7 @@ curl -X GET http://localhost:3000/api/debug/session
 
 - **Author**: Sayem Abdullah Rihan (@code-craka)
 - **Contributor**: Sajjadul Islam (Frontend Development & UI/UX)
-- **Contact**: hello@techsci.io
+- **Contact**: <hello@techsci.io>
 
 ## Repository Information
 

@@ -8,12 +8,13 @@ This comprehensive guide covers production deployment of the UPI Admin Dashboard
 **Version**: 2.0.0 (Production Optimized)  
 **Author**: Sayem Abdullah Rihan (@code-craka)  
 **Contributor**: Sajjadul Islam  
-**Contact**: hello@techsci.io  
-**Repository**: https://github.com/code-craka/upi-payment-app
+**Contact**: <hello@techsci.io>  
+**Repository**: <https://github.com/code-craka/upi-payment-app>
 
 ## Production Readiness Checklist
 
 ### ✅ Code Quality Achievements
+
 - **ESLint**: 0 critical errors (406 warnings resolved for production)
 - **TypeScript**: 100% type coverage with strict mode
 - **Build Process**: All compilation errors eliminated
@@ -117,20 +118,17 @@ REDIS_MAX_RETRIES=3  # Connection retry attempts
 #### Manual Deployment
 
 1. **Connect Repository**
-   \`\`\`bash
 
+   ```bash
    # Install Vercel CLI
-
    npm i -g vercel
 
    # Login to Vercel
-
    vercel login
 
    # Deploy
-
    vercel --prod
-   \`\`\`
+   ```
 
 2. **Configure Environment Variables**
    - Go to Vercel Dashboard → Project Settings → Environment Variables
@@ -144,41 +142,41 @@ REDIS_MAX_RETRIES=3  # Connection retry attempts
 
 #### Vercel Configuration
 
-\`\`\`json
+```json
 // vercel.json
 {
-"framework": "nextjs",
-"buildCommand": "pnpm build",
-"devCommand": "pnpm dev",
-"installCommand": "pnpm install",
-"functions": {
-"app/api/\*_/_.ts": {
-"maxDuration": 30
+  "framework": "nextjs",
+  "buildCommand": "pnpm build",
+  "devCommand": "pnpm dev",
+  "installCommand": "pnpm install",
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        }
+      ]
+    }
+  ]
 }
-},
-"headers": [
-{
-"source": "/api/(.\*)",
-"headers": [
-{
-"key": "X-Content-Type-Options",
-"value": "nosniff"
-},
-{
-"key": "X-Frame-Options",
-"value": "DENY"
-}
-]
-}
-]
-}
-\`\`\`
+```
 
 ### 2. Docker Deployment
 
 #### Dockerfile
 
-\`\`\`dockerfile
+```dockerfile
 FROM node:18-alpine AS base
 
 # Install dependencies only when needed
@@ -233,11 +231,11 @@ ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
 CMD ["node", "server.js"]
-\`\`\`
+```
 
 #### Docker Compose
 
-\`\`\`yaml
+```yaml
 
 # docker-compose.yml
 
@@ -267,11 +265,11 @@ restart: unless-stopped
 
 volumes:
 mongo_data:
-\`\`\`
+```
 
 #### Deploy with Docker
 
-\`\`\`bash
+```bash
 
 # Build and run
 
@@ -284,17 +282,16 @@ docker-compose logs -f
 # Scale application
 
 docker-compose up -d --scale app=3
-\`\`\`
+```
 
 ### 3. AWS Deployment
 
 #### Using AWS App Runner
 
 1. **Create App Runner Service**
-   \`\`\`bash
 
+   ```bash
    # Install AWS CLI
-
    aws configure
 
    # Create apprunner.yaml
@@ -315,7 +312,7 @@ docker-compose up -d --scale app=3
    - name: NODE_ENV
      value: production
      EOF
-     \`\`\`
+     ```
 
 2. **Deploy to App Runner**
    - Connect GitHub repository
@@ -324,7 +321,7 @@ docker-compose up -d --scale app=3
 
 #### Using ECS with Fargate
 
-\`\`\`yaml
+```yaml
 
 # ecs-task-definition.json
 
@@ -362,13 +359,13 @@ docker-compose up -d --scale app=3
 }
 ]
 }
-\`\`\`
+```
 
 ### 4. Google Cloud Platform
 
 #### Using Cloud Run
 
-\`\`\`yaml
+```yaml
 
 # cloudbuild.yaml
 
@@ -390,11 +387,11 @@ steps:
   - '--platform'
   - 'managed'
   - '--allow-unauthenticated'
-    \`\`\`
+    ```
 
 #### Deploy to Cloud Run
 
-\`\`\`bash
+```bash
 
 # Build and deploy
 
@@ -404,7 +401,7 @@ gcloud builds submit --config cloudbuild.yaml
 
 gcloud run services update upi-payment-system \
  --set-env-vars NODE_ENV=production,MONGODB_URI=your-connection-string
-\`\`\`
+```
 
 ## Database Setup
 
@@ -446,7 +443,7 @@ gcloud run services update upi-payment-system \
 
 ### Self-Hosted MongoDB
 
-\`\`\`bash
+```bash
 
 # Install MongoDB
 
@@ -469,13 +466,13 @@ mongo
     roles: ["readWrite"]
 
 })
-\`\`\`
+```
 
 ## SSL/TLS Configuration
 
 ### Let's Encrypt (Free SSL)
 
-\`\`\`bash
+```bash
 
 # Install Certbot
 
@@ -491,11 +488,11 @@ sudo crontab -e
 
 # Add: 0 12 \*\* \* /usr/bin/certbot renew --quiet
 
-\`\`\`
+```
 
 ### Nginx Configuration
 
-\`\`\`nginx
+```nginx
 
 # nginx.conf
 
@@ -525,7 +522,7 @@ server_name your-domain.com;
     }
 
 }
-\`\`\`
+```
 
 ## Monitoring and Logging
 
@@ -535,7 +532,7 @@ The system includes comprehensive performance benchmarking capabilities to valid
 
 #### Performance Benchmarking Configuration
 
-\`\`\`env
+```env
 
 # Performance Testing Configuration (Optional)
 
@@ -550,13 +547,13 @@ BENCHMARK_TARGET_LATENCY_MS=30
 PERFORMANCE_MONITORING_ENABLED=true
 PERFORMANCE_ALERT_THRESHOLD=100 # Alert if p95 > 100ms
 PERFORMANCE_REPORT_RETENTION_DAYS=30
-\`\`\`
+```
 
 #### Post-Deployment Performance Validation
 
 After deployment, run these benchmarks to validate system performance:
 
-\`\`\`bash
+```bash
 
 # 1. Validate Redis vs Clerk performance
 
@@ -585,7 +582,7 @@ curl -X POST https://your-domain.com/api/performance/benchmark/full-suite \
  -H "Authorization: Bearer <admin-token>" \
  -H "Content-Type: application/json" \
  -d '{"configuration": {"iterations": 1000, "includeLoadTest": true}}'
-\`\`\`
+```
 
 #### Performance Targets for Production
 
@@ -602,9 +599,10 @@ Ensure your deployment meets these performance targets:
 #### Performance Dashboard Access
 
 Access the performance dashboard at:
-\`\`\`
+
+```url
 https://your-domain.com/admin -> Performance Benchmarking tab
-\`\`\`
+```
 
 **Requirements**: Admin role access required for performance testing.
 
@@ -612,7 +610,7 @@ https://your-domain.com/admin -> Performance Benchmarking tab
 
 Set up automated performance monitoring with alerts:
 
-\`\`\`javascript
+```javascript
 // Add to your monitoring setup
 const performanceMonitor = {
 schedule: '0 _/6 _ \* \*', // Every 6 hours
@@ -627,11 +625,11 @@ cacheHitRatio: { min: 0.7 }, // Alert if < 70%
 errorRate: { max: 0.01 } // Alert if > 1%
 }
 };
-\`\`\`
+```
 
 ### Application Monitoring
 
-\`\`\`javascript
+```javascript
 // Add to your app
 import { Analytics } from '@vercel/analytics/react';
 
@@ -643,11 +641,11 @@ return (
 </>
 );
 }
-\`\`\`
+```
 
 ### Error Tracking
 
-\`\`\`javascript
+```javascript
 // Sentry integration
 import \* as Sentry from "@sentry/nextjs";
 
@@ -655,11 +653,11 @@ Sentry.init({
 dsn: process.env.SENTRY_DSN,
 environment: process.env.NODE_ENV,
 });
-\`\`\`
+```
 
 ### Health Checks
 
-\`\`\`typescript
+```typescript
 // app/api/health/route.ts
 export async function GET() {
 try {
@@ -682,13 +680,13 @@ return Response.json(
 );
 }
 }
-\`\`\`
+```
 
 ## Performance Optimization
 
 ### Caching Strategy
 
-\`\`\`javascript
+```javascript
 // Redis caching
 import Redis from 'ioredis';
 
@@ -702,11 +700,11 @@ return cached ? JSON.parse(cached) : null;
 export async function setCachedData(key: string, data: any, ttl = 3600) {
 await redis.setex(key, ttl, JSON.stringify(data));
 }
-\`\`\`
+```
 
 ### CDN Configuration
 
-\`\`\`javascript
+```javascript
 // next.config.mjs
 /\*_ @type {import('next').NextConfig} _/
 const nextConfig = {
@@ -727,13 +725,13 @@ value: 'public, max-age=31536000, immutable',
 ];
 },
 };
-\`\`\`
+```
 
 ## Backup and Recovery
 
 ### Database Backup
 
-\`\`\`bash
+```bash
 
 # MongoDB backup script
 
@@ -747,11 +745,11 @@ rm -rf "/backups/backup*$DATE"
 # Upload to S3
 
 aws s3 cp "/backups/backup\_$DATE.tar.gz" "s3://your-backup-bucket/"
-\`\`\`
+```
 
 ### Automated Backups
 
-\`\`\`yaml
+```yaml
 
 # GitHub Actions backup
 
@@ -772,7 +770,7 @@ aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       - run: aws s3 cp backup_$(date +%Y%m%d).tar.gz s3://your-backup-bucket/
-\`\`\`
+```
 
 ## Production Monitoring & Testing (v1.1.0)
 
@@ -780,7 +778,7 @@ aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
 
 The system includes comprehensive monitoring capabilities for production deployments:
 
-\`\`\`bash
+```bash
 
 # Health check endpoints
 
@@ -788,7 +786,7 @@ curl https://your-domain.com/api/health
 curl https://your-domain.com/api/health?metrics=true
 curl https://your-domain.com/api/circuit-breaker
 curl https://your-domain.com/api/dashboard
-\`\`\`
+```
 
 ### Monitoring Stack Components
 
@@ -801,7 +799,7 @@ curl https://your-domain.com/api/dashboard
 
 ### Test Suite Execution
 
-\`\`\`bash
+```bash
 
 # Run full test suite
 
@@ -822,13 +820,13 @@ npm run test:unit
 # Watch mode for development
 
 npm run test:watch
-\`\`\`
+```
 
 ### Production Alerting Setup
 
 Configure monitoring alerts for critical thresholds:
 
-\`\`\`yaml
+```yaml
 
 # Example monitoring configuration
 
@@ -848,11 +846,11 @@ severity: warning
 error_rate:
 threshold: 0.01 # Alert if error rate > 1%
 severity: critical
-\`\`\`
+```
 
 ### Performance Validation
 
-\`\`\`bash
+```bash
 
 # Run performance benchmarks
 
@@ -869,7 +867,7 @@ npm run test:performance:cache
 # Test circuit breaker functionality
 
 npm run test:circuit-breaker
-\`\`\`
+```
 
 ## Troubleshooting
 
@@ -882,16 +880,16 @@ npm run test:circuit-breaker
 
 ### Debug Mode
 
-\`\`\`bash
+```bash
 
 # Enable debug logging
 
 NODE_ENV=development DEBUG=\* npm start
-\`\`\`
+```
 
 ### Log Analysis
 
-\`\`\`bash
+```bash
 
 # View application logs
 

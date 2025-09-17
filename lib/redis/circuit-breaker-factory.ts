@@ -228,7 +228,7 @@ export function withCircuitBreaker(
 /**
  * Circuit breaker hook for React components (client-side)
  */
-export function useCircuitBreaker(serviceName: string) {
+export function useCircuitBreaker(_serviceName: string) {
   // Client-side circuit breaker status (limited functionality)
   return {
     isAvailable: true, // Assume available on client

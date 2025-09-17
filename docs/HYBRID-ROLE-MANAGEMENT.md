@@ -115,7 +115,7 @@ const response = await fetch('/api/admin-bootstrap', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    userEmail: 'user@example.com',
+    userEmail: '<user@example.com>',
     targetRole: 'admin',
     reason: 'Initial admin setup',
     force: false,
@@ -218,7 +218,7 @@ curl GET /api/debug/session
 curl -X POST /api/debug/session -d '{"action": "sync"}'
 
 # Bootstrap user role
-curl -X POST /api/admin-bootstrap -d '{"userEmail": "user@example.com", "targetRole": "admin"}'
+curl -X POST /api/admin-bootstrap -d '{"userEmail": "<user@example.com>", "targetRole": "admin"}'
 ```
 
 ### **Redis Connection Issues**

@@ -361,13 +361,13 @@ export function PerformanceBenchmarkDashboard() {
                       <div className="flex justify-between">
                         <span>Median Response:</span>
                         <span className="font-mono">
-                          {testResults.redisVsClerk.insights?.medianResponseTime?.toFixed(2)}ms
+                          {((testResults.redisVsClerk.insights as { medianResponseTime?: number })?.medianResponseTime || 0).toFixed(2)}ms
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Cache Advantage:</span>
                         <span className="font-mono">
-                          {testResults.redisVsClerk.insights?.cacheAdvantage?.toFixed(2)}ms
+                          {((testResults.redisVsClerk.insights as { cacheAdvantage?: number })?.cacheAdvantage || 0).toFixed(2)}ms
                         </span>
                       </div>
                     </div>
@@ -409,13 +409,13 @@ export function PerformanceBenchmarkDashboard() {
                         <span>Overall Hit Ratio:</span>
                         <span className="font-mono">
                           {(
-                            (testResults.cacheHitRatio.analysis?.overallHitRatio || 0) * 100
+                            (((testResults.cacheHitRatio.analysis as { overallHitRatio?: number })?.overallHitRatio || 0) * 100)
                           ).toFixed(1)}
                           %
                         </span>
                       </div>
                       <Progress
-                        value={(testResults.cacheHitRatio.analysis?.overallHitRatio || 0) * 100}
+                        value={((testResults.cacheHitRatio.analysis as { overallHitRatio?: number })?.overallHitRatio || 0) * 100}
                         className="h-2"
                       />
                     </div>
@@ -454,13 +454,13 @@ export function PerformanceBenchmarkDashboard() {
                       <div className="flex justify-between">
                         <span>Compliance Rate:</span>
                         <span className="font-mono">
-                          {testResults.sub30ms.analysis?.complianceRate?.toFixed(1)}%
+                          {((testResults.sub30ms.analysis as { complianceRate?: number })?.complianceRate || 0).toFixed(1)}%
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span>P50 Response:</span>
                         <span className="font-mono">
-                          {testResults.sub30ms.analysis?.medianTime?.toFixed(2)}ms
+                          {((testResults.sub30ms.analysis as { medianTime?: number })?.medianTime || 0).toFixed(2)}ms
                         </span>
                       </div>
                     </div>
