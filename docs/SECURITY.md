@@ -11,13 +11,16 @@ The UPI Admin Dashboard implements multiple layers of security to protect user d
 
 ## Security Architecture
 
-### Hybrid Authentication Security
+### Hybrid Authentication Security (v1.1.0 Updates)
 
 - **Clerk**: Source of truth for authentication and role management
-- **Upstash Redis**: High-performance role cache with 30-second TTL  
+- **Upstash Redis**: High-performance role cache with **30-second TTL** (updated from 300s)
+- **Atomic Operations**: Lua script-based cache operations preventing race conditions
 - **Edge Security**: Instant role validation at edge with Redis-first approach
 - **Automatic Failover**: Seamless fallback to Clerk when Redis unavailable
 - **Dual Validation**: Both Redis and Clerk validate roles for critical operations
+- **Circuit Breaker**: Redis-backed persistent fault tolerance system
+- **Comprehensive Monitoring**: Full observability with structured logging and alerts
 
 ### Enhanced Session Management
 
@@ -266,11 +269,24 @@ pnpm update
 
 ## Security Testing
 
-### Automated Testing
-- SAST (Static Application Security Testing)
-- DAST (Dynamic Application Security Testing)
-- Dependency vulnerability scanning
-- Container security scanning
+### Automated Testing (v1.1.0 Updates)
+- **Jest Test Suite**: Comprehensive test coverage with 70%+ threshold
+- **Redis Atomic Operations Testing**: Lua script validation and race condition prevention
+- **Circuit Breaker Testing**: Failure simulation and recovery validation  
+- **API Security Testing**: Authentication, authorization, and input validation tests
+- **SAST (Static Application Security Testing)**: Integrated security scanning
+- **DAST (Dynamic Application Security Testing)**: Runtime security validation
+- **Dependency vulnerability scanning**: Automated security updates
+- **Container security scanning**: Docker image vulnerability assessment
+
+### Security Monitoring & Observability
+- **Structured Logging**: Comprehensive audit trails with correlation IDs
+- **Real-time Monitoring**: Health checks for Redis, Clerk, and MongoDB
+- **Performance Metrics**: P50/P95/P99 latency tracking with alerting
+- **Security Alerts**: Failed authentication attempts and suspicious activity
+- **Circuit Breaker Monitoring**: Service degradation and recovery tracking
+- **Webhook Security Monitoring**: Dead letter queue and retry analysis
+- **Cache Analytics**: Hit ratio monitoring and performance optimization
 
 ### Manual Testing
 - Code security reviews

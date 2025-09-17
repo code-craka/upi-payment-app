@@ -4,6 +4,7 @@
 
 This guide covers deployment options for the UPI Admin Dashboard across different environments and platforms. The system features advanced Redis-based session management for instant role updates and high-performance authentication.
 
+**Version**: 1.1.0 (Updated with Enhanced Monitoring)  
 **Author**: Sayem Abdullah Rihan (@code-craka)  
 **Contributor**: Sajjadul Islam  
 **Contact**: hello@techsci.io  
@@ -11,13 +12,24 @@ This guide covers deployment options for the UPI Admin Dashboard across differen
 
 ## Prerequisites
 
-### System Requirements
+### System Requirements (v1.1.0 Updates)
 
 - **Node.js**: 18+ (LTS recommended)
 - **MongoDB**: 5.0+ with replica set support
-- **Upstash Redis**: Required for hybrid role management (primary cache layer)
+- **Upstash Redis**: Required for hybrid role management with **30-second TTL**
 - **SSL Certificate**: For production deployment
 - **Domain name**: For production deployment
+- **Jest Testing Framework**: Integrated with 70%+ coverage threshold
+- **Monitoring Stack**: Health checks, metrics, and alerting capabilities
+
+### Enhanced Architecture Features (v1.1.0)
+
+- **Atomic Cache Operations**: Lua script-based Redis operations preventing race conditions
+- **Persistent Circuit Breakers**: Redis-backed circuit breaker state for serverless environments
+- **Comprehensive Monitoring**: Full observability with structured logging and performance metrics
+- **Advanced Security**: Enhanced webhook verification and audit logging
+- **Dashboard Analytics**: Real-time system metrics and user analytics
+- **Test Infrastructure**: Comprehensive Jest test suite with infrastructure validation
 
 ### Hybrid Role Management Requirements (Critical)
 
@@ -746,6 +758,88 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       - run: aws s3 cp backup_$(date +%Y%m%d).tar.gz s3://your-backup-bucket/
+\`\`\`
+
+## Production Monitoring & Testing (v1.1.0)
+
+### System Health Monitoring
+
+The system includes comprehensive monitoring capabilities for production deployments:
+
+\`\`\`bash
+# Health check endpoints
+curl https://your-domain.com/api/health
+curl https://your-domain.com/api/health?metrics=true
+curl https://your-domain.com/api/circuit-breaker
+curl https://your-domain.com/api/dashboard
+\`\`\`
+
+### Monitoring Stack Components
+
+- **Health Checks**: Real-time service health monitoring (Redis, MongoDB, Clerk)
+- **Performance Metrics**: P50/P95/P99 latency tracking with alerting
+- **Circuit Breaker Monitoring**: Service degradation and recovery tracking
+- **Cache Analytics**: Hit ratio monitoring and performance optimization
+- **Structured Logging**: Comprehensive audit trails with correlation IDs
+- **Webhook Monitoring**: Dead letter queue and retry analysis
+
+### Test Suite Execution
+
+\`\`\`bash
+# Run full test suite
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run integration tests
+npm run test:integration
+
+# Run unit tests only
+npm run test:unit
+
+# Watch mode for development
+npm run test:watch
+\`\`\`
+
+### Production Alerting Setup
+
+Configure monitoring alerts for critical thresholds:
+
+\`\`\`yaml
+# Example monitoring configuration
+production_alerts:
+  redis_latency:
+    threshold: 100ms  # Alert if Redis P95 > 100ms
+    severity: warning
+  
+  cache_hit_ratio:
+    threshold: 0.7    # Alert if hit ratio < 70%
+    severity: critical
+    
+  circuit_breaker:
+    trigger: "state_change"  # Alert on circuit breaker state changes
+    severity: warning
+    
+  error_rate:
+    threshold: 0.01   # Alert if error rate > 1%
+    severity: critical
+\`\`\`
+
+### Performance Validation
+
+\`\`\`bash
+# Run performance benchmarks
+npm run benchmark
+
+# Validate sub-30ms role checks
+npm run test:performance:redis
+
+# Monitor cache hit ratios
+npm run test:performance:cache
+
+# Test circuit breaker functionality
+npm run test:circuit-breaker
 \`\`\`
 
 ## Troubleshooting

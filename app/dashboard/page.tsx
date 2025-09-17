@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
+import { StatsCards } from "@/components/shared/stats-cards"
 import { CreditCard, ShoppingCart, TrendingUp, Plus, Eye } from "lucide-react"
 
 // Mock data for merchant dashboard
@@ -29,53 +30,42 @@ function MerchantStatsCards() {
     }).format(amount)
   }
 
-  return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Payment Links</CardTitle>
-          <CreditCard className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{mockMerchantStats.totalLinks}</div>
-          <p className="text-xs text-muted-foreground">Total links created</p>
-        </CardContent>
-      </Card>
+  const merchantMetrics = [
+    {
+      id: "payment-links",
+      title: "Payment Links",
+      value: mockMerchantStats.totalLinks,
+      description: "Total links created",
+      icon: CreditCard,
+      trend: "+5 this week"
+    },
+    {
+      id: "active-orders",
+      title: "Active Orders", 
+      value: mockMerchantStats.activeOrders,
+      description: "Pending payment",
+      icon: ShoppingCart,
+      trend: "+2 today"
+    },
+    {
+      id: "total-revenue",
+      title: "Total Revenue",
+      value: formatCurrency(mockMerchantStats.totalRevenue),
+      description: "From completed orders",
+      icon: TrendingUp,
+      trend: "+12% this month"
+    },
+    {
+      id: "success-rate",
+      title: "Success Rate",
+      value: `${mockMerchantStats.successRate}%`,
+      description: "Payment completion rate", 
+      icon: TrendingUp,
+      trend: "+0.8% this week"
+    }
+  ]
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
-          <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{mockMerchantStats.activeOrders}</div>
-          <p className="text-xs text-muted-foreground">Pending payment</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(mockMerchantStats.totalRevenue)}</div>
-          <p className="text-xs text-muted-foreground">From completed orders</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{mockMerchantStats.successRate}%</div>
-          <p className="text-xs text-muted-foreground">Payment completion rate</p>
-        </CardContent>
-      </Card>
-    </div>
-  )
+  return <StatsCards metrics={merchantMetrics} />
 }
 
 function QuickActions() {

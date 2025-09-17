@@ -20,13 +20,16 @@ Development: <http://localhost:3000/api>
 
 The system uses a **hybrid authentication approach** combining **Clerk authentication** with **Upstash Redis caching** for instant role access and enhanced performance:
 
-### Hybrid Role Management
+### Hybrid Role Management (v1.1.0 Updates)
 
 - **Clerk**: Source of truth for user roles and authentication  
-- **Upstash Redis**: High-performance cache layer with 30-second TTL  
+- **Upstash Redis**: High-performance cache layer with **30-second TTL** (updated from 300s)
+- **Atomic Operations**: Lua script-based cache invalidation preventing race conditions
 - **Middleware**: Edge-safe role validation with Redis-first, Clerk fallback  
 - **Real-time Updates**: Role changes apply instantly via automatic sync  
 - **Auto-Refresh**: React hooks refresh roles every 30 seconds
+- **Circuit Breaker**: Redis-backed persistent circuit breaker for fault tolerance
+- **Comprehensive Monitoring**: Full observability with metrics, alerts, and health checks
 
 ### Authentication Flow
 
@@ -291,6 +294,159 @@ POST /api/orders/{orderId}/utr
     "utr": "123456789012",
     "submittedAt": "2024-12-15T10:25:00Z"
   }
+}
+\`\`\`
+
+## Dashboard API
+
+### Get Dashboard Analytics
+
+Retrieve comprehensive dashboard analytics with role-based data filtering.
+
+\`\`\`http
+GET /api/dashboard
+\`\`\`
+
+**Headers:**
+\`\`\`
+Authorization: Bearer {clerk_session_token}
+\`\`\`
+
+**Response:**
+\`\`\`json
+{
+  "success": true,
+  "data": {
+    "analytics": {
+      "totalRevenue": 125000.50,
+      "totalOrders": 1247,
+      "completedOrders": 1156,
+      "pendingOrders": 78,
+      "failedOrders": 13,
+      "completionRate": 92.7,
+      "averageOrderValue": 100.24,
+      "revenueGrowth": 15.3,
+      "orderGrowth": 12.8,
+      "timeRange": "last_30_days"
+    },
+    "userStats": {
+      "totalUsers": 2847,
+      "adminUsers": 5,
+      "merchantUsers": 234,
+      "viewerUsers": 2608,
+      "activeUsers": 1256,
+      "newUsers": 89,
+      "userGrowth": 8.4
+    },
+    "recentActivity": [
+      {
+        "id": "activity_1",
+        "type": "order_completed",
+        "description": "Order ORD-1234 completed",
+        "timestamp": "2024-12-15T10:30:00Z",
+        "userId": "user_123",
+        "userEmail": "merchant@example.com"
+      }
+    ],
+    "systemHealth": {
+      "redis": {
+        "status": "healthy",
+        "latency": "12.5ms",
+        "hitRatio": 89.2
+      },
+      "database": {
+        "status": "healthy", 
+        "latency": "45.3ms",
+        "connections": 12
+      },
+      "clerk": {
+        "status": "healthy",
+        "latency": "85.2ms"
+      },
+      "circuitBreakers": {
+        "redis": "closed",
+        "database": "closed",
+        "clerk": "closed"
+      }
+    }
+  },
+  "role": "admin",
+  "timestamp": "2024-12-15T10:30:00Z"
+}
+\`\`\`
+
+**Role-based Filtering:**
+- **Admin**: Full analytics including all users and revenue data
+- **Merchant**: Limited to own orders and basic user stats  
+- **Viewer**: Read-only access to assigned orders only
+
+## System Monitoring API
+
+### Health Check
+
+Get comprehensive system health status with service metrics.
+
+\`\`\`http
+GET /api/health
+\`\`\`
+
+**Query Parameters:**
+- `metrics=true` - Include performance metrics
+- `history=true` - Include historical data
+
+**Response:**
+\`\`\`json
+{
+  "status": "healthy",
+  "timestamp": "2024-12-15T10:30:00Z",
+  "uptime": 432000,
+  "version": "1.1.0",
+  "services": [
+    {
+      "name": "redis",
+      "status": "healthy",
+      "latency": 12.5,
+      "details": {
+        "connections": 25,
+        "memory": "156MB",
+        "hitRatio": 89.2
+      }
+    }
+  ],
+  "alerts": [],
+  "metrics": {
+    "redis": {
+      "latency": "12.50ms",
+      "operationsPerSecond": 1250,
+      "memoryUsage": "156MB",
+      "connections": 25
+    }
+  }
+}
+\`\`\`
+
+### Circuit Breaker Status
+
+Get circuit breaker health for all services.
+
+\`\`\`http
+GET /api/circuit-breaker
+\`\`\`
+
+**Response:**
+\`\`\`json
+{
+  "metrics": {
+    "redis": {
+      "state": "CLOSED",
+      "failures": 0,
+      "successes": 1245,
+      "timeouts": 2,
+      "lastFailure": null,
+      "nextAttemptAt": null
+    }
+  },
+  "timestamp": 1702634400000
 }
 \`\`\`
 

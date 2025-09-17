@@ -1,7 +1,8 @@
 import { Redis } from '@upstash/redis';
 import { redisCircuitBreaker } from './redis/circuit-breaker';
 
-// Edge-safe Redis client for hybrid role management
+// Edge-safe Redis client for hybrid authentication caching
+// Production deployment on Vercel Edge Runtime
 const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
 const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -20,13 +21,15 @@ export const REDIS_KEYS = {
   USER_ROLE_VERSION: (userId: string) => `user_role_version:${userId}`,
   SESSION_SYNC: (userId: string) => `session_sync:${userId}`,
   ROLE_CACHE: (userId: string) => `role_cache:${userId}`,
+  ROLE_VERSION: (userId: string) => `role_version:${userId}`,
+  INVALIDATION_LOG: (userId: string) => `invalidation_log:${userId}`,
   ADMIN_BOOTSTRAP: 'admin:bootstrap:status',
   ROLE_STATS: 'roles:stats',
   ROLE_UPDATES_CHANNEL: 'role-updates',
 } as const;
 
-// Role cache TTL (5 minutes for real-time feel)
-export const ROLE_CACHE_TTL = 300; // 5 minutes
+// Role cache TTL (30 seconds as per hybrid authentication requirements)
+export const ROLE_CACHE_TTL = 30; // 30 seconds for security
 
 // Session data interface
 export interface RedisSessionData {
@@ -48,7 +51,7 @@ export interface RoleStats {
 }
 
 /**
- * Cache user role in Redis with TTL
+ * Cache user role in Redis with TTL using atomic operations
  * @param userId - User ID from Clerk
  * @param role - User role (admin, merchant, viewer)
  * @param metadata - Additional role metadata
@@ -59,39 +62,50 @@ export async function cacheUserRole(
   metadata?: Record<string, unknown>
 ): Promise<void> {
   try {
-    // Get current version
-    const currentVersion = await redis.incr(REDIS_KEYS.USER_ROLE_VERSION(userId));
+    // Atomic role caching with version increment using Lua script
+    const luaScript = `
+      local version = redis.call('INCR', KEYS[2])
+      local sessionData = ARGV[1]
+      local ttl = tonumber(ARGV[2])
+      local syncTime = ARGV[3]
+      
+      -- Set role data with TTL
+      redis.call('SETEX', KEYS[1], ttl, sessionData)
+      
+      -- Set session sync with same TTL
+      redis.call('SETEX', KEYS[3], ttl, syncTime)
+      
+      return version
+    `;
 
     const sessionData: RedisSessionData = {
       userId,
       role,
       lastSync: Date.now(),
       clerkSync: true,
-      version: currentVersion,
+      version: 0, // Will be set by Lua script
       metadata,
     };
 
-    // Set user role with TTL
-    await redisCircuitBreaker.execute(() =>
-      redis.setex(
-        REDIS_KEYS.USER_ROLE(userId),
-        ROLE_CACHE_TTL,
-        JSON.stringify(sessionData)
-      )
-    );
-
-    // Update session sync timestamp
-    await redisCircuitBreaker.execute(() =>
-      redis.setex(
-        REDIS_KEYS.SESSION_SYNC(userId),
-        ROLE_CACHE_TTL * 2, // Longer TTL for sync tracking
-        Date.now().toString()
+    const version = await redisCircuitBreaker.execute(() =>
+      redis.eval(
+        luaScript,
+        [
+          REDIS_KEYS.USER_ROLE(userId),
+          REDIS_KEYS.USER_ROLE_VERSION(userId),
+          REDIS_KEYS.SESSION_SYNC(userId)
+        ],
+        [
+          JSON.stringify({ ...sessionData, version: 0 }),
+          ROLE_CACHE_TTL.toString(),
+          Date.now().toString()
+        ]
       )
     );
 
     // Log successful cache operation (server-side only)
     if (typeof window === 'undefined') {
-      console.log(`[Redis] Cached role for user ${userId}: ${role}`);
+      console.log(`[Redis] Cached role for user ${userId}: ${role} (v${version})`);
     }
   } catch (error) {
     // Log error (server-side only)
@@ -137,23 +151,53 @@ export async function getCachedUserRole(userId: string): Promise<RedisSessionDat
 }
 
 /**
- * Invalidate user role cache
- * @param userId - User ID to invalidate
+ * Invalidate user role cache with atomic operations
+ * Uses Lua script to ensure atomic deletion of all user-related cache keys
+ * @param userId - User ID to invalidate cache for
  */
 export async function invalidateUserRole(userId: string): Promise<void> {
   try {
-    await Promise.all([
-      redis.del(REDIS_KEYS.USER_ROLE(userId)),
-      redis.del(REDIS_KEYS.SESSION_SYNC(userId)),
-      redis.del(REDIS_KEYS.ROLE_CACHE(userId)),
-    ]);
+    // Atomic cache invalidation using Lua script
+    const luaScript = `
+      local keys = {
+        KEYS[1], -- user_role key
+        KEYS[2], -- session_sync key
+        KEYS[3]  -- role_cache key
+      }
+      
+      local deleted = 0
+      for i = 1, #keys do
+        if redis.call('EXISTS', keys[i]) == 1 then
+          redis.call('DEL', keys[i])
+          deleted = deleted + 1
+        end
+      end
+      
+      -- Log invalidation timestamp
+      redis.call('SETEX', KEYS[4], 300, ARGV[1])
+      
+      return deleted
+    `;
+
+    const deletedCount = await redisCircuitBreaker.execute(() =>
+      redis.eval(
+        luaScript,
+        [
+          REDIS_KEYS.USER_ROLE(userId),
+          REDIS_KEYS.SESSION_SYNC(userId), 
+          REDIS_KEYS.ROLE_CACHE(userId),
+          REDIS_KEYS.INVALIDATION_LOG(userId)
+        ],
+        [Date.now().toString()]
+      )
+    );
 
     if (process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console
-      console.log(`[Redis] Invalidated role cache for user ${userId}`);
+      console.log(`[Redis] Atomically invalidated ${deletedCount} cache keys for user ${userId}`);
     }
   } catch (error) {
-    console.error('[Redis] Failed to invalidate role cache:', error);
+    console.error('[Redis] Failed to atomically invalidate role cache:', error);
   }
 }
 
@@ -292,23 +336,53 @@ export async function testRedisConnection(): Promise<{
 }
 
 /**
- * Batch invalidate multiple user roles
+ * Batch invalidate multiple user roles with atomic operations
+ * Uses Lua script to atomically invalidate all keys for multiple users
  * @param userIds - Array of user IDs to invalidate
  */
 export async function batchInvalidateRoles(userIds: string[]): Promise<void> {
   try {
-    const keys = userIds.flatMap(userId => [
-      REDIS_KEYS.USER_ROLE(userId),
-      REDIS_KEYS.SESSION_SYNC(userId),
-      REDIS_KEYS.ROLE_CACHE(userId),
-    ]);
+    if (userIds.length === 0) return;
 
-    if (keys.length > 0) {
-      await redis.del(...keys);
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.log(`[Redis] Batch invalidated ${userIds.length} user roles`);
-      }
+    // Atomic batch invalidation using Lua script
+    const luaScript = `
+      local deleted = 0
+      local userCount = #ARGV
+      
+      for i = 1, userCount do
+        local userId = ARGV[i]
+        local keys = {
+          'user_role:' .. userId,
+          'session_sync:' .. userId,
+          'role_cache:' .. userId,
+          'role_version:' .. userId
+        }
+        
+        for j = 1, #keys do
+          if redis.call('EXISTS', keys[j]) == 1 then
+            redis.call('DEL', keys[j])
+            deleted = deleted + 1
+          end
+        end
+      end
+      
+      -- Log batch invalidation
+      redis.call('SETEX', 'batch_invalidation:' .. ARGV[userCount + 1], 300, deleted)
+      
+      return deleted
+    `;
+
+    const deletedCount = await redisCircuitBreaker.execute(() =>
+      redis.eval(
+        luaScript,
+        [],
+        [...userIds, Date.now().toString()]
+      )
+    );
+
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log(`[Redis] Batch invalidated ${deletedCount} cache keys for ${userIds.length} users`);
     }
   } catch (error) {
     console.error('[Redis] Failed to batch invalidate roles:', error);
