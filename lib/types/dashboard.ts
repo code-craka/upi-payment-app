@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+// Dashboard types and interfaces
 
 export interface Order {
   id: string;

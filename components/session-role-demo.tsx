@@ -18,10 +18,6 @@ export function SessionRoleDemo() {
     isLoading: loading,
     error,
     refresh,
-    isStale,
-    isAdmin,
-    lastRefresh,
-    refreshCount,
   } = sessionData;
 
   // Mock permissions and session status based on role

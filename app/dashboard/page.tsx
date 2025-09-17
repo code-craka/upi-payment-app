@@ -7,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { StatsCards } from '@/components/shared/stats-cards';
 import { formatCurrency } from '@/lib/utils';
-import { CreditCard, ShoppingCart, TrendingUp, Plus, Eye } from 'lucide-react';
+import { Plus, Eye } from 'lucide-react'; // Only keep icons used in this server component
 
 // Mock data for merchant dashboard
 const mockMerchantStats = {
@@ -30,7 +30,7 @@ function MerchantStatsCards() {
       title: 'Payment Links',
       value: mockMerchantStats.totalLinks,
       description: 'Total links created',
-      icon: CreditCard,
+      icon: 'CreditCard', // Changed from CreditCard component to string
       trend: '+5 this week',
     },
     {
@@ -38,7 +38,7 @@ function MerchantStatsCards() {
       title: 'Active Orders',
       value: mockMerchantStats.activeOrders,
       description: 'Pending payment',
-      icon: ShoppingCart,
+      icon: 'ShoppingCart', // Changed from ShoppingCart component to string
       trend: '+2 today',
     },
     {
@@ -46,7 +46,7 @@ function MerchantStatsCards() {
       title: 'Total Revenue',
       value: formatCurrency(mockMerchantStats.totalRevenue),
       description: 'From completed orders',
-      icon: TrendingUp,
+      icon: 'TrendingUp', // Changed from TrendingUp component to string
       trend: '+12% this month',
     },
     {
@@ -54,7 +54,7 @@ function MerchantStatsCards() {
       title: 'Success Rate',
       value: `${mockMerchantStats.successRate}%`,
       description: 'Payment completion rate',
-      icon: TrendingUp,
+      icon: 'TrendingUp', // Changed from TrendingUp component to string
       trend: '+0.8% this week',
     },
   ];

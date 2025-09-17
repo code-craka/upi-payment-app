@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { IconWrapper } from '@/lib/icon-wrapper';
 import { ShieldX } from 'lucide-react';
 
 interface RoleProtectedPageProps {
@@ -60,7 +61,7 @@ export function RoleProtectedPage({
     return (
       fallback || (
         <Alert>
-          <ShieldX className="h-4 w-4" />
+          <IconWrapper icon={ShieldX} className="h-4 w-4" />
           <AlertTitle>Authentication Required</AlertTitle>
           <AlertDescription>
             Please sign in to access this page.
@@ -84,7 +85,7 @@ export function RoleProtectedPage({
     return (
       fallback || (
         <Alert variant="destructive">
-          <ShieldX className="h-4 w-4" />
+          <IconWrapper icon={ShieldX} className="h-4 w-4" />
           <AlertTitle>Access Denied</AlertTitle>
           <AlertDescription>
             You don&apos;t have permission to access this resource. Required roles:{' '}

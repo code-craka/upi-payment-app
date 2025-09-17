@@ -91,11 +91,11 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const permissions = Array.from(getPermissionsForRole(clerkRole as any));
+      const permissions = Array.from(getPermissionsForRole(clerkRole as 'admin' | 'merchant' | 'viewer'));
 
       // Update Redis session with Clerk role and permissions
       const setSuccess = await setSession(userId, {
-        role: clerkRole as any,
+        role: clerkRole as 'admin' | 'merchant' | 'viewer',
         permissions: permissions,
       });
 
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
 /**
  * Get current session info (lightweight endpoint)
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const user = await currentUser();
     if (!user) {

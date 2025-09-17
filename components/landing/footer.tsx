@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Github, Twitter, Linkedin, Mail, Phone, MapPin, ArrowRight } from 'lucide-react';
+import { Github, Twitter, Linkedin, Mail, MapPin, ArrowRight } from 'lucide-react';
 
 const footerLinks = {
   product: [

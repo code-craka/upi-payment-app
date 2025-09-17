@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import Image from 'next/image';
 import { Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -230,249 +229,182 @@ export function PaymentPageClient({ order }: PaymentPageClientProps) {
   const time = formatTime(timeLeft);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto min-h-screen max-w-md bg-white shadow-sm">
-        {/* Timer Section */}
-        <div className="px-4 py-6 text-center sm:py-8">
-          <h2 className="mb-4 text-lg font-medium text-gray-800 sm:text-xl">
-            Order will be closed in:
-          </h2>
-          <div className="flex items-center justify-center gap-2">
-            <div className="min-w-[50px] rounded-md bg-blue-500 px-3 py-2 text-xl font-bold text-white sm:text-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md bg-white shadow-lg rounded-2xl p-6 space-y-6 font-sans">
+        {/* Header */}
+        <div className="text-center space-y-1">
+          <h1 className="text-lg font-semibold text-gray-900">Complete Payment</h1>
+          <p className="text-sm text-gray-600">Pay using UPI to complete your order</p>
+        </div>
+
+        {/* Countdown Timer */}
+        <div className="text-center space-y-3">
+          <p className="text-gray-700 font-medium text-sm">Order will be closed in:</p>
+          <div className="flex justify-center gap-2">
+            <div className="bg-blue-600 text-white px-3 py-2 rounded-lg text-xl font-bold min-w-[50px]">
               {time.minutes}
             </div>
-            <div className="text-2xl font-bold text-gray-600">:</div>
-            <div className="min-w-[50px] rounded-md bg-blue-500 px-3 py-2 text-xl font-bold text-white sm:text-2xl">
+            <span className="text-gray-400 text-xl font-bold">:</span>
+            <div className="bg-blue-600 text-white px-3 py-2 rounded-lg text-xl font-bold min-w-[50px]">
               {time.seconds}
             </div>
           </div>
+          <p className="text-xs text-gray-500">Minutes : Seconds</p>
         </div>
 
         {/* Amount Section */}
-        <div className="border-b border-gray-100 px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-base font-medium text-gray-600">Amount</p>
-              <p className="text-2xl font-bold text-gray-800 sm:text-3xl">
-                ₹ {currentOrder.amount}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
+        <div className="bg-gray-50 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-gray-700 font-medium">Amount to Pay</p>
+            <button 
               onClick={() => copyToClipboard(currentOrder.amount.toString(), 'Amount')}
-              className="border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100"
+              className="text-blue-600 border border-blue-600 rounded-md px-3 py-1 text-xs font-medium hover:bg-blue-50 transition-colors"
             >
               COPY
-            </Button>
+            </button>
           </div>
+          <p className="text-3xl font-bold text-gray-900">₹{currentOrder.amount}</p>
         </div>
 
-        {/* VPA/UPI Section */}
-        <div className="border-b border-gray-100 px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0 flex-1">
-              <p className="text-base font-medium text-gray-600">VPA/UPI</p>
-              <p className="truncate text-lg font-medium text-gray-800">
-                {currentOrder.vpa || currentOrder.upiId || 'Bzbx****@upi'}
-              </p>
+        {/* UPI ID Section */}
+        <div className="bg-gray-50 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-gray-700 font-medium">UPI ID</p>
+            <button 
+              onClick={() => copyToClipboard(currentOrder.vpa || currentOrder.upiId || 'merchant@paytm', 'UPI ID')}
+              className="text-blue-600 border border-blue-600 rounded-md px-3 py-1 text-xs font-medium hover:bg-blue-50 transition-colors"
+            >
+              COPY
+            </button>
+          </div>
+          <p className="font-mono text-lg font-medium text-gray-900 break-all">
+            {currentOrder.vpa || currentOrder.upiId || 'merchant@paytm'}
+          </p>
+        </div>
+
+        {/* Important Notice */}
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                copyToClipboard(currentOrder.vpa || currentOrder.upiId || 'Bzbx****@upi', 'VPA')
-              }
-              className="ml-4 border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100"
-            >
-              COPY
-            </Button>
-          </div>
-        </div>
-
-        {/* Notice Section */}
-        <div className="px-4 py-4">
-          <div className="rounded-r-lg border-l-4 border-red-500 bg-red-50 p-4">
-            <h3 className="mb-2 text-sm font-semibold text-red-600">Notice:</h3>
-            <div className="space-y-1 text-sm text-gray-700">
-              <p>
-                1. One UPI can only transfer money{' '}
-                <span className="font-semibold text-red-600">once</span>.
-              </p>
-              <p>
-                2. Don&apos;t change the{' '}
-                <span className="font-semibold text-red-600">payment amount</span>. Otherwise, the
-                order cannot be closed.
-              </p>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-red-800">Important Notice:</p>
+              <div className="mt-2 text-sm text-red-700">
+                <ul className="list-disc list-inside space-y-1">
+                  <li>One UPI ID can only transfer money <strong>once</strong></li>
+                  <li>Don't change the <strong>payment amount</strong></li>
+                  <li>Order will be auto-cancelled if payment is not completed</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* UPI Apps Selection */}
-        <div className="px-4 py-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {/* PhonePe */}
-            <label
-              className="flex cursor-pointer items-center space-x-3 rounded-lg border border-gray-200 p-3 transition-colors hover:bg-gray-50"
-              onClick={() => handlePaymentMethodClick('phonepe')}
-            >
-              <input
-                type="radio"
-                name="upi"
-                value="phonepe"
-                checked={selectedUpi === 'phonepe'}
-                onChange={() => {}} // Removed onChange as click handler manages selection
-                className="h-4 w-4 text-blue-600"
-              />
-              <div className="flex items-center space-x-3">
-                <div className="relative h-8 w-8 flex-shrink-0">
+        {/* Payment Method Selection */}
+        <div className="space-y-4">
+          <p className="text-gray-700 font-medium text-sm">Choose Payment Method:</p>
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { icon: "/icons/phonepe.svg", value: "phonepe", alt: "PhonePe" },
+              { icon: "/icons/paytm.svg", value: "paytm", alt: "Paytm" },
+              { icon: "/icons/googlepay.svg", value: "gpay", alt: "Google Pay" },
+              { icon: "/icons/upi.svg", value: "upi", alt: "UPI" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                onClick={() => handlePaymentMethodClick(option.value)}
+                className={`flex flex-col items-center justify-center p-4 border-2 rounded-xl transition-all duration-200 hover:shadow-md ${
+                  selectedUpi === option.value 
+                    ? 'border-blue-600 bg-blue-50 shadow-md' 
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
+              >
+                <div className="relative">
                   <Image
-                    src="/phonepe-logo.webp"
-                    alt="PhonePe"
-                    width={32}
-                    height={32}
-                    className="object-contain"
+                    src={option.icon}
+                    alt={option.alt}
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 object-contain"
                   />
+                  {selectedUpi === option.value && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
-                <span className="font-medium text-gray-800">PhonePe</span>
-              </div>
-            </label>
-
-            {/* Paytm */}
-            <label
-              className="flex cursor-pointer items-center space-x-3 rounded-lg border border-gray-200 p-3 transition-colors hover:bg-gray-50"
-              onClick={() => handlePaymentMethodClick('paytm')}
-            >
-              <input
-                type="radio"
-                name="upi"
-                value="paytm"
-                checked={selectedUpi === 'paytm'}
-                onChange={() => {}} // Removed onChange as click handler manages selection
-                className="h-4 w-4 text-blue-600"
-              />
-              <div className="flex items-center space-x-3">
-                <div className="relative h-8 w-8 flex-shrink-0">
-                  <Image
-                    src="/Paytm_logo.png"
-                    alt="Paytm"
-                    width={32}
-                    height={32}
-                    className="object-contain"
-                  />
-                </div>
-                <span className="font-medium text-gray-800">Paytm</span>
-              </div>
-            </label>
-
-            {/* Google Pay */}
-            <label
-              className="flex cursor-pointer items-center space-x-3 rounded-lg border border-gray-200 p-3 transition-colors hover:bg-gray-50"
-              onClick={() => handlePaymentMethodClick('gpay')}
-            >
-              <input
-                type="radio"
-                name="upi"
-                value="gpay"
-                checked={selectedUpi === 'gpay'}
-                onChange={() => {}} // Removed onChange as click handler manages selection
-                className="h-4 w-4 text-blue-600"
-              />
-              <div className="flex items-center space-x-3">
-                <div className="relative h-8 w-8 flex-shrink-0">
-                  <Image
-                    src="/gpay-logo.png"
-                    alt="G Pay"
-                    width={32}
-                    height={32}
-                    className="object-contain"
-                  />
-                </div>
-                <span className="font-medium text-gray-800">G Pay</span>
-              </div>
-            </label>
-
-            {/* UPI */}
-            <label
-              className="flex cursor-pointer items-center space-x-3 rounded-lg border border-gray-200 p-3 transition-colors hover:bg-gray-50"
-              onClick={() => handlePaymentMethodClick('upi')}
-            >
-              <input
-                type="radio"
-                name="upi"
-                value="upi"
-                checked={selectedUpi === 'upi'}
-                onChange={() => {}} // Removed onChange as click handler manages selection
-                className="h-4 w-4 text-blue-600"
-              />
-              <div className="flex items-center space-x-3">
-                <div className="relative h-8 w-8 flex-shrink-0">
-                  <Image
-                    src="/UPI_logo.svg.png"
-                    alt="UPI"
-                    width={32}
-                    height={32}
-                    className="object-contain"
-                  />
-                </div>
-                <span className="font-medium text-gray-800">UPI</span>
-              </div>
-            </label>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* UTR Form */}
-        <div className="px-4 py-4">
-          <div className="mb-4 flex items-center gap-1">
-            <span className="text-sm text-blue-500">↓</span>
-            <span className="text-sm font-medium text-blue-500">
-              Fill the UTR numbers after you done payment
-            </span>
+        {/* UTR Input Section */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+            <p className="text-sm text-gray-600 font-medium">
+              After payment, enter UTR number below
+            </p>
           </div>
-
-          <div className="space-y-3">
-            <Input
-              placeholder="Input UTR number"
+          <div className="space-y-2">
+            <input
+              type="text"
               value={utr}
-              onChange={(e) => setUtr(e.target.value)}
-              className="h-12 w-full text-base"
+              onChange={(e) => setUtr(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="Enter 12-digit UTR number"
               maxLength={12}
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all"
             />
-
-            <Button
-              onClick={() => {
-                handleUtrSubmit().catch(console.error);
-              }}
-              disabled={isSubmitting}
-              className="h-12 w-full rounded-lg bg-blue-500 text-base font-medium text-white transition-colors hover:bg-blue-600"
-            >
-              {isSubmitting ? 'Submitting...' : 'Submit UTR'}
-            </Button>
+            <p className="text-xs text-gray-500">
+              UTR is a 12-digit reference number for your transaction
+            </p>
           </div>
         </div>
 
-        {/* Bottom UPI Logo and Support Info */}
-        <div className="border-t border-gray-100 px-4 py-6 text-center">
-          <div className="mx-auto mb-4 h-16 w-16">
-            <Image
-              src="/UPI_logo.svg.png"
-              alt="UPI"
-              width={64}
-              height={64}
-              className="object-contain"
-            />
-          </div>
+        {/* Submit Button */}
+        <button 
+          onClick={handleUtrSubmit}
+          disabled={isSubmitting || !utr || utr.length !== 12}
+          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:cursor-not-allowed disabled:shadow-none"
+        >
+          {isSubmitting ? (
+            <div className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Verifying Payment...</span>
+            </div>
+          ) : (
+            'Complete Payment Verification'
+          )}
+        </button>
 
-          <div className="space-y-3 text-center">
-            <p className="px-2 text-xs leading-relaxed text-gray-600">
-              Dear customers: Please give priority to this channel to recharge! Support UPI account
-              withdrawal! ICICI Bank guarantee! Safe and reliable! If you have any questions, please
-              contact:
-            </p>
-            <p className="text-sm font-medium break-all text-blue-500">
-              hdfcbankComplaintacceptance@gmail.com
-            </p>
+        {/* Support Information */}
+        <div className="text-center space-y-2 pt-4 border-t border-gray-100">
+          <div className="flex items-center justify-center gap-2">
+            <Image
+              src="/icons/upi.svg"
+              alt="UPI"
+              width={24}
+              height={24}
+              className="w-6 h-6"
+            />
+            <p className="text-xs font-medium text-gray-600">Powered by UPI</p>
           </div>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            For any payment issues, contact support at{' '}
+            <a href="mailto:support@payment.com" className="text-blue-600 font-medium">
+              support@payment.com
+            </a>
+          </p>
         </div>
       </div>
     </div>

@@ -26,11 +26,8 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Users,
   ShoppingCart,
-  DollarSign,
   Activity,
-  Clock,
   CheckCircle,
-  XCircle,
   Plus,
   Eye,
   ArrowUpRight,
@@ -39,6 +36,7 @@ import {
   Globe,
   Sparkles,
 } from 'lucide-react';
+import { IconWrapper } from '@/lib/icon-wrapper';
 
 // Enhanced mock data with more realistic metrics
 const mockStats = {
@@ -148,16 +146,16 @@ function CreatePaymentLinkModal({ isOpen, onClose }: { isOpen: boolean; onClose:
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md border border-slate-700/50 bg-slate-900/95 shadow-2xl backdrop-blur-xl">
+      <DialogContent className="max-w-md border border-border bg-card shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-2xl font-bold text-transparent">
+          <DialogTitle className="bg-gradient-to-r from-primary via-primary-light to-primary bg-clip-text text-2xl font-bold text-transparent">
             Create Payment Link
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleCreateLink} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="amount" className="font-medium text-slate-200">
+            <Label htmlFor="amount" className="font-medium text-foreground">
               Amount (₹)
             </Label>
             <Input
@@ -166,23 +164,22 @@ function CreatePaymentLinkModal({ isOpen, onClose }: { isOpen: boolean; onClose:
               placeholder="Enter amount"
               value={formData.amount}
               onChange={(e) => setFormData((prev) => ({ ...prev, amount: e.target.value }))}
-              className="border-slate-600 bg-slate-800/50 text-white placeholder-slate-400 focus:border-transparent focus:ring-2 focus:ring-purple-500"
+              className="border-input bg-background text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" className="font-medium text-slate-200">
-              Description
+                        <Label htmlFor="description" className="font-medium text-foreground">
+              Description (Optional)
             </Label>
             <Textarea
               id="description"
-              placeholder="Payment description"
+              placeholder="Enter payment description"
               value={formData.description}
               onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-              className="resize-none border-slate-600 bg-slate-800/50 text-white placeholder-slate-400 focus:border-transparent focus:ring-2 focus:ring-purple-500"
+              className="border-input bg-background text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary resize-none"
               rows={3}
-              required
             />
           </div>
 
@@ -257,7 +254,7 @@ function CreatePaymentLinkModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                 </>
               ) : (
                 <>
-                  <Sparkles className="mr-2 h-4 w-4" />
+                  <IconWrapper icon={Sparkles} className="mr-2 h-4 w-4" />
                   Create Link
                 </>
               )}
@@ -275,7 +272,7 @@ function AdminStatsCards() {
       title: 'Total Users',
       value: mockStats.totalUsers.toLocaleString(),
       description: 'Registered users',
-      icon: Users,
+      icon: 'Users', // Changed from Users component to string
       trend: '+12% from last month',
     },
     {
@@ -283,7 +280,7 @@ function AdminStatsCards() {
       title: 'Total Orders',
       value: mockStats.totalOrders.toLocaleString(),
       description: 'Payment orders processed',
-      icon: ShoppingCart,
+      icon: 'ShoppingCart', // Changed from ShoppingCart component to string
       trend: '+8% from last month',
     },
     {
@@ -291,7 +288,7 @@ function AdminStatsCards() {
       title: 'Total Revenue',
       value: `₹${(mockStats.totalRevenue / 100000).toFixed(1)}L`,
       description: 'Revenue generated',
-      icon: DollarSign,
+      icon: 'DollarSign', // Changed from DollarSign component to string
       trend: '+15% from last month',
     },
     {
@@ -299,7 +296,7 @@ function AdminStatsCards() {
       title: 'Success Rate',
       value: `${mockStats.successRate}%`,
       description: 'Payment success rate',
-      icon: Activity,
+      icon: 'Activity', // Changed from Activity component to string
       trend: '+2.1% from last month',
     },
   ];
@@ -313,21 +310,21 @@ function OrderStatusCards() {
       title: 'Pending Orders',
       value: mockStats.pendingOrders,
       description: 'Awaiting verification',
-      icon: Clock,
+      icon: 'Clock', // Changed from Clock component to string
       trend: 'Active',
     },
     {
       title: 'Completed Orders',
       value: mockStats.completedOrders.toLocaleString(),
       description: 'Successfully processed',
-      icon: CheckCircle,
+      icon: 'CheckCircle', // Changed from CheckCircle component to string
       trend: 'Success',
     },
     {
       title: 'Failed Orders',
       value: mockStats.failedOrders,
       description: 'Failed or expired',
-      icon: XCircle,
+      icon: 'XCircle', // Changed from XCircle component to string
       trend: 'Issues',
     },
   ];
@@ -352,15 +349,15 @@ function RecentActivity() {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'order':
-        return <ShoppingCart className="h-5 w-5 text-blue-400" />;
+        return <IconWrapper icon={ShoppingCart} className="h-5 w-5 text-primary" />;
       case 'user':
-        return <Users className="h-5 w-5 text-emerald-400" />;
+        return <IconWrapper icon={Users} className="h-5 w-5 text-primary" />;
       case 'payment':
-        return <CheckCircle className="h-5 w-5 text-emerald-400" />;
+        return <IconWrapper icon={CheckCircle} className="h-5 w-5 text-primary" />;
       case 'system':
-        return <Shield className="h-5 w-5 text-purple-400" />;
+        return <IconWrapper icon={Shield} className="h-5 w-5 text-primary" />;
       default:
-        return <Activity className="h-5 w-5 text-slate-400" />;
+        return <IconWrapper icon={Activity} className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
@@ -368,31 +365,31 @@ function RecentActivity() {
     switch (type) {
       case 'order':
         return (
-          <span className="rounded-full border border-blue-500/30 bg-blue-500/20 px-2 py-1 text-xs text-blue-300">
+          <span className="rounded-full border border-primary/30 bg-primary/20 px-2 py-1 text-xs text-primary">
             Order
           </span>
         );
       case 'user':
         return (
-          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2 py-1 text-xs text-emerald-300">
+          <span className="rounded-full border border-primary/30 bg-primary/20 px-2 py-1 text-xs text-primary">
             User
           </span>
         );
       case 'payment':
         return (
-          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2 py-1 text-xs text-emerald-300">
+          <span className="rounded-full border border-primary/30 bg-primary/20 px-2 py-1 text-xs text-primary">
             Payment
           </span>
         );
       case 'system':
         return (
-          <span className="rounded-full border border-purple-500/30 bg-purple-500/20 px-2 py-1 text-xs text-purple-300">
+          <span className="rounded-full border border-primary/30 bg-primary/20 px-2 py-1 text-xs text-primary">
             System
           </span>
         );
       default:
         return (
-          <span className="rounded-full border border-slate-500/30 bg-slate-500/20 px-2 py-1 text-xs text-slate-300">
+          <span className="rounded-full border border-muted/30 bg-muted/20 px-2 py-1 text-xs text-muted-foreground">
             Activity
           </span>
         );
@@ -400,14 +397,14 @@ function RecentActivity() {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-700/30 bg-gradient-to-br from-slate-800/30 to-slate-900/30 p-8 backdrop-blur-sm">
+    <div className="rounded-2xl border border-border bg-card p-8 backdrop-blur-sm">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="mb-2 text-xl font-semibold text-white">Recent Activity</h2>
-          <p className="text-sm text-slate-400">Latest system activities and events</p>
+          <h2 className="mb-2 text-xl font-semibold text-foreground">Recent Activity</h2>
+          <p className="text-sm text-muted-foreground">Latest system activities and events</p>
         </div>
-        <div className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 p-3">
-          <Activity className="h-5 w-5 text-white" />
+        <div className="rounded-xl bg-primary p-3">
+          <IconWrapper icon={Activity} className="h-5 w-5 text-primary-foreground" />
         </div>
       </div>
 
@@ -415,39 +412,39 @@ function RecentActivity() {
         {mockStats.recentActivity.map((activity) => (
           <div
             key={activity.id}
-            className="group rounded-xl border border-slate-700/50 bg-slate-800/50 p-4 backdrop-blur-sm transition-all duration-200 hover:scale-[1.02] hover:bg-slate-800/70"
+            className="group rounded-xl border border-border bg-card/50 p-4 backdrop-blur-sm transition-all duration-200 hover:scale-[1.02] hover:bg-card/70"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="rounded-lg bg-slate-700/50 p-2 transition-transform duration-200 group-hover:scale-110">
+                <div className="rounded-lg bg-muted p-2 transition-transform duration-200 group-hover:scale-110">
                   {getActivityIcon(activity.type)}
                 </div>
                 <div className="flex-1">
-                  <h3 className="mb-1 text-sm font-medium text-white">{activity.action}</h3>
-                  <p className="text-xs text-slate-400">by {activity.user}</p>
+                  <h3 className="mb-1 text-sm font-medium text-foreground">{activity.action}</h3>
+                  <p className="text-xs text-muted-foreground">by {activity.user}</p>
                   {activity.amount && (
-                    <p className="mt-1 text-xs font-medium text-emerald-400">{activity.amount}</p>
+                    <p className="mt-1 text-xs font-medium text-primary">{activity.amount}</p>
                   )}
                   {activity.details && (
-                    <p className="mt-1 text-xs text-slate-500">{activity.details}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{activity.details}</p>
                   )}
                 </div>
               </div>
               <div className="flex items-center space-x-3">
                 {getActivityBadge(activity.type)}
-                <span className="text-xs text-slate-500">{activity.time}</span>
+                <span className="text-xs text-muted-foreground">{activity.time}</span>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-6 border-t border-slate-700/50 pt-6">
-        <button className="group w-full rounded-xl border border-slate-600/50 bg-gradient-to-r from-slate-700/50 to-slate-800/50 p-4 text-slate-300 transition-all duration-300 hover:scale-[1.02] hover:border-slate-500/50 hover:from-slate-600/50 hover:to-slate-700/50 hover:text-white">
+      <div className="mt-6 border-t border-border pt-6">
+        <button className="group w-full rounded-xl border border-border bg-card p-4 text-card-foreground transition-all duration-300 hover:scale-[1.02] hover:border-primary/50 hover:bg-card/90 hover:text-foreground">
           <div className="flex items-center justify-center space-x-2">
-            <Eye className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+            <IconWrapper icon={Eye} className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
             <span className="font-medium">View All Activity</span>
-            <ArrowUpRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1" />
+            <IconWrapper icon={ArrowUpRight} className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1" />
           </div>
         </button>
       </div>
@@ -459,10 +456,11 @@ export default function AdminDashboard() {
   const [createLinkModal, setCreateLinkModal] = useState(false);
   const { user } = useUser();
   const userRole = (user?.publicMetadata?.role as string) || 'admin';
-  const { data: dashboardData, isLoading: _isLoading, error } = useDashboardData(userRole);
+  const { error } = useDashboardData(userRole);
 
   // Use real data if available, otherwise fall back to mock data
-  const _stats = dashboardData || mockStats;
+  // Use dashboardData when available, fallback to mockStats
+  // const stats = dashboardData || mockStats;
 
   if (error) {
     return (
@@ -478,14 +476,14 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-7xl space-y-8 p-6">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="mb-4 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-4xl font-bold text-transparent">
+          <h1 className="mb-4 bg-gradient-to-r from-primary via-primary-light to-primary bg-clip-text text-4xl font-bold text-transparent">
             Admin Dashboard
           </h1>
-          <p className="text-lg text-slate-400">
+          <p className="text-lg text-muted-foreground">
             Welcome back! Here&apos;s what&apos;s happening with your UPI payment system.
           </p>
         </div>
@@ -497,11 +495,11 @@ export default function AdminDashboard() {
               {[...Array(4)].map((_, i) => (
                 <div
                   key={i}
-                  className="animate-pulse rounded-2xl border border-slate-700/50 bg-slate-800/50 p-6 backdrop-blur-sm"
+                  className="animate-pulse rounded-2xl border border-border bg-card p-6"
                 >
-                  <div className="mb-4 h-4 rounded bg-slate-700"></div>
-                  <div className="mb-2 h-8 rounded bg-slate-700"></div>
-                  <div className="h-3 rounded bg-slate-700"></div>
+                  <div className="mb-4 h-4 rounded bg-muted"></div>
+                  <div className="mb-2 h-8 rounded bg-muted"></div>
+                  <div className="h-3 rounded bg-muted"></div>
                 </div>
               ))}
             </div>
@@ -517,11 +515,11 @@ export default function AdminDashboard() {
               {[...Array(3)].map((_, i) => (
                 <div
                   key={i}
-                  className="animate-pulse rounded-2xl border border-slate-700/50 bg-slate-800/50 p-6 backdrop-blur-sm"
+                  className="animate-pulse rounded-2xl border border-border bg-card p-6"
                 >
-                  <div className="mb-4 h-4 rounded bg-slate-700"></div>
-                  <div className="mb-2 h-8 rounded bg-slate-700"></div>
-                  <div className="h-3 rounded bg-slate-700"></div>
+                  <div className="mb-4 h-4 rounded bg-muted"></div>
+                  <div className="mb-2 h-8 rounded bg-muted"></div>
+                  <div className="h-3 rounded bg-muted"></div>
                 </div>
               ))}
             </div>
@@ -534,11 +532,11 @@ export default function AdminDashboard() {
         <div className="rounded-2xl border border-slate-700/30 bg-gradient-to-br from-slate-800/30 to-slate-900/30 p-8 backdrop-blur-sm">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h2 className="mb-2 text-xl font-semibold text-white">Quick Actions</h2>
-              <p className="text-sm text-slate-400">Common administrative tasks</p>
+              <h2 className="mb-2 text-xl font-semibold text-foreground">Quick Actions</h2>
+              <p className="text-sm text-muted-foreground">Common administrative tasks</p>
             </div>
-            <div className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 p-3">
-              <Zap className="h-5 w-5 text-white" />
+            <div className="rounded-xl bg-primary p-3">
+              <IconWrapper icon={Zap} className="h-5 w-5 text-primary-foreground" />
             </div>
           </div>
 
@@ -546,56 +544,56 @@ export default function AdminDashboard() {
             {/* Create Payment Link */}
             <button
               onClick={() => setCreateLinkModal(true)}
-              className="group relative overflow-hidden rounded-xl border border-purple-400/20 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-6 text-white backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 hover:shadow-2xl hover:shadow-purple-500/25"
+              className="group relative overflow-hidden rounded-xl border border-primary/20 bg-card p-6 text-card-foreground backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:bg-card/90 hover:shadow-2xl hover:shadow-primary/25"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
               <div className="relative">
-                <div className="mx-auto mb-4 w-fit rounded-lg bg-white/10 p-3 backdrop-blur-sm">
-                  <Plus className="h-8 w-8 transition-transform duration-500 group-hover:rotate-90" />
+                <div className="mx-auto mb-4 w-fit rounded-lg bg-primary/10 p-3 backdrop-blur-sm">
+                  <IconWrapper icon={Plus} className="h-8 w-8 text-primary transition-transform duration-500 group-hover:rotate-90" />
                 </div>
-                <h3 className="mb-2 text-lg font-bold">Create Payment Link</h3>
-                <p className="text-sm text-purple-100">Generate instant payment links</p>
+                <h3 className="mb-2 text-lg font-bold text-foreground">Create Payment Link</h3>
+                <p className="text-sm text-muted-foreground">Generate instant payment links</p>
               </div>
-              <div className="absolute inset-0 -translate-x-full -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+              <div className="absolute inset-0 -translate-x-full -skew-x-12 bg-gradient-to-r from-transparent via-primary/5 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
             </button>
 
             {/* View All Orders */}
-            <button className="group relative overflow-hidden rounded-xl border border-emerald-400/20 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 p-6 text-white backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:from-emerald-500 hover:via-teal-500 hover:to-cyan-500 hover:shadow-2xl hover:shadow-emerald-500/25">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+            <button className="group relative overflow-hidden rounded-xl border border-primary/20 bg-card p-6 text-card-foreground backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:bg-card/90 hover:shadow-2xl hover:shadow-primary/25">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
               <div className="relative">
-                <div className="mx-auto mb-4 w-fit rounded-lg bg-white/10 p-3 backdrop-blur-sm">
-                  <Eye className="h-8 w-8 transition-transform duration-300 group-hover:scale-110" />
+                <div className="mx-auto mb-4 w-fit rounded-lg bg-primary/10 p-3 backdrop-blur-sm">
+                  <IconWrapper icon={Eye} className="h-8 w-8 text-primary transition-transform duration-300 group-hover:scale-110" />
                 </div>
-                <h3 className="mb-2 text-lg font-bold">View All Orders</h3>
-                <p className="text-sm text-emerald-100">Browse complete order history</p>
+                <h3 className="mb-2 text-lg font-bold text-foreground">View All Orders</h3>
+                <p className="text-sm text-muted-foreground">Browse complete order history</p>
               </div>
-              <div className="absolute inset-0 -translate-x-full -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+              <div className="absolute inset-0 -translate-x-full -skew-x-12 bg-gradient-to-r from-transparent via-primary/5 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
             </button>
 
             {/* System Settings */}
-            <button className="group relative overflow-hidden rounded-xl border border-amber-400/20 bg-gradient-to-br from-amber-600 via-orange-600 to-red-600 p-6 text-white backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:from-amber-500 hover:via-orange-500 hover:to-red-500 hover:shadow-2xl hover:shadow-amber-500/25">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+            <button className="group relative overflow-hidden rounded-xl border border-primary/20 bg-card p-6 text-card-foreground backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:bg-card/90 hover:shadow-2xl hover:shadow-primary/25">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
               <div className="relative">
-                <div className="mx-auto mb-4 w-fit rounded-lg bg-white/10 p-3 backdrop-blur-sm">
-                  <Shield className="h-8 w-8 transition-transform duration-300 group-hover:scale-110" />
+                <div className="mx-auto mb-4 w-fit rounded-lg bg-primary/10 p-3 backdrop-blur-sm">
+                  <IconWrapper icon={Shield} className="h-8 w-8 text-primary transition-transform duration-300 group-hover:scale-110" />
                 </div>
-                <h3 className="mb-2 text-lg font-bold">System Settings</h3>
-                <p className="text-sm text-amber-100">Configure system parameters</p>
+                <h3 className="mb-2 text-lg font-bold text-foreground">System Settings</h3>
+                <p className="text-sm text-muted-foreground">Configure system parameters</p>
               </div>
-              <div className="absolute inset-0 -translate-x-full -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+              <div className="absolute inset-0 -translate-x-full -skew-x-12 bg-gradient-to-r from-transparent via-primary/5 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
             </button>
 
             {/* Analytics */}
-            <button className="group relative overflow-hidden rounded-xl border border-violet-400/20 bg-gradient-to-br from-purple-600 via-violet-600 to-indigo-600 p-6 text-white backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:from-purple-500 hover:via-violet-500 hover:to-indigo-500 hover:shadow-2xl hover:shadow-purple-500/25">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+            <button className="group relative overflow-hidden rounded-xl border border-primary/20 bg-card p-6 text-card-foreground backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:bg-card/90 hover:shadow-2xl hover:shadow-primary/25">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
               <div className="relative">
-                <div className="mx-auto mb-4 w-fit rounded-lg bg-white/10 p-3 backdrop-blur-sm">
-                  <Globe className="h-8 w-8 transition-transform duration-300 group-hover:rotate-12" />
+                <div className="mx-auto mb-4 w-fit rounded-lg bg-primary/10 p-3 backdrop-blur-sm">
+                  <IconWrapper icon={Globe} className="h-8 w-8 text-primary transition-transform duration-300 group-hover:rotate-12" />
                 </div>
-                <h3 className="mb-2 text-lg font-bold">Analytics</h3>
-                <p className="text-sm text-purple-100">View detailed analytics</p>
+                <h3 className="mb-2 text-lg font-bold text-foreground">Analytics</h3>
+                <p className="text-sm text-muted-foreground">View detailed analytics</p>
               </div>
-              <div className="absolute inset-0 -translate-x-full -skew-x-12 bg-gradient-to-r from-transparent via-white/5 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+              <div className="absolute inset-0 -translate-x-full -skew-x-12 bg-gradient-to-r from-transparent via-primary/5 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
             </button>
           </div>
         </div>
@@ -603,11 +601,11 @@ export default function AdminDashboard() {
         {/* Recent Activity */}
         <Suspense
           fallback={
-            <div className="animate-pulse rounded-2xl border border-slate-700/50 bg-slate-800/50 p-8 backdrop-blur-sm">
-              <div className="mb-4 h-6 rounded bg-slate-700"></div>
+            <div className="animate-pulse rounded-2xl border border-border bg-card p-8 backdrop-blur-sm">
+              <div className="mb-4 h-6 rounded bg-muted"></div>
               <div className="space-y-3">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-16 rounded-xl bg-slate-700/50"></div>
+                  <div key={i} className="h-16 rounded-xl bg-muted"></div>
                 ))}
               </div>
             </div>

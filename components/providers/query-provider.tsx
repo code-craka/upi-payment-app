@@ -32,7 +32,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      <ReactQueryDevtools initialIsOpen={false} />
+      {React.createElement(ReactQueryDevtools as React.ComponentType<{ initialIsOpen: boolean }>, { initialIsOpen: false })}
     </QueryClientProvider>
   );
 }

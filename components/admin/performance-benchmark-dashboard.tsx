@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { IconWrapper } from '@/lib/icon-wrapper';
 import {
   Play,
   RefreshCw,
@@ -90,7 +91,7 @@ export function PerformanceBenchmarkDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [config, _setConfig] = useState<TestConfiguration>({
+  const [config] = useState<TestConfiguration>({
     redisVsClerk: {
       regions: ['us-east-1', 'us-west-2', 'eu-west-1'],
       iterations: 100,
@@ -190,26 +191,26 @@ export function PerformanceBenchmarkDashboard() {
   const getBenchmarkIcon = (testType: string) => {
     switch (testType) {
       case 'redisVsClerk':
-        return <Database className="h-5 w-5" />;
+        return <IconWrapper icon={Database} className="h-5 w-5" />;
       case 'cacheHitRatio':
-        return <Activity className="h-5 w-5" />;
+        return <IconWrapper icon={Activity} className="h-5 w-5" />;
       case 'sub30ms':
-        return <Zap className="h-5 w-5" />;
+        return <IconWrapper icon={Zap} className="h-5 w-5" />;
       case 'concurrentUsers':
-        return <Users className="h-5 w-5" />;
+        return <IconWrapper icon={Users} className="h-5 w-5" />;
       case 'loadTest':
-        return <TrendingUp className="h-5 w-5" />;
+        return <IconWrapper icon={TrendingUp} className="h-5 w-5" />;
       case 'networkFailures':
-        return <Network className="h-5 w-5" />;
+        return <IconWrapper icon={Network} className="h-5 w-5" />;
       default:
-        return <BarChart3 className="h-5 w-5" />;
+        return <IconWrapper icon={BarChart3} className="h-5 w-5" />;
     }
   };
 
   const getResultStatus = (result?: BenchmarkResult) => {
     if (!result) return null;
-    if (!result.success) return <XCircle className="h-4 w-4 text-red-500" />;
-    return <CheckCircle className="h-4 w-4 text-green-500" />;
+    if (!result.success) return <IconWrapper icon={XCircle} className="h-4 w-4 text-red-500" />;
+    return <IconWrapper icon={CheckCircle} className="h-4 w-4 text-green-500" />;
   };
 
   const formatDuration = (ms: number) => {
@@ -229,7 +230,7 @@ export function PerformanceBenchmarkDashboard() {
           </p>
         </div>
         <Button onClick={fetchStatus} variant="outline" disabled={loading}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <IconWrapper icon={RefreshCw} className="mr-2 h-4 w-4" />
           Refresh Status
         </Button>
       </div>
@@ -238,7 +239,7 @@ export function PerformanceBenchmarkDashboard() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Monitor className="h-5 w-5" />
+            <IconWrapper icon={Monitor} className="h-5 w-5" />
             System Status
           </CardTitle>
         </CardHeader>
@@ -260,7 +261,7 @@ export function PerformanceBenchmarkDashboard() {
                   <p className="text-sm font-medium">Total Benchmarks</p>
                   <p className="text-2xl font-bold">{status.totalBenchmarks}</p>
                 </div>
-                <Activity className="h-6 w-6 text-blue-500" />
+                <IconWrapper icon={Activity} className="h-6 w-6 text-blue-500" />
               </div>
 
               <div className="bg-muted flex items-center justify-between rounded-lg p-3">
@@ -268,7 +269,7 @@ export function PerformanceBenchmarkDashboard() {
                   <p className="text-sm font-medium">Last Hour Activity</p>
                   <p className="text-2xl font-bold">{status.recentActivity.lastHour}</p>
                 </div>
-                <TrendingUp className="h-6 w-6 text-green-500" />
+                <IconWrapper icon={TrendingUp} className="h-6 w-6 text-green-500" />
               </div>
 
               <div className="bg-muted flex items-center justify-between rounded-lg p-3">
@@ -278,7 +279,7 @@ export function PerformanceBenchmarkDashboard() {
                     {status.recentActivity.averageResponseTime.toFixed(1)}ms
                   </p>
                 </div>
-                <Zap className="h-6 w-6 text-yellow-500" />
+                <IconWrapper icon={Zap} className="h-6 w-6 text-yellow-500" />
               </div>
             </div>
           ) : (
@@ -313,7 +314,7 @@ export function PerformanceBenchmarkDashboard() {
       {/* Error Display */}
       {error && (
         <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
+          <IconWrapper icon={AlertTriangle} className="h-4 w-4" />
           <AlertTitle>Test Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -348,9 +349,9 @@ export function PerformanceBenchmarkDashboard() {
                     className="w-full"
                   >
                     {activeTest === 'redisVsClerk' ? (
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      <IconWrapper icon={RefreshCw} className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="mr-2 h-4 w-4" />
+                      <IconWrapper icon={Play} className="mr-2 h-4 w-4" />
                     )}
                     Run Benchmark
                   </Button>
@@ -395,9 +396,9 @@ export function PerformanceBenchmarkDashboard() {
                     className="w-full"
                   >
                     {activeTest === 'cacheHitRatio' ? (
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      <IconWrapper icon={RefreshCw} className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="mr-2 h-4 w-4" />
+                      <IconWrapper icon={Play} className="mr-2 h-4 w-4" />
                     )}
                     Test Cache
                   </Button>
@@ -441,9 +442,9 @@ export function PerformanceBenchmarkDashboard() {
                     className="w-full"
                   >
                     {activeTest === 'sub30ms' ? (
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      <IconWrapper icon={RefreshCw} className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="mr-2 h-4 w-4" />
+                      <IconWrapper icon={Play} className="mr-2 h-4 w-4" />
                     )}
                     Validate Speed
                   </Button>
@@ -488,9 +489,9 @@ export function PerformanceBenchmarkDashboard() {
                     className="w-full"
                   >
                     {activeTest === 'concurrentUsers' ? (
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      <IconWrapper icon={RefreshCw} className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="mr-2 h-4 w-4" />
+                      <IconWrapper icon={Play} className="mr-2 h-4 w-4" />
                     )}
                     Test Concurrency
                   </Button>
@@ -535,9 +536,9 @@ export function PerformanceBenchmarkDashboard() {
                     className="w-full"
                   >
                     {activeTest === 'loadTest' ? (
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      <IconWrapper icon={RefreshCw} className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="mr-2 h-4 w-4" />
+                      <IconWrapper icon={Play} className="mr-2 h-4 w-4" />
                     )}
                     Run Load Test
                   </Button>
@@ -591,9 +592,9 @@ export function PerformanceBenchmarkDashboard() {
                     variant="destructive"
                   >
                     {activeTest === 'networkFailures' ? (
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      <IconWrapper icon={RefreshCw} className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="mr-2 h-4 w-4" />
+                      <IconWrapper icon={Play} className="mr-2 h-4 w-4" />
                     )}
                     Simulate Failures
                   </Button>
@@ -627,7 +628,7 @@ export function PerformanceBenchmarkDashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
+                <IconWrapper icon={BarChart3} className="h-5 w-5" />
                 Full Benchmark Suite
                 {getResultStatus(testResults.fullSuite)}
               </CardTitle>
@@ -649,9 +650,9 @@ export function PerformanceBenchmarkDashboard() {
                   size="lg"
                 >
                   {activeTest === 'fullSuite' ? (
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    <IconWrapper icon={RefreshCw} className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Play className="mr-2 h-4 w-4" />
+                    <IconWrapper icon={Play} className="mr-2 h-4 w-4" />
                   )}
                   Run Full Suite
                 </Button>

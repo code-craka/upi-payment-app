@@ -4,7 +4,7 @@ import { connectDB } from '@/lib/db/connection';
 import { OrderModel } from '@/lib/db/models/Order';
 import { AuditLogModel } from '@/lib/db/models/AuditLog';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const user = await currentUser();
 

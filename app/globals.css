@@ -1,75 +1,105 @@
 /* styles/globals.css */
 @import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
-  --background: oklch(0.9399 0.0203 345.6985);
-  --foreground: oklch(0.4712 0 0);
-  --card: oklch(0.9498 0.05 86.8891);
-  --card-foreground: oklch(0.4712 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.4712 0 0);
-  --primary: oklch(0.6209 0.1801 348.1385);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.8095 0.0694 198.1863);
-  --secondary-foreground: oklch(0.3211 0 0);
-  --muted: oklch(0.88 0.0504 212.0952);
-  --muted-foreground: oklch(0.5795 0 0);
-  --accent: oklch(0.9195 0.0801 87.667);
-  --accent-foreground: oklch(0.3211 0 0);
-  --destructive: oklch(0.7091 0.1697 21.9551);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.6209 0.1801 348.1385);
-  --input: oklch(0.9189 0 0);
-  --ring: oklch(0.7002 0.1597 350.7532);
-  --chart-1: oklch(0.7002 0.1597 350.7532);
-  --chart-2: oklch(0.8189 0.0799 212.0892);
-  --chart-3: oklch(0.9195 0.0801 87.667);
-  --chart-4: oklch(0.7998 0.111 348.1791);
-  --chart-5: oklch(0.6197 0.1899 353.9091);
-  --radius: 0.4rem;
-  --sidebar: oklch(0.914 0.0424 343.0913);
-  --sidebar-foreground: oklch(0.3211 0 0);
-  --sidebar-primary: oklch(0.6559 0.2118 354.3084);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.8228 0.1095 346.0184);
-  --sidebar-accent-foreground: oklch(0.3211 0 0);
-  --sidebar-border: oklch(0.9464 0.0327 307.1745);
-  --sidebar-ring: oklch(0.6559 0.2118 354.3084);
+  /* Font family */
+  --font-inter: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  
+  /* UNIFIED BRAND COLORS - PRIMARY BLUE THEME */
+  --primary: 219.2 100% 55.9%;           /* Blue-500 #2563eb */
+  --primary-foreground: 210 20% 98%;     /* White */
+  --primary-dark: 221.2 100% 50%;        /* Blue-600 #1d4ed8 */
+  --primary-light: 213.3 100% 66.7%;     /* Blue-400 #3b82f6 */
+  
+  /* SECONDARY COLORS - CONSISTENT GRAY PALETTE */
+  --secondary: 215 27.9% 16.9%;          /* Gray-800 */
+  --secondary-foreground: 210 20% 98%;   /* White */
+  --muted: 215 13.8% 93.7%;             /* Gray-100 */
+  --muted-foreground: 215.4 16.3% 46.9%; /* Gray-600 */
+  
+  /* ACCENT COLORS */
+  --accent: 215 25% 96.9%;               /* Gray-50 */
+  --accent-foreground: 215.4 16.3% 46.9%; /* Gray-600 */
+  
+  /* SEMANTIC COLORS */
+  --success: 142.1 76.2% 36.3%;          /* Green-600 #16a34a */
+  --success-foreground: 210 20% 98%;     /* White */
+  --warning: 32.1 94.6% 43.7%;           /* Orange-500 #f97316 */  
+  --warning-foreground: 210 20% 98%;     /* White */
+  --destructive: 0 84.2% 60.2%;          /* Red-500 #ef4444 */
+  --destructive-foreground: 210 20% 98%; /* White */
+  
+  /* BACKGROUND COLORS */
+  --background: 0 0% 100%;               /* White */
+  --foreground: 215.4 16.3% 46.9%;      /* Gray-600 */
+  
+  /* CARD & POPOVER */
+  --card: 0 0% 100%;                     /* White */
+  --card-foreground: 224 71.4% 4.1%;    /* Gray-900 */
+  --popover: 0 0% 100%;                  /* White */
+  --popover-foreground: 224 71.4% 4.1%; /* Gray-900 */
+  
+  /* BORDERS & INPUT */
+  --border: 214.3 31.8% 91.4%;          /* Gray-200 */
+  --input: 214.3 31.8% 91.4%;           /* Gray-200 */
+  --ring: 219.2 100% 55.9%;             /* Primary Blue */
+  
+  /* SIDEBAR COLORS - CONSISTENT WITH MAIN THEME */
+  --sidebar: 215 25% 96.9%;              /* Gray-50 */
+  --sidebar-foreground: 215.4 16.3% 46.9%; /* Gray-600 */
+  --sidebar-primary: 219.2 100% 55.9%;   /* Primary Blue */
+  --sidebar-primary-foreground: 210 20% 98%; /* White */
+  --sidebar-accent: 213.3 100% 66.7%;    /* Blue-400 */
+  --sidebar-accent-foreground: 210 20% 98%; /* White */
+  --sidebar-border: 214.3 31.8% 91.4%;   /* Gray-200 */
+  --sidebar-ring: 219.2 100% 55.9%;      /* Primary Blue */
+  
+  /* CHART COLORS - HARMONIOUS BLUE PALETTE */
+  --chart-1: 219.2 100% 55.9%;          /* Primary Blue */
+  --chart-2: 142.1 76.2% 36.3%;         /* Green-600 */
+  --chart-3: 32.1 94.6% 43.7%;          /* Orange-500 */
+  --chart-4: 271.5 81.3% 55.9%;         /* Purple-500 */
+  --chart-5: 338.7 78.1% 59.6%;         /* Pink-500 */
+  
+  --radius: 0.5rem;
 }
 
 .dark {
-  --background: oklch(0.2497 0.0305 234.1628);
-  --foreground: oklch(0.9306 0.0197 349.0785);
-  --card: oklch(0.2902 0.0299 233.5352);
-  --card-foreground: oklch(0.9306 0.0197 349.0785);
-  --popover: oklch(0.2902 0.0299 233.5352);
-  --popover-foreground: oklch(0.9306 0.0197 349.0785);
-  --primary: oklch(0.9195 0.0801 87.667);
-  --primary-foreground: oklch(0.2497 0.0305 234.1628);
-  --secondary: oklch(0.7794 0.0803 4.133);
-  --secondary-foreground: oklch(0.2497 0.0305 234.1628);
-  --muted: oklch(0.2713 0.0086 255.578);
-  --muted-foreground: oklch(0.7794 0.0803 4.133);
-  --accent: oklch(0.6699 0.0988 356.9762);
-  --accent-foreground: oklch(0.9306 0.0197 349.0785);
-  --destructive: oklch(0.6702 0.1806 350.3599);
-  --destructive-foreground: oklch(0.2497 0.0305 234.1628);
-  --border: oklch(0.3907 0.0399 242.2181);
-  --input: oklch(0.3093 0.0305 232.0027);
-  --ring: oklch(0.6998 0.0896 201.8672);
-  --chart-1: oklch(0.6998 0.0896 201.8672);
-  --chart-2: oklch(0.7794 0.0803 4.133);
-  --chart-3: oklch(0.6699 0.0988 356.9762);
-  --chart-4: oklch(0.4408 0.0702 217.0848);
-  --chart-5: oklch(0.2713 0.0086 255.578);
-  --sidebar: oklch(0.2303 0.027 235.9743);
-  --sidebar-foreground: oklch(0.967 0.0029 264.5419);
-  --sidebar-primary: oklch(0.6559 0.2118 354.3084);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.8228 0.1095 346.0184);
-  --sidebar-accent-foreground: oklch(0.2781 0.0296 256.848);
-  --sidebar-border: oklch(0.3729 0.0306 259.7328);
-  --sidebar-ring: oklch(0.6559 0.2118 354.3084);
+  /* DARK THEME - CONSISTENT SLATE PALETTE */
+  --primary: 219.2 100% 55.9%;           /* Blue-500 stays same */
+  --primary-foreground: 210 20% 98%;     /* White */
+  --primary-dark: 221.2 100% 50%;        /* Blue-600 */
+  --primary-light: 213.3 100% 66.7%;     /* Blue-400 */
+  
+  --secondary: 215 13.8% 93.7%;          /* Light in dark mode */
+  --secondary-foreground: 215.4 16.3% 46.9%; /* Gray-600 */
+  --muted: 215 27.9% 16.9%;              /* Gray-800 */
+  --muted-foreground: 215 13.8% 93.7%;   /* Gray-100 */
+  
+  --accent: 215 25% 12%;                  /* Gray-900 */
+  --accent-foreground: 215 13.8% 93.7%;  /* Gray-100 */
+  
+  --background: 224 71.4% 4.1%;          /* Gray-950 */
+  --foreground: 215 13.8% 93.7%;         /* Gray-100 */
+  
+  --card: 215 27.9% 16.9%;               /* Gray-800 */
+  --card-foreground: 215 13.8% 93.7%;    /* Gray-100 */
+  --popover: 215 27.9% 16.9%;            /* Gray-800 */
+  --popover-foreground: 215 13.8% 93.7%; /* Gray-100 */
+  
+  --border: 215 25% 27%;                  /* Gray-700 */
+  --input: 215 25% 27%;                   /* Gray-700 */
+  --ring: 219.2 100% 55.9%;              /* Primary Blue */
+  
+  --sidebar: 215 25% 12%;                 /* Gray-900 */
+  --sidebar-foreground: 215 13.8% 93.7%; /* Gray-100 */
+  --sidebar-primary: 219.2 100% 55.9%;   /* Primary Blue */
+  --sidebar-primary-foreground: 210 20% 98%; /* White */
+  --sidebar-accent: 213.3 100% 66.7%;    /* Blue-400 */
+  --sidebar-accent-foreground: 210 20% 98%; /* White */
+  --sidebar-border: 215 25% 27%;          /* Gray-700 */
+  --sidebar-ring: 219.2 100% 55.9%;      /* Primary Blue */
 }
 
 :root {
@@ -118,9 +148,34 @@
     border-color: hsl(var(--border));
     outline-color: hsl(var(--ring) / 0.5);
   }
+  
+  html {
+    font-family: var(--font-inter);
+    scroll-behavior: smooth;
+  }
+  
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    font-family: var(--font-inter);
+    font-size: 14px;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    font-variation-settings: normal;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  .font-sans {
+    font-family: var(--font-inter);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-inter);
+  }
+  
+  button, input, textarea, select {
+    font-family: var(--font-inter);
   }
 }
 

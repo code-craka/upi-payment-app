@@ -1,12 +1,39 @@
 'use client';
 
-import { LucideIcon } from 'lucide-react';
+import { 
+  CreditCard, 
+  ShoppingCart, 
+  TrendingUp, 
+  Users, 
+  DollarSign, 
+  Activity,
+  Package,
+  Target,
+  Clock,
+  CheckCircle,
+  XCircle
+} from 'lucide-react';
+
+// Icon mapping
+const iconMap = {
+  CreditCard,
+  ShoppingCart,
+  TrendingUp,
+  Users,
+  DollarSign,
+  Activity,
+  Package,
+  Target,
+  Clock,
+  CheckCircle,
+  XCircle,
+};
 
 interface MetricCardProps {
   title: string;
   value: string | number;
   description: string;
-  icon: LucideIcon;
+  icon: string; // Changed from LucideIcon to string
   trend?: string;
   className?: string;
 }
@@ -15,17 +42,20 @@ export function MetricCard({
   title,
   value,
   description,
-  icon: Icon,
+  icon,
   trend,
   className = '',
 }: MetricCardProps) {
+  // Get the icon component from the string name
+  const IconComponent = iconMap[icon as keyof typeof iconMap] || CreditCard;
+
   return (
     <div
       className={`group rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-6 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/10 ${className}`}
     >
       <div className="mb-4 flex items-center justify-between">
         <div className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 p-3 transition-transform duration-300 group-hover:scale-110">
-          <Icon className="h-6 w-6 text-white" />
+          <IconComponent className="h-6 w-6 text-white" />
         </div>
         {trend && (
           <div className="flex items-center text-xs font-medium text-emerald-400">

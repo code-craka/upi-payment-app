@@ -1,6 +1,5 @@
 'use client';
 
-import { LucideIcon } from 'lucide-react';
 import { MetricCard } from './metric-card';
 
 export interface MetricData {
@@ -8,7 +7,7 @@ export interface MetricData {
   title: string;
   value: string | number;
   description: string;
-  icon: LucideIcon;
+  icon: string; // Changed from LucideIcon to string
   trend?: string;
 }
 

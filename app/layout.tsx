@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import { Analytics } from '@vercel/analytics/next';
-import { ClerkProvider } from '@clerk/nextjs';
+import { ClerkProvider } from '@/components/providers/clerk-provider';
 import { ClientProviders } from '@/components/client-providers';
 import './globals.css';
 
@@ -58,15 +58,20 @@ export default function RootLayout({
       publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
       appearance={{
         variables: {
-          colorPrimary: '#2563eb', // Blue-600
-          colorDanger: '#dc2626', // Red-600
-          fontFamily: 'inherit',
+          colorPrimary: 'hsl(219.2, 100%, 55.9%)', // Primary Blue
+          colorDanger: 'hsl(0, 84.2%, 60.2%)', // Red-500
+          fontFamily: 'var(--font-inter)',
+          colorSuccess: 'hsl(142.1, 76.2%, 36.3%)', // Green-600
+          colorWarning: 'hsl(32.1, 94.6%, 43.7%)', // Orange-500
         },
         elements: {
-          formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 text-white',
-          card: 'shadow-lg border',
-          headerTitle: 'text-xl font-semibold',
-          headerSubtitle: 'text-gray-600',
+          formButtonPrimary: 'bg-primary hover:bg-primary-dark text-white transition-colors duration-200',
+          card: 'shadow-lg border border-border bg-card',
+          headerTitle: 'text-xl font-semibold text-foreground',
+          headerSubtitle: 'text-muted-foreground',
+          formFieldInput: 'border-input bg-background text-foreground focus:border-primary focus:ring-primary',
+          footerActionLink: 'text-primary hover:text-primary-dark',
+          socialButtonsBlockButton: 'border-border hover:border-primary transition-colors duration-200',
         },
       }}
     >

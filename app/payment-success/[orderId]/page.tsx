@@ -19,10 +19,10 @@ async function getCompletedOrder(orderId: string) {
   try {
     await connectDB();
 
-    const order = (await OrderModel.findOne({
+    const order = await OrderModel.findOne({
       orderId,
       status: { $in: ['completed', 'pending-verification'] },
-    }).lean()) as any;
+    }).lean()
 
     if (!order) {
       return null;
@@ -33,13 +33,14 @@ async function getCompletedOrder(orderId: string) {
       orderId: order.orderId,
       amount: order.amount,
       description: order.description,
-      merchantName: order.merchantName,
+      merchantName: process.env.UPI_MERCHANT_NAME || 'UPI Payment System',
       status: order.status,
-      utr: order.utr,
-      utrSubmittedAt: order.utrSubmittedAt,
-      paymentMethod: order.paymentMethod,
+      utr: order.utrNumber,
+      utrSubmittedAt: order.updatedAt, // Use updatedAt for when UTR was submitted
+      paymentMethod: 'upi', // Default payment method
       verifiedAt: order.verifiedAt,
       createdAt: order.createdAt,
+      customerName: order.customerName,
     };
   } catch (error) {
     console.error('Error fetching completed order:', error);
@@ -64,7 +65,8 @@ function PaymentSuccessContent({ order }: { order: any }) {
       merchantName: order.merchantName,
       utr: order.utr,
       status: order.status,
-      date: new Date(order.utrSubmittedAt).toLocaleDateString('en-IN'),
+      customerName: order.customerName,
+      date: new Date(order.utrSubmittedAt || order.createdAt).toLocaleDateString('en-IN'),
     };
 
     const dataStr = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(receiptData, null, 2))}`;
@@ -197,7 +199,7 @@ function PaymentSuccessContent({ order }: { order: any }) {
               Contact support with Order ID: <strong>{order.orderId}</strong>
             </p>
             <p className="mt-1 text-xs text-blue-600">
-              Email: support@{order.merchantName.toLowerCase().replace(/\s+/g, '')}.com
+              Email: support@upipayments.com
             </p>
           </CardContent>
         </Card>

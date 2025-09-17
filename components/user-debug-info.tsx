@@ -9,7 +9,7 @@ import { useState } from 'react';
 
 export function UserDebugInfo() {
   const { user, isLoaded, isSignedIn } = useUser();
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [, setRefreshKey] = useState(0);
 
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1);
