@@ -52,6 +52,29 @@ export function createCircuitBreaker(
   const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!redisUrl || !redisToken) {
+    // During build time, environment variables might not be available
+    // Throw error only if we're not in build mode
+    if (process.env.NODE_ENV !== 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+      console.warn('Redis environment variables not configured for circuit breaker - using fallback');
+      // Return a mock circuit breaker for development/build
+      return {
+        execute: async <T>(operation: () => Promise<T>) => operation(),
+        getHealth: async () => ({ status: 'healthy' as const }),
+        getMetrics: async () => ({ 
+          availability: 100,
+          errorRate: 0,
+          responseTime: 0,
+          successCount: 0,
+          errorCount: 0,
+          totalRequests: 0,
+          totalFailures: 0
+        }),
+        isAvailable: async () => true,
+        reset: async () => {},
+        forceOpen: async () => {},
+        forceClose: async () => {},
+      } as unknown as PersistentCircuitBreaker;
+    }
     throw new Error('Redis environment variables not configured for circuit breaker');
   }
 
@@ -124,44 +147,71 @@ export class RedisCircuitBreakerWrapper {
 }
 
 /**
- * Pre-configured circuit breakers for common services
+ * Pre-configured circuit breakers for common services - lazy loaded
  */
+let _circuitBreakers: {
+  redis?: RedisCircuitBreakerWrapper;
+  database?: RedisCircuitBreakerWrapper;
+  api?: RedisCircuitBreakerWrapper;
+  auth?: RedisCircuitBreakerWrapper;
+} = {};
+
 export const CircuitBreakers = {
-  // Redis operations circuit breaker
-  redis: new RedisCircuitBreakerWrapper('redis-service', {
-    failureThreshold: 5,
-    successThreshold: 3,
-    recoveryTimeout: 30000,
-    maxRecoveryTimeout: 300000,
-    monitoringPeriod: 300000,
-  }),
+  // Redis operations circuit breaker - lazy loaded
+  get redis() {
+    if (!_circuitBreakers.redis) {
+      _circuitBreakers.redis = new RedisCircuitBreakerWrapper('redis-service', {
+        failureThreshold: 5,
+        successThreshold: 3,
+        recoveryTimeout: 30000,
+        maxRecoveryTimeout: 300000,
+        monitoringPeriod: 300000,
+      });
+    }
+    return _circuitBreakers.redis;
+  },
 
-  // Database operations circuit breaker
-  database: new RedisCircuitBreakerWrapper('database-service', {
-    failureThreshold: 3,
-    successThreshold: 2,
-    recoveryTimeout: 15000,
-    maxRecoveryTimeout: 120000,
-    monitoringPeriod: 180000,
-  }),
+  // Database operations circuit breaker - lazy loaded
+  get database() {
+    if (!_circuitBreakers.database) {
+      _circuitBreakers.database = new RedisCircuitBreakerWrapper('database-service', {
+        failureThreshold: 3,
+        successThreshold: 2,
+        recoveryTimeout: 15000,
+        maxRecoveryTimeout: 120000,
+        monitoringPeriod: 180000,
+      });
+    }
+    return _circuitBreakers.database;
+  },
 
-  // External API calls circuit breaker
-  api: new RedisCircuitBreakerWrapper('external-api', {
-    failureThreshold: 10,
-    successThreshold: 5,
-    recoveryTimeout: 60000,
-    maxRecoveryTimeout: 600000,
-    monitoringPeriod: 600000,
-  }),
+  // External API calls circuit breaker - lazy loaded
+  get api() {
+    if (!_circuitBreakers.api) {
+      _circuitBreakers.api = new RedisCircuitBreakerWrapper('external-api', {
+        failureThreshold: 10,
+        successThreshold: 5,
+        recoveryTimeout: 60000,
+        maxRecoveryTimeout: 600000,
+        monitoringPeriod: 600000,
+      });
+    }
+    return _circuitBreakers.api;
+  },
 
-  // Authentication service circuit breaker
-  auth: new RedisCircuitBreakerWrapper('auth-service', {
-    failureThreshold: 3,
-    successThreshold: 2,
-    recoveryTimeout: 10000,
-    maxRecoveryTimeout: 60000,
-    monitoringPeriod: 120000,
-  }),
+  // Authentication service circuit breaker - lazy loaded
+  get auth() {
+    if (!_circuitBreakers.auth) {
+      _circuitBreakers.auth = new RedisCircuitBreakerWrapper('auth-service', {
+        failureThreshold: 3,
+        successThreshold: 2,
+        recoveryTimeout: 10000,
+        maxRecoveryTimeout: 60000,
+        monitoringPeriod: 120000,
+      });
+    }
+    return _circuitBreakers.auth;
+  },
 };
 
 /**
@@ -277,11 +327,11 @@ export async function getCircuitBreakerHealth(): Promise<{
 
   // Determine overall health
   const unhealthyCount = Object.values(serviceHealth).filter(
-    (h: unknown) => h.status === 'unhealthy',
+    (h) => (h as { status?: string })?.status === 'unhealthy',
   ).length;
 
   const degradedCount = Object.values(serviceHealth).filter(
-    (h: unknown) => h.status === 'degraded',
+    (h) => (h as { status?: string })?.status === 'degraded',
   ).length;
 
   let overall: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
