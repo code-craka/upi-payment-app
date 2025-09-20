@@ -48,10 +48,10 @@
     "user-administration"
   ],
   "engines": {
-    "node": ">=22.15.0",
-    "pnpm": ">=10.17.0"
+    "node": ">=18.17.0",
+    "pnpm": ">=6.32.0"
   },
-  "packageManager": "pnpm@10.17.0",
+  "packageManager": "pnpm@6.35.1",
   "type":"module",
   "scripts": {
     "build": "next build",
