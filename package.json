@@ -47,11 +47,7 @@
     "order-management",
     "user-administration"
   ],
-  "engines": {
-    "node": ">=18.17.0",
-    "pnpm": ">=6.32.0"
-  },
-  "packageManager": "pnpm@6.35.1",
+  "packageManager": "pnpm@10.17.0",
   "type":"module",
   "scripts": {
     "build": "next build",
