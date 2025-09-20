@@ -1,19 +1,62 @@
 import { Redis } from '@upstash/redis';
+import type { SetCommandOptions } from '@upstash/redis';
 import { redisCircuitBreaker } from './redis/circuit-breaker';
 
 // Edge-safe Redis client for hybrid authentication caching
 // Production deployment on Vercel Edge Runtime
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-if (!redisUrl || !redisToken) {
-  throw new Error('Redis environment variables not configured');
+let _redis: Redis | null = null;
+
+// Lazy-loaded Redis client to prevent build-time initialization
+function getRedisClient(): Redis {
+  if (!_redis) {
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    if (!redisUrl || !redisToken) {
+      throw new Error('Redis environment variables not configured');
+    }
+
+    _redis = new Redis({
+      url: redisUrl,
+      token: redisToken,
+    });
+  }
+
+  return _redis;
 }
 
-export const redis = new Redis({
-  url: redisUrl,
-  token: redisToken,
-});
+// Export Redis instance getter instead of direct instance
+export const redis = {
+  get client() {
+    return getRedisClient();
+  },
+  // Proxy Redis methods to the lazy-loaded client
+  async get(key: string) {
+    return getRedisClient().get(key);
+  },
+  async set(key: string, value: string | number, options?: SetCommandOptions) {
+    return getRedisClient().set(key, value, options);
+  },
+  async setex(key: string, seconds: number, value: string | number) {
+    return getRedisClient().setex(key, seconds, value);
+  },
+  async del(...keys: string[]) {
+    return getRedisClient().del(...keys);
+  },
+  async exists(...keys: string[]) {
+    return getRedisClient().exists(...keys);
+  },
+  async eval(script: string, keys: string[], args: (string | number)[]) {
+    return getRedisClient().eval(script, keys, args);
+  },
+  async ping() {
+    return getRedisClient().ping();
+  },
+  async incr(key: string) {
+    return getRedisClient().incr(key);
+  }
+};
 
 // Redis keys for role management
 export const REDIS_KEYS = {
@@ -388,4 +431,8 @@ export async function batchInvalidateRoles(userIds: string[]): Promise<void> {
 }
 
 // Export Redis instance for direct use if needed
-export { redis as redisClient };
+export const redisClient = {
+  get instance() {
+    return getRedisClient();
+  }
+};
