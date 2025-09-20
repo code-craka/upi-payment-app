@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useUser } from '@clerk/nextjs';
+// Removed Clerk import as per v3.0.0 migration
 import { useToast } from '@/hooks/use-toast';
 import {
   Plus,
@@ -394,15 +394,8 @@ export function MerchantDashboard() {
   const [createLinkModal, setCreateLinkModal] = useState(false);
   const [createUserModal, setCreateUserModal] = useState(false);
 
-  // Handle Clerk authentication with fallback
-  let _user = null;
-  try {
-    const clerkUser = useUser();
-    _user = clerkUser.user;
-  } catch (_error) {
-    console.warn('Clerk authentication failed, using development mode');
-    _user = { id: 'dev-user', emailAddresses: [{ emailAddress: 'merchant@dev.com' }] };
-  }
+  // Use custom authentication system (v3.0.0)
+  // Authentication is handled by middleware and session management
 
   // Function to refresh dashboard data
   const refreshDashboard = () => {

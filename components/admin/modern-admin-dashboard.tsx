@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useUser } from '@clerk/nextjs';
+// Removed Clerk import as per v3.0.0 migration
 import {
   Activity,
   CheckCircle,
@@ -357,16 +357,8 @@ export function ModernAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  // Get user info
-  let _user = null;
-
-  try {
-    const clerkUser = useUser();
-    _user = clerkUser.user;
-  } catch (_error) {
-    console.warn('Clerk authentication failed, using development mode');
-    _user = { id: 'dev-user', emailAddresses: [{ emailAddress: 'admin@dev.com' }] };
-  }
+  // Use custom authentication system (v3.0.0)
+  // Authentication is handled by middleware and session management
 
   // Fetch dashboard data
   const fetchDashboardData = useCallback(async () => {

@@ -342,3 +342,15 @@ export function HourlyActivityChart() {
     </div>
   );
 }
+
+// Export combined analytics charts component
+export function AnalyticsCharts() {
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <OrderTrendsChart />
+      <StatusDistributionChart />
+      <UserPerformanceChart />
+      <HourlyActivityChart />
+    </div>
+  );
+}

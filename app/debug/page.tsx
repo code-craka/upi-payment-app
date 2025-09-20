@@ -3,6 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
+// Force dynamic rendering due to user authentication
+export const dynamic = 'force-dynamic';
+
 export default async function DebugPage() {
   const user = await getSafeUser();
 

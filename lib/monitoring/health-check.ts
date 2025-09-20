@@ -421,3 +421,6 @@ export class HealthChecker {
 
 // Export singleton instance
 export const healthChecker = new HealthChecker();
+
+// Export as healthCheckService for backward compatibility
+export const healthCheckService = healthChecker;
