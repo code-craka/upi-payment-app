@@ -1,10 +1,11 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useAuth } from '@/lib/contexts/auth-context';
 import { ReactNode } from 'react';
+import type { UserRole } from '@/lib/types/roles';
 
 interface RoleGuardProps {
-  allowedRoles: string[];
+  allowedRoles: UserRole[];
   fallback?: ReactNode;
   children: ReactNode;
 }
@@ -48,10 +49,10 @@ function UnauthorizedPage() {
 }
 
 export function RoleGuard({ allowedRoles, fallback, children }: RoleGuardProps) {
-  const { user, isLoaded } = useUser();
+  const { user, isLoading } = useAuth();
 
   // Show loading state while checking authentication
-  if (!isLoaded) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-center">
@@ -67,11 +68,8 @@ export function RoleGuard({ allowedRoles, fallback, children }: RoleGuardProps) 
     return fallback || <UnauthorizedPage />;
   }
 
-  // Get user role from Clerk metadata
-  const userRole = user.publicMetadata?.role as string;
-
   // Check if user has required role
-  if (!userRole || !allowedRoles.includes(userRole)) {
+  if (!allowedRoles.includes(user.role)) {
     return fallback || <UnauthorizedPage />;
   }
 

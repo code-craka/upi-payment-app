@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
 import { connectDB } from '@/lib/db/connection';
-import { getCachedUserRole } from '@/lib/redis';
+import { getUserFromSession } from '@/lib/auth/session-edge';
 import { OrderModel } from '@/lib/db/models/Order';
 import { UserModel } from '@/lib/db/models/User';
 import { AuditLogModel } from '@/lib/db/models/AuditLog';
+import { cookies } from 'next/headers';
 
 // Types for aggregation results
 interface MonthlyRevenueItem {
@@ -41,36 +41,26 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
   const startTime = performance.now();
 
   try {
-    // 1. Authentication with hybrid role check
-    const user = await currentUser();
-    if (!user?.id) {
+    // 1. Authentication using custom session
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('session');
+    if (!sessionCookie?.value) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    // 2. Admin role validation with Redis cache
-    let userRole = 'viewer';
-    let authSource: 'redis' | 'clerk' = 'clerk';
-    let cached = false;
-
-    try {
-      const cachedRole = await getCachedUserRole(user.id);
-      if (cachedRole) {
-        userRole = cachedRole.role;
-        authSource = 'redis';
-        cached = true;
-      } else if (user.publicMetadata?.role) {
-        userRole = user.publicMetadata.role as string;
-        authSource = 'clerk';
-      }
-    } catch (error) {
-      console.warn('[Admin Dashboard API] Role check failed, using default:', error);
+    const user = await getUserFromSession(sessionCookie.value);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Invalid session' },
+        { status: 401 }
+      );
     }
 
-    // 3. Admin permission check
-    if (userRole !== 'admin') {
+    // 2. Admin permission check
+    if (user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Admin access required' },
         { status: 403 }
@@ -97,18 +87,40 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
 
     const responseTime = performance.now() - startTime;
 
-    // 6. Construct admin response
+    // 6. Construct admin response matching DashboardData interface
     const response = {
+      stats: {
+        totalUsers: userStatsData.totalUsers,
+        totalOrders: analyticsData.totalOrders,
+        totalRevenue: analyticsData.totalRevenue,
+        successRate: analyticsData.conversionRate,
+        pendingOrders: analyticsData.pendingOrders,
+        completedOrders: analyticsData.completedOrders,
+        failedOrders: analyticsData.failedOrders,
+        activeUsers: userStatsData.activeUsers,
+        monthlyGrowth: userStatsData.userGrowth,
+      },
+      recentOrders: [], // Will be populated if needed
+      recentActivity: recentActivityData.map((activity: { id: string; action: string; user: string; timestamp: string; details?: Record<string, unknown> }) => ({
+        id: parseInt(activity.id) || Date.now(),
+        action: activity.action,
+        user: activity.user,
+        time: new Date(activity.timestamp).toLocaleString(),
+        type: activity.action.includes('order') ? 'order' as const :
+              activity.action.includes('user') ? 'user' as const :
+              activity.action.includes('payment') ? 'payment' as const : 'system' as const,
+        amount: activity.details?.amount as string,
+        details: activity.details?.message as string || JSON.stringify(activity.details),
+      })),
+      // Additional admin-specific data
       analytics: analyticsData,
       userStats: userStatsData,
-      recentActivity: recentActivityData,
       systemHealth: systemHealthData,
       alerts: alertsData,
       meta: {
         lastUpdated: new Date().toISOString(),
-        userId: user.id,
-        source: authSource,
-        cached,
+        userId: user.userId,
+        source: 'session',
         responseTime: Math.round(responseTime),
       },
     };
@@ -354,7 +366,7 @@ async function getAdminUserStats() {
         acc[item._id] = item.count;
         return acc;
       },
-      { admin: 0, merchant: 0, viewer: 0 }
+      { admin: 0, merchant: 0, user: 0 }
     );
 
     return {
@@ -375,7 +387,7 @@ async function getAdminUserStats() {
       activeUsers: 0,
       newUsers: 0,
       userGrowth: 0,
-      roleDistribution: { admin: 0, merchant: 0, viewer: 0 },
+      roleDistribution: { admin: 0, merchant: 0, user: 0 },
       monthlyUserGrowth: [],
     };
   }

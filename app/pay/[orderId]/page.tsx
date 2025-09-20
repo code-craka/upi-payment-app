@@ -51,8 +51,8 @@ async function getOrder(orderId: string) {
       utr: order.utrNumber,
       vpa: order.upiId, // Add vpa field that client component expects
     }
-  } catch (error) {
-    console.error('Error fetching order:', error)
+  } catch (_error) {
+    console.error('Error fetching order:', _error)
     return null
   }
 }

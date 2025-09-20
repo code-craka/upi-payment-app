@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
+import { requireAuth } from '@/lib/auth/requireRole';
 import { connectDB } from '@/lib/db/connection';
-import { getCachedUserRole } from '@/lib/redis';
 import { OrderModel } from '@/lib/db/models/Order';
 import { UserModel } from '@/lib/db/models/User';
 import { AuditLogModel } from '@/lib/db/models/AuditLog';
 import { z } from 'zod';
 
 // Dashboard analytics response schema
-const DashboardAnalyticsSchema = z.object({
+const _DashboardAnalyticsSchema = z.object({
   success: z.boolean(),
   data: z.object({
     analytics: z.object({
@@ -44,7 +43,7 @@ const DashboardAnalyticsSchema = z.object({
       roleDistribution: z.object({
         admin: z.number(),
         merchant: z.number(),
-        viewer: z.number(),
+        user: z.number(),
       }),
     }),
     recentActivity: z.array(
@@ -66,50 +65,28 @@ const DashboardAnalyticsSchema = z.object({
     meta: z.object({
       lastUpdated: z.string(),
       userId: z.string(),
-      source: z.enum(['redis', 'clerk']),
+      source: z.enum(['redis', 'clerk', 'custom_auth']),
       cached: z.boolean(),
       responseTime: z.number(),
     }),
   }),
 });
 
-export type DashboardAnalytics = z.infer<typeof DashboardAnalyticsSchema>;
+export type DashboardAnalytics = z.infer<typeof _DashboardAnalyticsSchema>;
 
 /**
  * GET /api/dashboard - Unified dashboard analytics endpoint
  * Returns comprehensive dashboard data including analytics, user stats, and recent activity
  */
-export async function GET(_request: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   const startTime = performance.now();
 
   try {
-    // 1. Authentication with hybrid role check
-    const user = await currentUser();
-    if (!user?.id) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
+    // 1. Authentication and role validation
+    const user = await requireAuth(request);
 
-    // 2. Role validation with Redis cache
-    let userRole = 'viewer';
-    let authSource: 'redis' | 'clerk' = 'clerk';
-    let cached = false;
-
-    try {
-      const cachedRole = await getCachedUserRole(user.id);
-      if (cachedRole) {
-        userRole = cachedRole.role;
-        authSource = 'redis';
-        cached = true;
-      } else if (user.publicMetadata?.role) {
-        userRole = user.publicMetadata.role as string;
-        authSource = 'clerk';
-      }
-    } catch (error) {
-      console.warn('[Dashboard API] Role check failed, using default:', error);
-    }
-
-    // 3. Permission check for dashboard access
-    if (!['admin', 'merchant'].includes(userRole)) {
+    // 2. Permission check for dashboard access
+    if (!['admin', 'merchant', 'user'].includes(user.role)) {
       return NextResponse.json(
         { error: 'Insufficient permissions for dashboard access' },
         { status: 403 },
@@ -121,9 +98,9 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
 
     // 5. Parallel data fetching for performance
     const [analyticsData, userStatsData, recentActivityData, systemHealthData] = await Promise.all([
-      getAnalyticsData(userRole),
-      getUserStats(userRole),
-      getRecentActivity(userRole, user.id),
+      getAnalyticsData(user.role, user.id),
+      getUserStats(user.role),
+      getRecentActivity(user.role, user.id),
       getSystemHealth(),
     ]);
 
@@ -138,8 +115,8 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       meta: {
         lastUpdated: new Date().toISOString(),
         userId: user.id,
-        source: authSource,
-        cached,
+        source: 'custom_auth',
+        cached: false,
         responseTime: Math.round(responseTime),
       },
     };
@@ -179,14 +156,14 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
 /**
  * Get analytics data (revenue, orders, growth metrics)
  */
-async function getAnalyticsData(userRole: string) {
+async function getAnalyticsData(userRole: string, userId: string) {
   try {
     const now = new Date();
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-    // Base query - admins see all data, merchants see their own
-    const baseQuery = userRole === 'admin' ? {} : { merchantId: userRole };
+    // Base query - admins see all data, merchants and users see their own
+    const baseQuery = userRole === 'admin' ? {} : { createdBy: userId };
 
     // Current month metrics
     const [totalRevenue, totalOrders, completedOrders, pendingOrders] = await Promise.all([
@@ -261,7 +238,7 @@ async function getAnalyticsData(userRole: string) {
             { $match: { status: 'completed' } },
             {
               $group: {
-                _id: '$merchantId',
+                _id: '$createdBy',
                 revenue: { $sum: '$amount' },
                 orders: { $sum: 1 },
               },
@@ -272,7 +249,7 @@ async function getAnalyticsData(userRole: string) {
               $lookup: {
                 from: 'users',
                 localField: '_id',
-                foreignField: 'clerkId',
+                foreignField: '_id',
                 as: 'merchant',
               },
             },
@@ -330,14 +307,14 @@ async function getAnalyticsData(userRole: string) {
  */
 async function getUserStats(userRole: string) {
   try {
-    // Admin sees all users, merchants see limited stats
+    // Admin sees all users, merchants and users see limited stats
     if (userRole !== 'admin') {
       return {
-        totalUsers: 0,
-        activeUsers: 0,
+        totalUsers: 1, // They can see they exist
+        activeUsers: 1,
         newUsers: 0,
         userGrowth: 0,
-        roleDistribution: { admin: 0, merchant: 0, viewer: 0 },
+        roleDistribution: { admin: 0, merchant: 0, user: 0 },
       };
     }
 
@@ -361,7 +338,7 @@ async function getUserStats(userRole: string) {
         acc[item._id] = item.count;
         return acc;
       },
-      { admin: 0, merchant: 0, viewer: 0 },
+      { admin: 0, merchant: 0, user: 0 },
     );
 
     return {
@@ -378,7 +355,7 @@ async function getUserStats(userRole: string) {
       activeUsers: 0,
       newUsers: 0,
       userGrowth: 0,
-      roleDistribution: { admin: 0, merchant: 0, viewer: 0 },
+      roleDistribution: { admin: 0, merchant: 0, user: 0 },
     };
   }
 }
@@ -388,7 +365,7 @@ async function getUserStats(userRole: string) {
  */
 async function getRecentActivity(userRole: string, userId: string) {
   try {
-    // Base query - admins see all activity, merchants see their own
+    // Base query - admins see all activity, merchants and users see their own
     const baseQuery = userRole === 'admin' ? {} : { userId };
 
     const activities = await AuditLogModel.find(baseQuery)

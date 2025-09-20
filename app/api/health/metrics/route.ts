@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     if (requireAuth) {
       try {
         await requireRole('admin');
-      } catch (error) {
+      } catch (_error) {
         return NextResponse.json(
           {
             error: 'Authentication required',
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
 /**
  * Build Prometheus-formatted metrics
  */
-function buildPrometheusMetrics(healthStatus: any, metrics: any): string {
+function buildPrometheusMetrics(healthStatus: unknown, metrics: unknown): string {
   const lines: string[] = [];
   const timestamp = Date.now();
 
@@ -106,7 +106,7 @@ function buildPrometheusMetrics(healthStatus: any, metrics: any): string {
 /**
  * Add overall health metrics
  */
-function addHealthMetrics(lines: string[], healthStatus: any, timestamp: number): void {
+function addHealthMetrics(lines: string[], healthStatus: unknown, timestamp: number): void {
   lines.push('# HELP upi_health_status Overall health status (0=healthy, 1=degraded, 2=unhealthy)');
   lines.push('# TYPE upi_health_status gauge');
 
@@ -118,13 +118,13 @@ function addHealthMetrics(lines: string[], healthStatus: any, timestamp: number)
 /**
  * Add service-specific metrics
  */
-function addServiceMetrics(lines: string[], healthStatus: any, timestamp: number): void {
+function addServiceMetrics(lines: string[], healthStatus: unknown, timestamp: number): void {
   lines.push(
     '# HELP upi_service_health_status Health status per service (0=healthy, 1=degraded, 2=unhealthy)',
   );
   lines.push('# TYPE upi_service_health_status gauge');
 
-  healthStatus.services.forEach((service: any) => {
+  healthStatus.services.forEach((service: unknown) => {
     const value = service.status === 'healthy' ? 0 : service.status === 'degraded' ? 1 : 2;
     lines.push(`upi_service_health_status{service="${service.service}"} ${value} ${timestamp}`);
   });
@@ -132,7 +132,7 @@ function addServiceMetrics(lines: string[], healthStatus: any, timestamp: number
   lines.push('# HELP upi_service_latency_ms Service response latency in milliseconds');
   lines.push('# TYPE upi_service_latency_ms gauge');
 
-  healthStatus.services.forEach((service: any) => {
+  healthStatus.services.forEach((service: unknown) => {
     if (service.latency) {
       lines.push(
         `upi_service_latency_ms{service="${service.service}"} ${service.latency} ${timestamp}`,
@@ -144,7 +144,7 @@ function addServiceMetrics(lines: string[], healthStatus: any, timestamp: number
 /**
  * Add Redis metrics
  */
-function addRedisMetrics(lines: string[], redisMetrics: any, timestamp: number): void {
+function addRedisMetrics(lines: string[], redisMetrics: unknown, timestamp: number): void {
   lines.push('# HELP upi_redis_latency_ms Redis operation latency in milliseconds');
   lines.push('# TYPE upi_redis_latency_ms gauge');
   lines.push(`upi_redis_latency_ms ${redisMetrics.latency} ${timestamp}`);
@@ -161,7 +161,7 @@ function addRedisMetrics(lines: string[], redisMetrics: any, timestamp: number):
 /**
  * Add database metrics
  */
-function addDatabaseMetrics(lines: string[], dbMetrics: any, timestamp: number): void {
+function addDatabaseMetrics(lines: string[], dbMetrics: unknown, timestamp: number): void {
   lines.push('# HELP upi_database_latency_ms Database operation latency in milliseconds');
   lines.push('# TYPE upi_database_latency_ms gauge');
   lines.push(`upi_database_latency_ms ${dbMetrics.latency} ${timestamp}`);
@@ -182,7 +182,7 @@ function addDatabaseMetrics(lines: string[], dbMetrics: any, timestamp: number):
 /**
  * Add Clerk metrics
  */
-function addClerkMetrics(lines: string[], clerkMetrics: any, timestamp: number): void {
+function addClerkMetrics(lines: string[], clerkMetrics: unknown, timestamp: number): void {
   lines.push('# HELP upi_clerk_latency_ms Clerk API latency in milliseconds');
   lines.push('# TYPE upi_clerk_latency_ms gauge');
   lines.push(`upi_clerk_latency_ms ${clerkMetrics.latency} ${timestamp}`);
@@ -199,7 +199,7 @@ function addClerkMetrics(lines: string[], clerkMetrics: any, timestamp: number):
 /**
  * Add cache metrics
  */
-function addCacheMetrics(lines: string[], cacheMetrics: any, timestamp: number): void {
+function addCacheMetrics(lines: string[], cacheMetrics: unknown, timestamp: number): void {
   lines.push('# HELP upi_cache_hits_total Total cache hits');
   lines.push('# TYPE upi_cache_hits_total counter');
   lines.push(`upi_cache_hits_total ${cacheMetrics.hits} ${timestamp}`);
@@ -224,7 +224,7 @@ function addCacheMetrics(lines: string[], cacheMetrics: any, timestamp: number):
 /**
  * Add application metrics
  */
-function addApplicationMetrics(lines: string[], healthStatus: any, timestamp: number): void {
+function addApplicationMetrics(lines: string[], healthStatus: unknown, timestamp: number): void {
   lines.push('# HELP upi_uptime_seconds Application uptime in seconds');
   lines.push('# TYPE upi_uptime_seconds gauge');
   lines.push(`upi_uptime_seconds ${healthStatus.uptime} ${timestamp}`);
@@ -233,7 +233,7 @@ function addApplicationMetrics(lines: string[], healthStatus: any, timestamp: nu
   lines.push('# TYPE upi_alerts_total gauge');
   lines.push(`upi_alerts_total ${healthStatus.alerts.length} ${timestamp}`);
 
-  const healthyCount = healthStatus.services.filter((s: any) => s.status === 'healthy').length;
+  const healthyCount = healthStatus.services.filter((s: unknown) => s.status === 'healthy').length;
   const degradedCount = healthStatus.degradedServices.length;
   const unhealthyCount = healthStatus.unhealthyServices.length;
 

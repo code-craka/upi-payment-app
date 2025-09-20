@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
+import { getSafeUser } from '@/lib/auth/safe-auth';
 import { connectDB } from '@/lib/db/connection';
 import { OrderModel } from '@/lib/db/models/Order';
 import { AuditLogModel } from '@/lib/db/models/AuditLog';
 
 export async function GET(_request: NextRequest) {
   try {
-    const user = await currentUser();
+    const user = await getSafeUser();
 
     // Allow unauthenticated access for system diagnostics
     const isAuthenticated = !!user;
@@ -19,7 +19,7 @@ export async function GET(_request: NextRequest) {
     const auditCount = await AuditLogModel.countDocuments();
 
     // Check user role status if authenticated
-    const userRole = user?.publicMetadata?.role as string;
+    const userRole = user?.role;
 
     const systemStatus = {
       database: {
@@ -32,10 +32,10 @@ export async function GET(_request: NextRequest) {
       user: isAuthenticated
         ? {
             id: user.id,
-            email: user.emailAddresses[0]?.emailAddress,
+            email: user.email,
             role: userRole,
             hasRole: !!userRole,
-            metadata: user.publicMetadata,
+            name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : null,
           }
         : {
             authenticated: false,
@@ -43,10 +43,7 @@ export async function GET(_request: NextRequest) {
           },
       environment: {
         mongoUri: process.env.MONGODB_URI ? '✓ Configured' : '✗ Missing',
-        clerkKeys:
-          process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY
-            ? '✓ Configured'
-            : '✗ Missing',
+        authKeys: process.env.SESSION_SECRET ? '✓ Configured' : '✗ Missing',
       },
     };
 

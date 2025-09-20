@@ -6,16 +6,16 @@ import { requireRole } from '@/lib/auth/safe-auth';
  * Build detailed health response
  */
 function buildDetailedResponse(
-  healthStatus: any,
-  includeMetrics: boolean,
-  includeHistory: boolean,
-): any {
-  const response: any = {
+  healthStatus: unknown,
+  _includeMetrics: boolean,
+  _includeHistory: boolean,
+): unknown {
+  const response: unknown = {
     status: healthStatus.overall,
     timestamp: new Date().toISOString(),
     uptime: healthStatus.uptime,
     version: process.env.npm_package_version || '1.0.0',
-    services: healthStatus.services.map((service: any) => ({
+    services: healthStatus.services.map((service: unknown) => ({
       name: service.service,
       status: service.status,
       latency: service.latency,
@@ -26,12 +26,12 @@ function buildDetailedResponse(
     })),
     summary: {
       totalServices: healthStatus.services.length,
-      healthyServices: healthStatus.services.filter((s: any) => s.status === 'healthy').length,
+      healthyServices: healthStatus.services.filter((s: unknown) => s.status === 'healthy').length,
       degradedServices: healthStatus.degradedServices.length,
       unhealthyServices: healthStatus.unhealthyServices.length,
       alertsCount: healthStatus.alerts.length,
     },
-    alerts: healthStatus.alerts.map((alert: any) => ({
+    alerts: healthStatus.alerts.map((alert: unknown) => ({
       id: alert.id,
       service: alert.service,
       type: alert.type,
@@ -47,7 +47,7 @@ function buildDetailedResponse(
 /**
  * Add metrics to response if requested
  */
-async function addMetricsToResponse(response: any, includeMetrics: boolean): Promise<void> {
+async function addMetricsToResponse(response: unknown, includeMetrics: boolean): Promise<void> {
   if (!includeMetrics) return;
 
   const metrics = await healthCheckService.getPerformanceMetrics();
@@ -83,12 +83,12 @@ async function addMetricsToResponse(response: any, includeMetrics: boolean): Pro
 /**
  * Add history to response if requested
  */
-function addHistoryToResponse(response: any, healthStatus: any, includeHistory: boolean): void {
+function addHistoryToResponse(response: unknown, healthStatus: unknown, includeHistory: boolean): void {
   if (!includeHistory) return;
 
   response.history = {
     lastCheck: healthStatus.timestamp,
-    serviceHistory: healthStatus.services.map((service: any) => ({
+    serviceHistory: healthStatus.services.map((service: unknown) => ({
       service: service.service,
       status: service.status,
       latency: service.latency,
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST endpoint to manually trigger health check
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     // Require admin authentication
     await requireRole('admin');

@@ -13,11 +13,10 @@ export interface AuthConfig {
 
 const defaultAuthConfig: AuthConfig = {
   redirectOnAuthFailure: true,
-  redirectUrl: '/sign-in',
+  redirectUrl: '/login',
   publicRoutes: [
     '/',
-    '/sign-in(.*)',
-    '/sign-up(.*)',
+    '/login(.*)',
     '/pay(.*)',
     '/api/admin/bootstrap',
     '/api/system-status',
@@ -83,7 +82,7 @@ export async function getUserRoleWithFallback(user: { id: string; publicMetadata
 
     if (cachedRole && cachedRole.role) {
       // Verify role is valid
-      const validRoles: UserRole[] = ['admin', 'merchant', 'viewer'];
+      const validRoles: UserRole[] = ['admin', 'merchant', 'user'];
       if (validRoles.includes(cachedRole.role as UserRole)) {
         serverLogger.middleware('Role resolved from Redis cache', {
           userId,
@@ -195,7 +194,7 @@ export function createAuthMiddleware(config: Partial<AuthConfig> = {}) {
     // Get user authentication
     const user = await getSafeUser();
 
-    // Redirect to sign-in if not authenticated
+    // Redirect to login if not authenticated
     if (!user) {
       serverLogger.middleware(`Unauthenticated access attempt to: ${pathname}`);
 

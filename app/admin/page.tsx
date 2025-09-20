@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,14 +18,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/hooks/useAuth';
 import { useDashboardData } from '@/hooks/use-dashboard';
 import { StatsCards } from '@/components/shared/stats-cards';
 import { MetricCard } from '@/components/shared/metric-card';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Users,
-  ShoppingCart,
   Activity,
   CheckCircle,
   Plus,
@@ -37,6 +35,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { IconWrapper } from '@/lib/icon-wrapper';
+import { MerchantDashboard } from '@/components/admin/merchant-dashboard';
+import { ModernAdminDashboard } from '@/components/admin/modern-admin-dashboard';
 
 // Enhanced mock data with more realistic metrics
 const mockStats = {
@@ -94,7 +94,7 @@ const mockStats = {
 };
 
 // Create Payment Link Modal Component
-function CreatePaymentLinkModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+function CreatePaymentLinkModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onClose: () => void; onSuccess?: () => void }) {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
@@ -110,10 +110,33 @@ function CreatePaymentLinkModal({ isOpen, onClose }: { isOpen: boolean; onClose:
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Validate required fields
+      if (!formData.amount || !formData.description || !formData.customerName) {
+        throw new Error('Please fill in all required fields');
+      }
 
-      const orderId = `ORD${Date.now()}`;
+      // Create real payment order via API
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerName: formData.customerName,
+          customerEmail: formData.customerEmail || undefined,
+          amount: parseFloat(formData.amount),
+          description: formData.description,
+          expiresInMinutes: parseInt(formData.expiryHours) * 60, // Convert hours to minutes
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create payment link');
+      }
+
+      const result = await response.json();
+      const orderId = result.data.orderId;
       const paymentLink = `${window.location.origin}/pay/${orderId}`;
 
       // Copy to clipboard
@@ -121,8 +144,11 @@ function CreatePaymentLinkModal({ isOpen, onClose }: { isOpen: boolean; onClose:
 
       toast({
         title: '✨ Payment Link Created!',
-        description: 'Link copied to clipboard successfully',
+        description: `Order ${orderId} created and link copied to clipboard`,
       });
+
+      // Call success callback to refresh dashboard
+      onSuccess?.();
 
       // Reset form and close modal
       setFormData({
@@ -195,6 +221,7 @@ function CreatePaymentLinkModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                 value={formData.customerName}
                 onChange={(e) => setFormData((prev) => ({ ...prev, customerName: e.target.value }))}
                 className="border-slate-600 bg-slate-800/50 text-white placeholder-slate-400 focus:border-transparent focus:ring-2 focus:ring-purple-500"
+                required
               />
             </div>
 
@@ -265,38 +292,55 @@ function CreatePaymentLinkModal({ isOpen, onClose }: { isOpen: boolean; onClose:
     </Dialog>
   );
 }
-function AdminStatsCards() {
+function AdminStatsCards({ stats, isLoading }: { stats: typeof mockStats; isLoading: boolean }) {
+  if (isLoading) {
+    return (
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <div
+            key={i}
+            className="animate-pulse rounded-2xl border border-border bg-card p-6"
+          >
+            <div className="mb-4 h-4 rounded bg-muted"></div>
+            <div className="mb-2 h-8 rounded bg-muted"></div>
+            <div className="h-3 rounded bg-muted"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   const metrics = [
     {
       id: 'total-users',
       title: 'Total Users',
-      value: mockStats.totalUsers.toLocaleString(),
+      value: (stats.totalUsers || 0).toLocaleString(),
       description: 'Registered users',
-      icon: 'Users', // Changed from Users component to string
+      icon: 'Users',
       trend: '+12% from last month',
     },
     {
       id: 'total-orders',
       title: 'Total Orders',
-      value: mockStats.totalOrders.toLocaleString(),
+      value: (stats.totalOrders || 0).toLocaleString(),
       description: 'Payment orders processed',
-      icon: 'ShoppingCart', // Changed from ShoppingCart component to string
+      icon: 'ShoppingCart',
       trend: '+8% from last month',
     },
     {
       id: 'total-revenue',
       title: 'Total Revenue',
-      value: `₹${(mockStats.totalRevenue / 100000).toFixed(1)}L`,
+      value: `₹${((stats.totalRevenue || 0) / 100000).toFixed(1)}L`,
       description: 'Revenue generated',
-      icon: 'DollarSign', // Changed from DollarSign component to string
+      icon: 'DollarSign',
       trend: '+15% from last month',
     },
     {
       id: 'success-rate',
       title: 'Success Rate',
-      value: `${mockStats.successRate}%`,
+      value: `${stats.successRate || 0}%`,
       description: 'Payment success rate',
-      icon: 'Activity', // Changed from Activity component to string
+      icon: 'Activity',
       trend: '+2.1% from last month',
     },
   ];
@@ -345,54 +389,191 @@ function OrderStatusCards() {
   );
 }
 
-function RecentActivity() {
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'order':
-        return <IconWrapper icon={ShoppingCart} className="h-5 w-5 text-primary" />;
-      case 'user':
-        return <IconWrapper icon={Users} className="h-5 w-5 text-primary" />;
-      case 'payment':
-        return <IconWrapper icon={CheckCircle} className="h-5 w-5 text-primary" />;
-      case 'system':
-        return <IconWrapper icon={Shield} className="h-5 w-5 text-primary" />;
-      default:
-        return <IconWrapper icon={Activity} className="h-5 w-5 text-muted-foreground" />;
+function RecentPaymentLinks() {
+  const [paymentLinks, setPaymentLinks] = useState<Array<{
+    id: string;
+    amount: number;
+    customerName: string;
+    description?: string;
+    expiresAt: string;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchPaymentLinks();
+  }, []);
+
+  const fetchPaymentLinks = async () => {
+    try {
+      const response = await fetch('/api/orders?limit=5&status=pending');
+      if (response.ok) {
+        const data = await response.json();
+        // Ensure we always get an array
+        const linksData = data.data || data || [];
+        const validLinks = Array.isArray(linksData) ? linksData : [];
+        setPaymentLinks(validLinks);
+      } else {
+        // If API fails, don't show empty state, just log the error
+        console.warn('Failed to fetch payment links from API');
+        setPaymentLinks([]);
+      }
+    } catch (_error) {
+      console.error('Failed to fetch payment links');
+      setPaymentLinks([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getActivityBadge = (type: string) => {
+  const copyToClipboard = async (link: string) => {
+    try {
+      await navigator.clipboard.writeText(link);
+      toast({
+        title: 'Copied!',
+        description: 'Payment link copied to clipboard',
+      });
+    } catch (_error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to copy link',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-8 backdrop-blur-sm">
+        <div className="animate-pulse">
+          <div className="h-6 bg-muted rounded mb-4"></div>
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-16 bg-muted rounded-xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-8 backdrop-blur-sm">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="mb-2 text-xl font-semibold text-foreground">Recent Payment Links</h2>
+          <p className="text-sm text-muted-foreground">Latest payment links created</p>
+        </div>
+        <div className="rounded-xl bg-primary p-3">
+          <IconWrapper icon={Zap} className="h-5 w-5 text-primary-foreground" />
+        </div>
+      </div>
+
+      {!Array.isArray(paymentLinks) || paymentLinks.length === 0 ? (
+        <div className="text-center py-8">
+          <IconWrapper icon={Plus} className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">No Payment Links Yet</h3>
+          <p className="text-sm text-muted-foreground mb-4">Create your first payment link to get started</p>
+          <Button className="bg-primary hover:bg-primary/90">
+            <IconWrapper icon={Plus} className="h-4 w-4 mr-2" />
+            Create Payment Link
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {Array.isArray(paymentLinks) && paymentLinks.map((link) => (
+            <div
+              key={link.id}
+              className="group rounded-xl border border-border bg-card/50 p-4 backdrop-blur-sm transition-all duration-200 hover:scale-[1.02] hover:bg-card/70"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="rounded-lg bg-primary/10 p-2 transition-transform duration-200 group-hover:scale-110">
+                    <IconWrapper icon={CheckCircle} className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="mb-1 text-sm font-medium text-foreground">
+                      ₹{link.amount} - {link.customerName}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {link.description || 'Payment link'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Expires: {new Date(link.expiresAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => copyToClipboard(`${window.location.origin}/pay/${link.id}`)}
+                    className="border-primary/20 hover:bg-primary/10"
+                  >
+                    <IconWrapper icon={Eye} className="h-4 w-4 mr-1" />
+                    Copy Link
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => window.open(`/pay/${link.id}`, '_blank')}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <IconWrapper icon={ArrowUpRight} className="h-4 w-4 mr-1" />
+                    View
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {paymentLinks.length > 0 && (
+        <div className="mt-6 border-t border-border pt-6">
+          <button
+            className="group w-full rounded-xl border border-border bg-card p-4 text-card-foreground transition-all duration-300 hover:scale-[1.02] hover:border-primary/50 hover:bg-card/90 hover:text-foreground"
+            onClick={() => window.location.href = '/admin/orders'}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <IconWrapper icon={Eye} className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
+              <span className="font-medium">View All Payment Links</span>
+              <IconWrapper icon={ArrowUpRight} className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1" />
+            </div>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecentActivity({ activities }: { activities: Array<{ id: number; action: string; user: string; time: string; type: string; amount?: string; details?: string }> }) {
+  const getActivityIcon = (type: string) => {
     switch (type) {
       case 'order':
-        return (
-          <span className="rounded-full border border-primary/30 bg-primary/20 px-2 py-1 text-xs text-primary">
-            Order
-          </span>
-        );
+        return CheckCircle;
       case 'user':
-        return (
-          <span className="rounded-full border border-primary/30 bg-primary/20 px-2 py-1 text-xs text-primary">
-            User
-          </span>
-        );
+        return Plus;
       case 'payment':
-        return (
-          <span className="rounded-full border border-primary/30 bg-primary/20 px-2 py-1 text-xs text-primary">
-            Payment
-          </span>
-        );
+        return ArrowUpRight;
       case 'system':
-        return (
-          <span className="rounded-full border border-primary/30 bg-primary/20 px-2 py-1 text-xs text-primary">
-            System
-          </span>
-        );
+        return Shield;
       default:
-        return (
-          <span className="rounded-full border border-muted/30 bg-muted/20 px-2 py-1 text-xs text-muted-foreground">
-            Activity
-          </span>
-        );
+        return Activity;
+    }
+  };
+
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case 'order':
+        return 'text-green-400';
+      case 'user':
+        return 'text-blue-400';
+      case 'payment':
+        return 'text-purple-400';
+      case 'system':
+        return 'text-orange-400';
+      default:
+        return 'text-gray-400';
     }
   };
 
@@ -401,46 +582,47 @@ function RecentActivity() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="mb-2 text-xl font-semibold text-foreground">Recent Activity</h2>
-          <p className="text-sm text-muted-foreground">Latest system activities and events</p>
+          <p className="text-sm text-muted-foreground">Latest system activities</p>
         </div>
         <div className="rounded-xl bg-primary p-3">
           <IconWrapper icon={Activity} className="h-5 w-5 text-primary-foreground" />
         </div>
       </div>
 
-      <div className="space-y-3">
-        {mockStats.recentActivity.map((activity) => (
+      <div className="space-y-4">
+        {activities.map((activity) => (
           <div
             key={activity.id}
-            className="group rounded-xl border border-border bg-card/50 p-4 backdrop-blur-sm transition-all duration-200 hover:scale-[1.02] hover:bg-card/70"
+            className="group flex items-center space-x-4 rounded-xl border border-border bg-card/50 p-4 backdrop-blur-sm transition-all duration-200 hover:scale-[1.02] hover:bg-card/70"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="rounded-lg bg-muted p-2 transition-transform duration-200 group-hover:scale-110">
-                  {getActivityIcon(activity.type)}
-                </div>
-                <div className="flex-1">
-                  <h3 className="mb-1 text-sm font-medium text-foreground">{activity.action}</h3>
-                  <p className="text-xs text-muted-foreground">by {activity.user}</p>
-                  {activity.amount && (
-                    <p className="mt-1 text-xs font-medium text-primary">{activity.amount}</p>
-                  )}
-                  {activity.details && (
-                    <p className="mt-1 text-xs text-muted-foreground">{activity.details}</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                {getActivityBadge(activity.type)}
-                <span className="text-xs text-muted-foreground">{activity.time}</span>
-              </div>
+            <div className={`rounded-lg bg-primary/10 p-2 transition-transform duration-200 group-hover:scale-110`}>
+              <IconWrapper
+                icon={getActivityIcon(activity.type)}
+                className={`h-5 w-5 ${getActivityColor(activity.type)}`}
+              />
+            </div>
+            <div className="flex-1">
+              <h3 className="mb-1 text-sm font-medium text-foreground">
+                {activity.action}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {activity.user} • {activity.time}
+              </p>
+              {(activity.amount || activity.details) && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {activity.amount || activity.details}
+                </p>
+              )}
             </div>
           </div>
         ))}
       </div>
 
       <div className="mt-6 border-t border-border pt-6">
-        <button className="group w-full rounded-xl border border-border bg-card p-4 text-card-foreground transition-all duration-300 hover:scale-[1.02] hover:border-primary/50 hover:bg-card/90 hover:text-foreground">
+        <button
+          className="group w-full rounded-xl border border-border bg-card p-4 text-card-foreground transition-all duration-300 hover:scale-[1.02] hover:border-primary/50 hover:bg-card/90 hover:text-foreground"
+          onClick={() => window.location.href = '/admin/audit-logs'}
+        >
           <div className="flex items-center justify-center space-x-2">
             <IconWrapper icon={Eye} className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
             <span className="font-medium">View All Activity</span>
@@ -454,21 +636,71 @@ function RecentActivity() {
 
 export default function AdminDashboard() {
   const [createLinkModal, setCreateLinkModal] = useState(false);
-  const { user } = useUser();
-  const userRole = (user?.publicMetadata?.role as string) || 'admin';
-  const { error } = useDashboardData(userRole);
+
+  // Handle custom authentication
+  let user = null;
+  let userRole = 'admin'; // Default to admin for development
+
+  try {
+    const authResult = useUser();
+    user = authResult.user;
+    userRole = user?.role || 'admin';
+  } catch (_error) {
+    console.warn('Authentication failed, using development mode:', _error);
+    // In development mode, we'll use mock data
+    user = { id: 'dev-user', email: 'admin@dev.com', role: 'admin' };
+  }
+
+  // Use the dashboard hook to fetch real data (must be called before any returns)
+  const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useDashboardData(userRole);
+
+  // If user is merchant, show merchant-specific dashboard
+  if (userRole === 'merchant') {
+    return <MerchantDashboard />;
+  }
+
+  // For admin users, show the modern admin dashboard
+  if (userRole === 'admin') {
+    return <ModernAdminDashboard />;
+  }
+
+  // Continue with admin dashboard for admin users (fallback)
 
   // Use real data if available, otherwise fall back to mock data
-  // Use dashboardData when available, fallback to mockStats
-  // const stats = dashboardData || mockStats;
+  const stats = dashboardData?.stats ? {
+    totalUsers: dashboardData.stats.totalUsers || 0,
+    totalOrders: dashboardData.stats.totalOrders || 0,
+    totalRevenue: dashboardData.stats.totalRevenue || 0,
+    successRate: dashboardData.stats.successRate || 0,
+    pendingOrders: dashboardData.stats.pendingOrders || 0,
+    completedOrders: dashboardData.stats.completedOrders || 0,
+    failedOrders: dashboardData.stats.failedOrders || 0,
+    activeUsers: dashboardData.stats.activeUsers || 0,
+    monthlyGrowth: dashboardData.stats.monthlyGrowth || 0,
+    recentActivity: mockStats.recentActivity,
+  } : mockStats;
+  const recentActivity = dashboardData?.recentActivity || mockStats.recentActivity;
 
-  if (error) {
+  // Function to refresh dashboard data
+  const refreshDashboard = () => {
+    // Trigger a page refresh or refetch data
+    window.location.reload();
+  };
+
+  // Handle errors from dashboard hook
+  if (dashboardError) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
         <div className="mx-auto max-w-7xl">
           <div className="text-center">
             <h1 className="mb-4 text-2xl font-bold text-red-400">Error Loading Dashboard</h1>
-            <p className="text-slate-400">{error.message}</p>
+            <p className="text-slate-400">{dashboardError.message}</p>
+            <button
+              onClick={refreshDashboard}
+              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+            >
+              Retry
+            </button>
           </div>
         </div>
       </div>
@@ -505,7 +737,7 @@ export default function AdminDashboard() {
             </div>
           }
         >
-          <AdminStatsCards />
+          <AdminStatsCards stats={stats} isLoading={dashboardLoading} />
         </Suspense>
 
         {/* Order Status Cards */}
@@ -558,7 +790,10 @@ export default function AdminDashboard() {
             </button>
 
             {/* View All Orders */}
-            <button className="group relative overflow-hidden rounded-xl border border-primary/20 bg-card p-6 text-card-foreground backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:bg-card/90 hover:shadow-2xl hover:shadow-primary/25">
+            <button 
+              className="group relative overflow-hidden rounded-xl border border-primary/20 bg-card p-6 text-card-foreground backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:bg-card/90 hover:shadow-2xl hover:shadow-primary/25"
+              onClick={() => window.location.href = '/admin/orders'}
+            >
               <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
               <div className="relative">
                 <div className="mx-auto mb-4 w-fit rounded-lg bg-primary/10 p-3 backdrop-blur-sm">
@@ -571,7 +806,10 @@ export default function AdminDashboard() {
             </button>
 
             {/* System Settings */}
-            <button className="group relative overflow-hidden rounded-xl border border-primary/20 bg-card p-6 text-card-foreground backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:bg-card/90 hover:shadow-2xl hover:shadow-primary/25">
+            <button 
+              className="group relative overflow-hidden rounded-xl border border-primary/20 bg-card p-6 text-card-foreground backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:bg-card/90 hover:shadow-2xl hover:shadow-primary/25"
+              onClick={() => window.location.href = '/admin/settings'}
+            >
               <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
               <div className="relative">
                 <div className="mx-auto mb-4 w-fit rounded-lg bg-primary/10 p-3 backdrop-blur-sm">
@@ -584,7 +822,10 @@ export default function AdminDashboard() {
             </button>
 
             {/* Analytics */}
-            <button className="group relative overflow-hidden rounded-xl border border-primary/20 bg-card p-6 text-card-foreground backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:bg-card/90 hover:shadow-2xl hover:shadow-primary/25">
+            <button 
+              className="group relative overflow-hidden rounded-xl border border-primary/20 bg-card p-6 text-card-foreground backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:bg-card/90 hover:shadow-2xl hover:shadow-primary/25"
+              onClick={() => window.location.href = '/admin/analytics'}
+            >
               <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
               <div className="relative">
                 <div className="mx-auto mb-4 w-fit rounded-lg bg-primary/10 p-3 backdrop-blur-sm">
@@ -597,6 +838,22 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
+
+        {/* Recent Payment Links */}
+        <Suspense
+          fallback={
+            <div className="animate-pulse rounded-2xl border border-border bg-card p-8 backdrop-blur-sm">
+              <div className="mb-4 h-6 rounded bg-muted"></div>
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-16 bg-muted rounded-xl"></div>
+                ))}
+              </div>
+            </div>
+          }
+        >
+          <RecentPaymentLinks />
+        </Suspense>
 
         {/* Recent Activity */}
         <Suspense
@@ -611,13 +868,14 @@ export default function AdminDashboard() {
             </div>
           }
         >
-          <RecentActivity />
+          <RecentActivity activities={recentActivity} />
         </Suspense>
 
         {/* Create Payment Link Modal */}
         <CreatePaymentLinkModal
           isOpen={createLinkModal}
           onClose={() => setCreateLinkModal(false)}
+          onSuccess={refreshDashboard}
         />
       </div>
     </div>

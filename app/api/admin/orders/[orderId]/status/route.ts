@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
+import { getSafeUser, hasPermission } from '@/lib/auth/safe-auth';
 import { z } from 'zod';
 import { connectDB } from '@/lib/db/connection';
 import { OrderModel } from '@/lib/db/models/Order';
 import { createAuditLogFromRequest } from '@/lib/utils/audit';
-import { hasPermission } from '@/lib/types';
 
 const StatusUpdateSchema = z.object({
   status: z.enum(['pending', 'pending-verification', 'completed', 'failed', 'expired']),
@@ -16,14 +15,13 @@ export async function PATCH(
   { params }: { params: Promise<{ orderId: string }> },
 ) {
   try {
-    const user = await currentUser();
+    const user = await getSafeUser();
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userRole = user.publicMetadata?.role as 'admin' | 'merchant' | 'viewer';
-    if (!hasPermission(userRole, 'verify_orders')) {
+    if (!hasPermission(user.role, 'verify_orders')) {
       return NextResponse.json(
         {
           error: 'Insufficient permissions to manage orders',
@@ -94,7 +92,7 @@ export async function PATCH(
       'Order',
       order.orderId,
       user.id,
-      user.emailAddresses[0]?.emailAddress || '',
+      user.email,
       {
         previousStatus,
         newStatus: validatedData.status,
@@ -135,7 +133,7 @@ export async function PATCH(
 
     // Create security audit log for failed admin operation
     try {
-      const user = await currentUser();
+      const user = await getSafeUser();
       if (user) {
         const { orderId: paramOrderId } = await params;
         await createAuditLogFromRequest(
@@ -144,7 +142,7 @@ export async function PATCH(
           'Order',
           paramOrderId,
           user.id,
-          user.emailAddresses[0]?.emailAddress || '',
+          user.email,
           {
             error: error instanceof Error ? error.message : 'Unknown error',
             requestBody: await request.json().catch(() => ({})),

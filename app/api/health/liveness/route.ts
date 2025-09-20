@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { healthCheckService } from '@/lib/monitoring/health-check';
-import { requireRole } from '@/lib/auth/safe-auth';
 
 /**
  * Liveness Health Check
@@ -11,10 +9,9 @@ import { requireRole } from '@/lib/auth/safe-auth';
  *
  * Returns 200 if the application is running, 503 if not.
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Basic liveness check - just verify the service is responding
-    const isLive = true; // Application is running if this code executes
 
     return NextResponse.json(
       {
@@ -31,7 +28,7 @@ export async function GET(request: NextRequest) {
         },
       },
     );
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       {
         status: 'error',

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const UserRoleSchema = z.enum(['admin', 'merchant', 'viewer']);
+export const UserRoleSchema = z.enum(['admin', 'merchant', 'user']);
 export type UserRole = z.infer<typeof UserRoleSchema>;
 
 export const SafeUserSchema = z.object({
@@ -106,7 +106,7 @@ export const PERMISSIONS = {
     'manage_roles',
   ],
   merchant: ['create_order', 'view_own_orders', 'manage_own_links', 'submit_utr'],
-  viewer: ['view_assigned_orders'],
+  user: ['view_assigned_orders'],
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS][number];
@@ -122,7 +122,7 @@ export interface User {
   email: string;
   firstName?: string;
   lastName?: string;
-  role: 'admin' | 'merchant' | 'viewer';
+  role: 'admin' | 'merchant' | 'user';
   createdAt: Date;
   lastActive?: Date;
 }
@@ -198,7 +198,7 @@ export type RedisSessionData = z.infer<typeof RedisSessionDataSchema>;
 export const RoleStatsSchema = z.object({
   admin: z.number().min(0),
   merchant: z.number().min(0),
-  viewer: z.number().min(0),
+  user: z.number().min(0),
   total: z.number().min(0),
   lastUpdated: z.number(),
 });

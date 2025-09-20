@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const UserRoleSchema = z.enum(['admin', 'merchant', 'viewer']);
+export const UserRoleSchema = z.enum(['admin', 'merchant', 'user']);
 export type UserRole = z.infer<typeof UserRoleSchema>;
 
 export const SafeUserSchema = z.object({
@@ -72,7 +72,7 @@ export const SettingsSchema = z.object({
 
 export type Settings = z.infer<typeof SettingsSchema>;
 
-// Permission definitions
+// Permission definitions (legacy - use lib/types/roles.ts instead)
 export const PERMISSIONS = {
   admin: [
     'create_user',
@@ -84,7 +84,7 @@ export const PERMISSIONS = {
     'manage_roles',
   ],
   merchant: ['create_order', 'view_own_orders', 'manage_own_links', 'submit_utr'],
-  viewer: ['view_assigned_orders'],
+  user: ['view_assigned_orders'],
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS][number];

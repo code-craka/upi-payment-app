@@ -1,20 +1,18 @@
-import { auth } from '@clerk/nextjs/server';
+import { getSafeUser } from '@/lib/auth/safe-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 export default async function DebugPage() {
-  const { userId, sessionClaims } = await auth();
+  const user = await getSafeUser();
 
   const envVars = {
     MONGODB_URI: !!process.env.MONGODB_URI,
-    CLERK_SECRET_KEY: !!process.env.CLERK_SECRET_KEY,
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-    CLERK_WEBHOOK_SECRET: !!process.env.CLERK_WEBHOOK_SECRET,
+    SESSION_SECRET: !!process.env.SESSION_SECRET,
+    UPSTASH_REDIS_REST_URL: !!process.env.UPSTASH_REDIS_REST_URL,
+    UPSTASH_REDIS_REST_TOKEN: !!process.env.UPSTASH_REDIS_REST_TOKEN,
     NEXT_PUBLIC_APP_URL: !!process.env.NEXT_PUBLIC_APP_URL,
   };
-
-  const userRole = (sessionClaims?.publicMetadata as { role?: string })?.role as string;
 
   return (
     <div className="container mx-auto space-y-6 p-6">
@@ -37,17 +35,19 @@ export default async function DebugPage() {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
               <span>User ID:</span>
-              <Badge variant={userId ? 'default' : 'destructive'}>
-                {userId ? 'Authenticated' : 'Not Authenticated'}
+              <Badge variant={user ? 'default' : 'destructive'}>
+                {user ? 'Authenticated' : 'Not Authenticated'}
               </Badge>
             </div>
             <div className="flex items-center justify-between">
               <span>User Role:</span>
-              <Badge variant={userRole ? 'default' : 'secondary'}>{userRole || 'No Role'}</Badge>
+              <Badge variant={user?.role ? 'default' : 'secondary'}>{user?.role || 'No Role'}</Badge>
             </div>
-            {userId && (
+            {user && (
               <div className="text-muted-foreground text-sm">
-                <p>User ID: {userId}</p>
+                <p>User ID: {user.id}</p>
+                <p>Email: {user.email}</p>
+                <p>Name: {user.firstName} {user.lastName}</p>
               </div>
             )}
           </CardContent>
@@ -90,7 +90,7 @@ export default async function DebugPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {!userId && (
+            {!user && (
               <p className="text-sm text-red-600">• Please sign in to test authentication</p>
             )}
             {!envVars.MONGODB_URI && (
@@ -98,17 +98,17 @@ export default async function DebugPage() {
                 • Configure MONGODB_URI in environment variables
               </p>
             )}
-            {!envVars.CLERK_SECRET_KEY && (
+            {!envVars.SESSION_SECRET && (
               <p className="text-sm text-red-600">
-                • Configure CLERK_SECRET_KEY in environment variables
+                • Configure SESSION_SECRET in environment variables
               </p>
             )}
-            {!envVars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && (
+            {!envVars.UPSTASH_REDIS_REST_URL && (
               <p className="text-sm text-red-600">
-                • Configure NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY in environment variables
+                • Configure UPSTASH_REDIS_REST_URL in environment variables
               </p>
             )}
-            {userId && userRole && Object.values(envVars).every(Boolean) && (
+            {user && user.role && Object.values(envVars).every(Boolean) && (
               <p className="text-sm text-green-600">✓ All systems configured correctly!</p>
             )}
           </div>

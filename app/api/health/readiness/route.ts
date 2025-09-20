@@ -13,7 +13,7 @@ import { healthCheckService } from '@/lib/monitoring/health-check';
  *
  * Returns 200 if all services are healthy, 503 if any critical service is unhealthy.
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Perform comprehensive health check
     const healthStatus = await healthCheckService.performHealthCheck();

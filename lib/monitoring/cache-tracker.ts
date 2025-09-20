@@ -6,7 +6,7 @@
  */
 
 import { redis } from '@/lib/redis';
-import { cacheMonitoring, trackCacheHit } from './cache-analytics';
+import { cacheMonitoring as _cacheMonitoring, trackCacheHit } from './cache-analytics';
 import { withTimeoutAndDegradation } from '@/lib/graceful-degradation/timeout-wrappers';
 
 export interface CacheTrackingOptions {
@@ -26,7 +26,7 @@ export interface CacheKeyPattern {
   category: 'user_data' | 'session' | 'auth' | 'orders' | 'analytics' | 'system';
 }
 
-export interface CacheOperationResult<T = any> {
+export interface CacheOperationResult<T = unknown> {
   value: T | null;
   hit: boolean;
   latency: number;
@@ -170,7 +170,7 @@ class EnhancedCacheTracker {
    */
   public async set(
     key: string,
-    value: any,
+    value: unknown,
     ttl?: number,
     options: CacheTrackingOptions = {},
   ): Promise<CacheOperationResult<boolean>> {
@@ -555,9 +555,9 @@ class EnhancedCacheTracker {
 
         if (!results) continue;
 
-        const hits = parseInt(((results[0] as [Error | null, any])?.[1] as string) || '0');
-        const misses = parseInt(((results[1] as [Error | null, any])?.[1] as string) || '0');
-        const operations = parseInt(((results[2] as [Error | null, any])?.[1] as string) || '0');
+        const hits = parseInt(((results[0] as [Error | null, unknown])?.[1] as string) || '0');
+        const _misses = parseInt(((results[1] as [Error | null, unknown])?.[1] as string) || '0');
+        const operations = parseInt(((results[2] as [Error | null, unknown])?.[1] as string) || '0');
 
         const actualHitRatio = operations > 0 ? hits / operations : 0;
 
@@ -619,7 +619,7 @@ class EnhancedCacheTracker {
     confidence?: number;
   }> {
     const groups = ['control', 'variant_a', 'variant_b'] as const;
-    const results: any = {};
+    const results: unknown = {};
 
     for (const group of groups) {
       const pipeline = redis.pipeline();
@@ -634,9 +634,9 @@ class EnhancedCacheTracker {
         continue;
       }
 
-      const hits = parseInt(((groupResults[0] as [Error | null, any])?.[1] as string) || '0');
-      const misses = parseInt(((groupResults[1] as [Error | null, any])?.[1] as string) || '0');
-      const operations = parseInt(((groupResults[2] as [Error | null, any])?.[1] as string) || '0');
+      const hits = parseInt(((groupResults[0] as [Error | null, unknown])?.[1] as string) || '0');
+      const _misses = parseInt(((groupResults[1] as [Error | null, unknown])?.[1] as string) || '0');
+      const operations = parseInt(((groupResults[2] as [Error | null, unknown])?.[1] as string) || '0');
 
       const hitRatio = operations > 0 ? hits / operations : 0;
 
@@ -682,7 +682,7 @@ export const trackedCache = {
   get: <T = string>(key: string, options?: CacheTrackingOptions) =>
     enhancedCacheTracker.get<T>(key, options),
 
-  set: (key: string, value: any, ttl?: number, options?: CacheTrackingOptions) =>
+  set: (key: string, value: unknown, ttl?: number, options?: CacheTrackingOptions) =>
     enhancedCacheTracker.set(key, value, ttl, options),
 
   del: (key: string, options?: CacheTrackingOptions) => enhancedCacheTracker.del(key, options),
@@ -706,7 +706,7 @@ export function withUserContext(userRole: string, userId?: string, source?: stri
     get: <T = string>(key: string, options: CacheTrackingOptions = {}) =>
       trackedCache.get<T>(key, { ...options, userRole, userId, source }),
 
-    set: (key: string, value: any, ttl?: number, options: CacheTrackingOptions = {}) =>
+    set: (key: string, value: unknown, ttl?: number, options: CacheTrackingOptions = {}) =>
       trackedCache.set(key, value, ttl, { ...options, userRole, userId, source }),
 
     del: (key: string, options: CacheTrackingOptions = {}) =>

@@ -327,7 +327,7 @@ export class CircuitBreakerEventHandler {
     }, 30000); // Check every 30 seconds
   }
 
-  private onUnhealthy(health: any) {
+  private onUnhealthy(health: unknown) {
     // Send alert to monitoring system
     console.error('Circuit breaker unhealthy:', health);
 
@@ -335,7 +335,7 @@ export class CircuitBreakerEventHandler {
     // await sendAlert('Circuit Breaker Unhealthy', health);
   }
 
-  private onDegraded(health: any) {
+  private onDegraded(health: unknown) {
     // Send warning to monitoring system
     console.warn('Circuit breaker degraded:', health);
 

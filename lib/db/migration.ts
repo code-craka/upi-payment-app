@@ -223,7 +223,7 @@ export async function checkDatabaseHealth(): Promise<{
     name: string
     status: 'pass' | 'fail'
     message: string
-    details?: any
+    details?: unknown
   }>
 }> {
   const checks = []
@@ -370,7 +370,7 @@ export async function getDatabaseStats(): Promise<{
         indexCount: indexes.length,
         size: `${(stats.size / 1024 / 1024).toFixed(2)} MB`,
       })
-    } catch (error) {
+    } catch (_error) {
       collections.push({
         name,
         documentCount: 0,

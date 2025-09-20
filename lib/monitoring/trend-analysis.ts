@@ -6,11 +6,11 @@
  */
 
 import { redis } from '@/lib/redis';
-import { redisCircuitBreaker } from '@/lib/redis/circuit-breaker';
+import { redisCircuitBreaker as _redisCircuitBreaker } from '@/lib/redis/circuit-breaker';
 import {
-  performanceMetrics,
-  type PerformanceMetrics,
-  type PerformanceTrend,
+  performanceMetrics as _performanceMetrics,
+  type PerformanceMetrics as _PerformanceMetrics,
+  type PerformanceTrend as _PerformanceTrend,
 } from './performance-metrics';
 
 export interface TrendPoint {
@@ -114,7 +114,7 @@ export interface PredictiveInsights {
 
 class CacheTrendAnalyzer {
   private static instance: CacheTrendAnalyzer;
-  private trendCache = new Map<string, { data: any; expires: number }>();
+  private trendCache = new Map<string, { data: unknown; expires: number }>();
   private readonly CACHE_TTL = 300000; // 5 minutes
 
   private constructor() {
@@ -715,7 +715,7 @@ class CacheTrendAnalyzer {
 
   private async getOperationCountForTimeWindow(
     startTime: number,
-    endTime: number,
+    _endTime: number,
   ): Promise<number> {
     try {
       const timeSlot = Math.floor(startTime / 60000) * 60000;
@@ -728,8 +728,8 @@ class CacheTrendAnalyzer {
   }
 
   private async getHitMissCountsForTimeWindow(
-    startTime: number,
-    endTime: number,
+    _startTime: number,
+    _endTime: number,
   ): Promise<{ hits: number; misses: number }> {
     // This would aggregate hit/miss counts from the cache analytics
     // For now, return mock data
@@ -737,15 +737,15 @@ class CacheTrendAnalyzer {
   }
 
   private async getSuccessErrorCountsForTimeWindow(
-    startTime: number,
-    endTime: number,
+    _startTime: number,
+    _endTime: number,
   ): Promise<{ success: number; errors: number }> {
     // This would aggregate success/error counts from operations
     // For now, return mock data
     return { success: 950, errors: 50 };
   }
 
-  private async getMemoryUsageForTimeWindow(startTime: number, endTime: number): Promise<number> {
+  private async getMemoryUsageForTimeWindow(_startTime: number, _endTime: number): Promise<number> {
     // This would get actual memory usage metrics
     // For now, return mock data
     return Math.random() * 1024 * 1024 * 100; // Random memory usage up to 100MB

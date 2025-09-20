@@ -558,7 +558,7 @@ class AdvancedPerformanceMetrics {
           byScore: true,
         });
         latencyData[op] = values.map((v: unknown) => parseFloat(v as string));
-      } catch (error) {
+      } catch (_error) {
         latencyData[op] = [];
       }
     }
@@ -567,8 +567,8 @@ class AdvancedPerformanceMetrics {
   }
 
   private async getOperationCounts(
-    startTime: number,
-    endTime: number,
+    _startTime: number,
+    _endTime: number,
   ): Promise<{ success: number; error: number }> {
     // Implementation would aggregate operation counts from Redis
     // For now, return mock data
@@ -576,8 +576,8 @@ class AdvancedPerformanceMetrics {
   }
 
   private async getDataSizes(
-    startTime: number,
-    endTime: number,
+    _startTime: number,
+    _endTime: number,
   ): Promise<{
     totalBytesRead: number;
     totalBytesWritten: number;
@@ -593,12 +593,12 @@ class AdvancedPerformanceMetrics {
     };
   }
 
-  private async getPeakThroughput(startTime: number, endTime: number): Promise<number> {
+  private async getPeakThroughput(_startTime: number, _endTime: number): Promise<number> {
     // Implementation would find peak operations per second
     return 500;
   }
 
-  private async getEvictionRate(startTime: number, endTime: number): Promise<number> {
+  private async getEvictionRate(_startTime: number, _endTime: number): Promise<number> {
     // Implementation would calculate eviction rate
     return 0.01; // 1%
   }
@@ -613,17 +613,17 @@ class AdvancedPerformanceMetrics {
     return 0.85; // 85%
   }
 
-  private async getTimeoutRate(startTime: number, endTime: number): Promise<number> {
+  private async getTimeoutRate(_startTime: number, _endTime: number): Promise<number> {
     // Implementation would calculate timeout rate
     return 0.02; // 2%
   }
 
-  private async getConnectionErrors(startTime: number, endTime: number): Promise<number> {
+  private async getConnectionErrors(_startTime: number, _endTime: number): Promise<number> {
     // Implementation would count connection errors
     return 5;
   }
 
-  private async getCircuitBreakerTrips(startTime: number, endTime: number): Promise<number> {
+  private async getCircuitBreakerTrips(_startTime: number, _endTime: number): Promise<number> {
     // Implementation would count circuit breaker trips
     return 2;
   }

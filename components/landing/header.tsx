@@ -48,10 +48,10 @@ export function Header() {
               fallback={
                 <div className="ml-8 flex items-center space-x-4">
                   <Button variant="ghost" asChild>
-                    <Link href="/sign-in">Sign In</Link>
+                    <Link href="/login">Sign In</Link>
                   </Button>
                   <Button asChild className="bg-blue-600 hover:bg-blue-700">
-                    <Link href="/sign-up">Get Started</Link>
+                    <Link href="/register">Get Started</Link>
                   </Button>
                 </div>
               }
@@ -87,10 +87,10 @@ export function Header() {
                   fallback={
                     <>
                       <Button variant="outline" asChild className="w-full">
-                        <Link href="/sign-in">Sign In</Link>
+                        <Link href="/login">Sign In</Link>
                       </Button>
                       <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
-                        <Link href="/sign-up">Get Started</Link>
+                        <Link href="/register">Get Started</Link>
                       </Button>
                     </>
                   }

@@ -13,7 +13,7 @@ import { Types } from 'mongoose';
 /**
  * Sanitizes MongoDB queries to prevent injection attacks
  */
-export function sanitizeMongoQuery(query: any): any {
+export function sanitizeMongoQuery(query: unknown): unknown {
   if (query === null || query === undefined) {
     return query;
   }
@@ -25,7 +25,7 @@ export function sanitizeMongoQuery(query: any): any {
 
   // Handle objects
   if (typeof query === 'object') {
-    const sanitized: any = {};
+    const sanitized: unknown = {};
 
     for (const [key, value] of Object.entries(query)) {
       // Prevent prototype pollution
@@ -101,7 +101,7 @@ export function sanitizeObjectId(id: string): Types.ObjectId | null {
     }
 
     return new Types.ObjectId(sanitizedId);
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -109,12 +109,12 @@ export function sanitizeObjectId(id: string): Types.ObjectId | null {
 /**
  * Sanitizes sort parameters to prevent injection
  */
-export function sanitizeSortParameter(sort: any): any {
+export function sanitizeSortParameter(sort: unknown): unknown {
   if (!sort || typeof sort !== 'object') {
     return {};
   }
 
-  const sanitized: any = {};
+  const sanitized: unknown = {};
   const allowedSortValues = [1, -1, 'asc', 'desc'];
 
   for (const [field, direction] of Object.entries(sort)) {
@@ -168,7 +168,7 @@ export function sanitizePaginationParams(page?: number, limit?: number) {
 /**
  * Removes dangerous fields from user input
  */
-export function sanitizeUserInput(input: any): any {
+export function sanitizeUserInput(input: unknown): unknown {
   if (input === null || input === undefined) {
     return input;
   }
@@ -178,7 +178,7 @@ export function sanitizeUserInput(input: any): any {
   }
 
   if (typeof input === 'object') {
-    const sanitized: any = {};
+    const sanitized: unknown = {};
 
     for (const [key, value] of Object.entries(input)) {
       // Remove prototype pollution vectors
@@ -224,8 +224,8 @@ export const MONGOOSE_SECURITY_OPTIONS = {
 /**
  * Safe aggregation pipeline builder
  */
-export function buildSafeAggregationPipeline(stages: any[]): any[] {
-  const safePipeline: any[] = [];
+export function buildSafeAggregationPipeline(stages: unknown[]): unknown[] {
+  const safePipeline: unknown[] = [];
 
   for (const stage of stages) {
     if (!stage || typeof stage !== 'object') {
@@ -261,7 +261,7 @@ export function buildSafeAggregationPipeline(stages: any[]): any[] {
 /**
  * Input validation middleware for Express routes
  */
-export function validateDatabaseInput(req: any, res: any, next: any) {
+export function validateDatabaseInput(req: unknown, res: unknown, next: unknown) {
   try {
     // Sanitize query parameters
     if (req.query) {
@@ -291,9 +291,9 @@ export function validateDatabaseInput(req: any, res: any, next: any) {
 /**
  * Mongoose plugin to add security measures
  */
-export function mongooseSecurityPlugin(schema: any) {
+export function mongooseSecurityPlugin(schema: unknown) {
   // Add pre-save middleware to sanitize data
-  schema.pre('save', function (this: any, next: any) {
+  schema.pre('save', function (this: unknown, next: unknown) {
     try {
       // Sanitize the document before saving
       const sanitized = sanitizeUserInput(this.toObject());
@@ -305,7 +305,7 @@ export function mongooseSecurityPlugin(schema: any) {
   });
 
   // Add pre-find middleware to sanitize queries
-  schema.pre(['find', 'findOne', 'findOneAndUpdate'], function (this: any, next: any) {
+  schema.pre(['find', 'findOne', 'findOneAndUpdate'], function (this: unknown, next: unknown) {
     try {
       // Sanitize the query
       const sanitizedQuery = sanitizeMongoQuery(this.getQuery());

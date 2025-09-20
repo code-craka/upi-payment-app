@@ -1,6 +1,5 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import {
   Bar,
@@ -71,192 +70,275 @@ const hourlyActivityData = [
 
 export function OrderTrendsChart() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Order Trends</CardTitle>
-        <CardDescription>Monthly order volume and revenue trends</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer
-          config={{
-            orders: {
-              label: 'Orders',
-              color: 'hsl(var(--chart-1))',
-            },
-            revenue: {
-              label: 'Revenue (₹)',
-              color: 'hsl(var(--chart-2))',
-            },
-          }}
-          className="h-[300px]"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={orderTrendsData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Legend />
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="orders"
-                stroke="var(--color-orders)"
-                strokeWidth={2}
-                name="Orders"
-              />
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="revenue"
-                stroke="var(--color-revenue)"
-                strokeWidth={2}
-                name="Revenue (₹)"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </CardContent>
-    </Card>
+    <div>
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-1">Order Trends</h3>
+        <p className="text-sm text-gray-600">Monthly order volume and revenue trends</p>
+      </div>
+      <ChartContainer
+        config={{
+          orders: {
+            label: 'Orders',
+            color: '#3b82f6',
+          },
+          revenue: {
+            label: 'Revenue (₹)',
+            color: '#22c55e',
+          },
+        }}
+        className="h-[300px]"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={orderTrendsData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+            <XAxis
+              dataKey="month"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#6b7280' }}
+            />
+            <YAxis
+              yAxisId="left"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#6b7280' }}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#6b7280' }}
+            />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Legend />
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="orders"
+              stroke="#3b82f6"
+              strokeWidth={3}
+              name="Orders"
+              dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+              activeDot={{ r: 6, fill: '#3b82f6' }}
+            />
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="revenue"
+              stroke="#22c55e"
+              strokeWidth={3}
+              name="Revenue (₹)"
+              dot={{ fill: '#22c55e', strokeWidth: 2, r: 4 }}
+              activeDot={{ r: 6, fill: '#22c55e' }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </ChartContainer>
+    </div>
   );
 }
 
 export function StatusDistributionChart() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Order Status Distribution</CardTitle>
-        <CardDescription>Breakdown of orders by current status</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer
-          config={{
-            completed: {
-              label: 'Completed',
-              color: '#22c55e',
-            },
-            pending: {
-              label: 'Pending',
-              color: '#3b82f6',
-            },
-            failed: {
-              label: 'Failed',
-              color: '#ef4444',
-            },
-            expired: {
-              label: 'Expired',
-              color: '#f59e0b',
-            },
-          }}
-          className="h-[300px]"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={statusDistributionData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={(entry: any) => `${entry.name} ${(entry.percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {statusDistributionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <ChartTooltip content={<ChartTooltipContent />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </CardContent>
-    </Card>
+    <div>
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-1">Order Status Distribution</h3>
+        <p className="text-sm text-gray-600">Breakdown of orders by current status</p>
+      </div>
+      <ChartContainer
+        config={{
+          completed: {
+            label: 'Completed',
+            color: '#22c55e',
+          },
+          pending: {
+            label: 'Pending',
+            color: '#3b82f6',
+          },
+          failed: {
+            label: 'Failed',
+            color: '#ef4444',
+          },
+          expired: {
+            label: 'Expired',
+            color: '#f59e0b',
+          },
+        }}
+        className="h-[300px]"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={statusDistributionData}
+              cx="50%"
+              cy="50%"
+              outerRadius={90}
+              fill="#8884d8"
+              dataKey="value"
+              stroke="#ffffff"
+              strokeWidth={2}
+            >
+              {statusDistributionData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <ChartTooltip
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  const percentage = ((data.value / statusDistributionData.reduce((a, b) => a + b.value, 0)) * 100).toFixed(1);
+                  return (
+                    <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                      <p className="font-medium">{data.name}</p>
+                      <p className="text-sm text-gray-600">{data.value} orders ({percentage}%)</p>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+            <Legend
+              verticalAlign="bottom"
+              height={36}
+              formatter={(value, entry) => (
+                <span style={{ color: entry.color }}>{value}</span>
+              )}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </ChartContainer>
+    </div>
   );
 }
 
 export function UserPerformanceChart() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>User Performance</CardTitle>
-        <CardDescription>Success rates and link generation statistics by user</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer
-          config={{
-            totalLinks: {
-              label: 'Total Links',
-              color: 'hsl(var(--chart-1))',
-            },
-            successfulOrders: {
-              label: 'Successful Orders',
-              color: 'hsl(var(--chart-2))',
-            },
-          }}
-          className="h-[300px]"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={userPerformanceData} margin={{ left: 20, right: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="user" angle={-45} textAnchor="end" height={80} fontSize={12} />
-              <YAxis />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Legend />
-              <Bar
-                dataKey="totalLinks"
-                fill="var(--color-totalLinks)"
-                name="Total Links"
-                radius={[2, 2, 0, 0]}
-              />
-              <Bar
-                dataKey="successfulOrders"
-                fill="var(--color-successfulOrders)"
-                name="Successful Orders"
-                radius={[2, 2, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </CardContent>
-    </Card>
+    <div>
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-1">User Performance</h3>
+        <p className="text-sm text-gray-600">Success rates and link generation statistics by user</p>
+      </div>
+      <ChartContainer
+        config={{
+          totalLinks: {
+            label: 'Total Links',
+            color: '#3b82f6',
+          },
+          successfulOrders: {
+            label: 'Successful Orders',
+            color: '#22c55e',
+          },
+        }}
+        className="h-[300px]"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={userPerformanceData} margin={{ left: 20, right: 20, bottom: 40, top: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+            <XAxis
+              dataKey="user"
+              angle={-45}
+              textAnchor="end"
+              height={80}
+              fontSize={11}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#6b7280' }}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#6b7280' }}
+            />
+            <ChartTooltip
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  return (
+                    <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                      <p className="font-medium mb-2">{label}</p>
+                      {payload.map((entry, index) => (
+                        <p key={index} className="text-sm" style={{ color: entry.color }}>
+                          {entry.name}: {entry.value}
+                        </p>
+                      ))}
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+            <Legend />
+            <Bar
+              dataKey="totalLinks"
+              fill="#3b82f6"
+              name="Total Links"
+              radius={[2, 2, 0, 0]}
+            />
+            <Bar
+              dataKey="successfulOrders"
+              fill="#22c55e"
+              name="Successful Orders"
+              radius={[2, 2, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartContainer>
+    </div>
   );
 }
 
 export function HourlyActivityChart() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Hourly Activity</CardTitle>
-        <CardDescription>Order distribution throughout the day</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer
-          config={{
-            orders: {
-              label: 'Orders',
-              color: 'hsl(var(--chart-3))',
-            },
-          }}
-          className="h-[300px]"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={hourlyActivityData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="hour" />
-              <YAxis />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar
-                dataKey="orders"
-                fill="var(--color-orders)"
-                name="Orders"
-                radius={[2, 2, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </CardContent>
-    </Card>
+    <div>
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-1">Hourly Activity</h3>
+        <p className="text-sm text-gray-600">Order distribution throughout the day</p>
+      </div>
+      <ChartContainer
+        config={{
+          orders: {
+            label: 'Orders',
+            color: '#f97316',
+          },
+        }}
+        className="h-[300px]"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={hourlyActivityData} margin={{ left: 20, right: 20, bottom: 20, top: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+            <XAxis
+              dataKey="hour"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#6b7280' }}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#6b7280' }}
+            />
+            <ChartTooltip
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  return (
+                    <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                      <p className="font-medium">{label}:00</p>
+                      <p className="text-sm text-orange-600">{payload[0].value} orders</p>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+            <Bar
+              dataKey="orders"
+              fill="#f97316"
+              name="Orders"
+              radius={[2, 2, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartContainer>
+    </div>
   );
 }

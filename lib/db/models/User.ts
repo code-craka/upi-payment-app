@@ -2,10 +2,10 @@ import mongoose, { Schema, type Document, type Model } from 'mongoose';
 import { mongooseSecurityPlugin } from '@/lib/db/security';
 
 export interface UserDocument extends Document {
-  clerkId: string;
   email: string;
+  passwordHash: string;
   name?: string;
-  role: 'admin' | 'merchant' | 'viewer';
+  role: 'admin' | 'merchant' | 'user';
   isActive: boolean;
   lastLoginAt?: Date;
   createdAt: Date;
@@ -29,10 +29,11 @@ export interface UserDocument extends Document {
   // Instance methods
   updateStats(orderAmount: number, isSuccessful: boolean): Promise<UserDocument>;
   updateLastLogin(): Promise<UserDocument>;
+  verifyPassword(password: string): Promise<boolean>;
 }
 
 export interface UserModelType extends Model<UserDocument> {
-  findByClerkId(clerkId: string): Promise<UserDocument | null>;
+  findByEmail(email: string): Promise<UserDocument | null>;
   findActiveUsers(role?: string): Promise<UserDocument[]>;
   getUserStats(): Promise<Array<{
     _id: string;
@@ -40,25 +41,31 @@ export interface UserModelType extends Model<UserDocument> {
     totalOrders: number;
     totalAmount: number;
   }>>;
+  createUser(userData: {
+    email: string;
+    password: string;
+    name?: string;
+    role: 'admin' | 'merchant' | 'user';
+  }): Promise<UserDocument>;
 }
 
 const UserSchema = new Schema<UserDocument>(
   {
-    clerkId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
     email: {
       type: String,
       required: true,
       unique: true,
       index: true,
+      lowercase: true,
       validate: {
         validator: (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
         message: 'Invalid email format',
       },
+    },
+    passwordHash: {
+      type: String,
+      required: true,
+      minlength: 60, // bcrypt hash length
     },
     name: {
       type: String,
@@ -66,8 +73,8 @@ const UserSchema = new Schema<UserDocument>(
     },
     role: {
       type: String,
-      enum: ['admin', 'merchant', 'viewer'],
-      default: 'merchant',
+      enum: ['admin', 'merchant', 'user'],
+      default: 'user',
       index: true,
     },
     isActive: {
@@ -130,9 +137,14 @@ UserSchema.methods.updateLastLogin = function (): Promise<UserDocument> {
   return this.save();
 };
 
+UserSchema.methods.verifyPassword = async function (password: string): Promise<boolean> {
+  const bcrypt = await import('bcryptjs');
+  return bcrypt.default.compare(password, this.passwordHash);
+};
+
 // Static methods with proper return types
-UserSchema.statics.findByClerkId = function (clerkId: string): Promise<UserDocument | null> {
-  return this.findOne({ clerkId, isActive: true });
+UserSchema.statics.findByEmail = function (email: string): Promise<UserDocument | null> {
+  return this.findOne({ email: email.toLowerCase(), isActive: true });
 };
 
 UserSchema.statics.findActiveUsers = function (role?: string): Promise<UserDocument[]> {
@@ -160,7 +172,58 @@ UserSchema.statics.getUserStats = function (): Promise<Array<{
   ]);
 };
 
+UserSchema.statics.createUser = async function (userData: {
+  email: string;
+  password: string;
+  name?: string;
+  role: 'admin' | 'merchant' | 'user';
+}): Promise<UserDocument> {
+  const bcrypt = await import('bcryptjs');
+
+  const passwordHash = await bcrypt.default.hash(userData.password, 12);
+
+  const user = new this({
+    email: userData.email.toLowerCase(),
+    passwordHash,
+    name: userData.name,
+    role: userData.role,
+    isActive: true,
+    preferences: {
+      theme: 'system',
+      notifications: {
+        email: true,
+        orderUpdates: true,
+        systemAlerts: userData.role === 'admin',
+      },
+      defaultExpiryMinutes: 9,
+    },
+    stats: {
+      totalOrders: 0,
+      totalAmount: 0,
+      successfulOrders: 0,
+    },
+  });
+
+  return user.save();
+};
+
 // Apply security plugin to prevent injection attacks
 UserSchema.plugin(mongooseSecurityPlugin);
 
-export const UserModel = (mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema)) as UserModelType;
+// Safe model export for Edge Runtime compatibility (used by middleware)
+export const UserModel = (() => {
+  try {
+    // Check if we're in Edge Runtime (middleware) - mongoose.models is undefined
+    if (typeof mongoose.models === 'undefined') {
+      // Return a mock for Edge Runtime - middleware shouldn't use the actual model
+      return null as unknown as UserModelType;
+    }
+
+    // Regular Node.js runtime - safe to use mongoose.models
+    return (mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema)) as UserModelType;
+  } catch (error) {
+    // Fallback for any mongoose initialization issues
+    console.warn('[UserModel] Mongoose model initialization failed:', error);
+    return null as unknown as UserModelType;
+  }
+})();

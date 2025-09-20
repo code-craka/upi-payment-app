@@ -167,7 +167,7 @@ export function AuditLogsViewer() {
         title: 'Audit logs refreshed',
         description: 'Latest audit logs have been loaded.',
       });
-    } catch (_error) {
+    } catch (__error) {
       toast({
         title: 'Error refreshing logs',
         description: 'Failed to load the latest audit logs.',
@@ -187,7 +187,7 @@ export function AuditLogsViewer() {
         title: 'Export started',
         description: "Audit logs are being exported. You'll receive a download link shortly.",
       });
-    } catch (_error) {
+    } catch (__error) {
       toast({
         title: 'Export failed',
         description: 'Failed to export audit logs.',
@@ -266,39 +266,41 @@ export function AuditLogsViewer() {
   return (
     <div className="space-y-6">
       {/* Filters and Controls */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
+      <Card className="bg-white border border-gray-200 shadow-lg">
+        <CardHeader className="border-b border-gray-100">
+          <CardTitle className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <div className="rounded-full bg-orange-500 p-2">
+              <Activity className="h-6 w-6 text-white" />
+            </div>
             Audit Trail
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600 mt-2">
             Complete activity log with IP tracking and user agent information
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-end">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="search">Search</Label>
+              <Label htmlFor="search" className="text-sm font-medium text-gray-700">Search</Label>
               <div className="relative">
-                <Search className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   id="search"
                   placeholder="Search by email, action, entity ID, or IP address..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 bg-white"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Action</Label>
+              <Label className="text-sm font-medium text-gray-700">Action</Label>
               <Select value={actionFilter} onValueChange={setActionFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 bg-white">
                   <SelectValue placeholder="Filter by action" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg">
                   <SelectItem value="all">All Actions</SelectItem>
                   {getUniqueActions().map((action) => (
                     <SelectItem key={action} value={action}>
@@ -310,12 +312,12 @@ export function AuditLogsViewer() {
             </div>
 
             <div className="space-y-2">
-              <Label>Entity Type</Label>
+              <Label className="text-sm font-medium text-gray-700">Entity Type</Label>
               <Select value={entityTypeFilter} onValueChange={setEntityTypeFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 bg-white">
                   <SelectValue placeholder="Filter by entity" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg">
                   <SelectItem value="all">All Types</SelectItem>
                   {getUniqueEntityTypes().map((type) => (
                     <SelectItem key={type} value={type}>
@@ -327,12 +329,12 @@ export function AuditLogsViewer() {
             </div>
 
             <div className="space-y-2">
-              <Label>Date Range</Label>
+              <Label className="text-sm font-medium text-gray-700">Date Range</Label>
               <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 bg-white">
                   <SelectValue placeholder="Filter by date" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg">
                   <SelectItem value="all">All Time</SelectItem>
                   <SelectItem value="today">Today</SelectItem>
                   <SelectItem value="week">Last 7 Days</SelectItem>
@@ -342,10 +344,19 @@ export function AuditLogsViewer() {
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" onClick={refreshLogs} disabled={isLoading}>
+              <Button
+                variant="outline"
+                onClick={refreshLogs}
+                disabled={isLoading}
+                className="border-gray-300 text-gray-700 hover:bg-orange-50"
+              >
                 <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               </Button>
-              <Button variant="outline" onClick={exportLogs}>
+              <Button
+                variant="outline"
+                onClick={exportLogs}
+                className="border-gray-300 text-gray-700 hover:bg-orange-50"
+              >
                 <Download className="h-4 w-4" />
               </Button>
             </div>
@@ -354,21 +365,23 @@ export function AuditLogsViewer() {
       </Card>
 
       {/* Audit Logs Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Activity Log ({filteredLogs.length} entries)</CardTitle>
+      <Card className="bg-white border border-gray-200 shadow-lg">
+        <CardHeader className="border-b border-gray-100">
+          <CardTitle className="text-xl font-bold text-gray-800">
+            Activity Log ({filteredLogs.length} entries)
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
+        <CardContent className="p-6">
+          <div className="rounded-lg border border-gray-200 overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Action</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Entity</TableHead>
-                  <TableHead>IP Address</TableHead>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead className="w-[100px]">Details</TableHead>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="font-semibold text-gray-700">Action</TableHead>
+                  <TableHead className="font-semibold text-gray-700">User</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Entity</TableHead>
+                  <TableHead className="font-semibold text-gray-700">IP Address</TableHead>
+                  <TableHead className="font-semibold text-gray-700">Timestamp</TableHead>
+                  <TableHead className="font-semibold text-gray-700 w-[100px]">Details</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -380,12 +393,12 @@ export function AuditLogsViewer() {
                   </TableRow>
                 ) : (
                   filteredLogs.map((log) => (
-                    <TableRow key={log.id}>
+                    <TableRow key={log.id} className="hover:bg-gray-50">
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {getActionIcon(log.action)}
                           <div>
-                            <div className="font-medium">
+                            <div className="font-medium text-gray-900">
                               {log.action
                                 .replace(/_/g, ' ')
                                 .replace(/\b\w/g, (l) => l.toUpperCase())}
@@ -396,24 +409,29 @@ export function AuditLogsViewer() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{log.userEmail}</div>
-                          <div className="text-muted-foreground text-sm">{log.userId}</div>
+                          <div className="font-medium text-gray-900">{log.userEmail}</div>
+                          <div className="text-gray-500 text-sm">{log.userId}</div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{log.entityType}</div>
-                          <div className="text-muted-foreground text-sm">{log.entityId}</div>
+                          <div className="font-medium text-gray-900">{log.entityType}</div>
+                          <div className="text-gray-500 text-sm">{log.entityId}</div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-mono text-sm">{log.ipAddress}</div>
+                        <div className="font-mono text-sm text-gray-900">{log.ipAddress}</div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">{formatDate(log.createdAt)}</div>
+                        <div className="text-sm text-gray-900">{formatDate(log.createdAt)}</div>
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedLog(log)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedLog(log)}
+                          className="hover:bg-orange-100"
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -428,70 +446,83 @@ export function AuditLogsViewer() {
 
       {/* Detailed View Modal */}
       {selectedLog && (
-        <Card className="bg-background fixed inset-4 z-50 overflow-auto border shadow-lg">
-          <CardHeader>
+        <Card className="bg-white fixed inset-4 z-50 overflow-auto border border-gray-200 shadow-2xl">
+          <CardHeader className="border-b border-gray-100">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                {getActionIcon(selectedLog.action)}
+              <CardTitle className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <div className="rounded-full bg-orange-500 p-2">
+                  {getActionIcon(selectedLog.action)}
+                </div>
                 Audit Log Details
               </CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedLog(null)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedLog(null)}
+                className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-xl"
+              >
                 ×
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6 p-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label className="text-sm font-medium">Action</Label>
-                <div className="bg-muted mt-1 rounded p-2">
+                <Label className="text-sm font-medium text-gray-700">Action</Label>
+                <div className="bg-gray-50 mt-1 rounded-lg p-3 border border-gray-200 text-gray-900">
                   {selectedLog.action.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                 </div>
               </div>
               <div>
-                <Label className="text-sm font-medium">Timestamp</Label>
-                <div className="bg-muted mt-1 rounded p-2">{formatDate(selectedLog.createdAt)}</div>
+                <Label className="text-sm font-medium text-gray-700">Timestamp</Label>
+                <div className="bg-gray-50 mt-1 rounded-lg p-3 border border-gray-200 text-gray-900">
+                  {formatDate(selectedLog.createdAt)}
+                </div>
               </div>
               <div>
-                <Label className="text-sm font-medium">User Email</Label>
-                <div className="bg-muted mt-1 rounded p-2">{selectedLog.userEmail}</div>
+                <Label className="text-sm font-medium text-gray-700">User Email</Label>
+                <div className="bg-gray-50 mt-1 rounded-lg p-3 border border-gray-200 text-gray-900">
+                  {selectedLog.userEmail}
+                </div>
               </div>
               <div>
-                <Label className="text-sm font-medium">User ID</Label>
-                <div className="bg-muted mt-1 rounded p-2 font-mono text-sm">
+                <Label className="text-sm font-medium text-gray-700">User ID</Label>
+                <div className="bg-gray-50 mt-1 rounded-lg p-3 border border-gray-200 font-mono text-sm text-gray-900">
                   {selectedLog.userId}
                 </div>
               </div>
               <div>
-                <Label className="text-sm font-medium">Entity Type</Label>
-                <div className="bg-muted mt-1 rounded p-2">{selectedLog.entityType}</div>
+                <Label className="text-sm font-medium text-gray-700">Entity Type</Label>
+                <div className="bg-gray-50 mt-1 rounded-lg p-3 border border-gray-200 text-gray-900">
+                  {selectedLog.entityType}
+                </div>
               </div>
               <div>
-                <Label className="text-sm font-medium">Entity ID</Label>
-                <div className="bg-muted mt-1 rounded p-2 font-mono text-sm">
+                <Label className="text-sm font-medium text-gray-700">Entity ID</Label>
+                <div className="bg-gray-50 mt-1 rounded-lg p-3 border border-gray-200 font-mono text-sm text-gray-900">
                   {selectedLog.entityId}
                 </div>
               </div>
               <div>
-                <Label className="text-sm font-medium">IP Address</Label>
-                <div className="bg-muted mt-1 rounded p-2 font-mono text-sm">
+                <Label className="text-sm font-medium text-gray-700">IP Address</Label>
+                <div className="bg-gray-50 mt-1 rounded-lg p-3 border border-gray-200 font-mono text-sm text-gray-900">
                   {selectedLog.ipAddress}
                 </div>
               </div>
             </div>
 
             <div>
-              <Label className="text-sm font-medium">User Agent</Label>
-              <div className="bg-muted mt-1 rounded p-2 text-sm break-all">
+              <Label className="text-sm font-medium text-gray-700">User Agent</Label>
+              <div className="bg-gray-50 mt-1 rounded-lg p-3 border border-gray-200 text-sm break-all text-gray-900">
                 {selectedLog.userAgent}
               </div>
             </div>
 
             {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
               <div>
-                <Label className="text-sm font-medium">Metadata</Label>
-                <div className="bg-muted mt-1 rounded p-2">
-                  <pre className="overflow-auto text-sm">
+                <Label className="text-sm font-medium text-gray-700">Metadata</Label>
+                <div className="bg-gray-50 mt-1 rounded-lg p-3 border border-gray-200">
+                  <pre className="overflow-auto text-sm text-gray-900">
                     {JSON.stringify(selectedLog.metadata, null, 2)}
                   </pre>
                 </div>

@@ -1,4 +1,5 @@
-import { currentUser } from '@clerk/nextjs/server';
+import { cookies } from 'next/headers';
+import { getUserFromSession } from '@/lib/auth/session-edge';
 import {
   type SafeUser,
   SafeUserSchema,
@@ -7,19 +8,35 @@ import {
   type Permission,
 } from '@/lib/types';
 
+/**
+ * Get current authenticated user from session
+ */
 export async function getSafeUser(): Promise<SafeUser | null> {
   try {
-    const user = await currentUser();
-    if (!user) return null;
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session')?.value;
+
+    if (!sessionToken) {
+      return null;
+    }
+
+    const sessionData = await getUserFromSession(sessionToken);
+    if (!sessionData) {
+      return null;
+    }
+
+    // Extract name from metadata if available
+    const fullName = sessionData.metadata?.name as string || '';
+    const nameParts = fullName.split(' ');
 
     const safeUser: SafeUser = {
-      id: user.id,
-      email: user.emailAddresses[0]?.emailAddress || '',
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: (user.publicMetadata?.role as UserRole) || 'viewer',
-      createdAt: new Date(user.createdAt),
-      updatedAt: new Date(user.updatedAt),
+      id: sessionData.userId,
+      email: sessionData.email,
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
+      role: sessionData.role,
+      createdAt: new Date(sessionData.createdAt),
+      updatedAt: new Date(sessionData.lastAccess),
     };
 
     return SafeUserSchema.parse(safeUser);

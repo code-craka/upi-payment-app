@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -26,18 +26,17 @@ export function RoleProtectedPage({
   redirectTo = '/unauthorized',
   fallback,
 }: RoleProtectedPageProps) {
-  const { user, isLoaded, isSignedIn } = useUser();
+  const { user, isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
-      router.push('/sign-in');
+      router.push('/login');
       return;
     }
 
     if (isLoaded && isSignedIn && user) {
-      const userRole = user.publicMetadata?.role as string;
-      if (!userRole || !allowedRoles.includes(userRole)) {
+      if (!user.role || !allowedRoles.includes(user.role)) {
         router.push(redirectTo);
         return;
       }
@@ -69,7 +68,7 @@ export function RoleProtectedPage({
               variant="outline"
               size="sm"
               className="ml-4"
-              onClick={() => router.push('/sign-in')}
+              onClick={() => router.push('/login')}
             >
               Sign In
             </Button>
@@ -80,8 +79,7 @@ export function RoleProtectedPage({
   }
 
   // Check role permissions
-  const userRole = user?.publicMetadata?.role as string;
-  if (!userRole || !allowedRoles.includes(userRole)) {
+  if (!user?.role || !allowedRoles.includes(user.role)) {
     return (
       fallback || (
         <Alert variant="destructive">

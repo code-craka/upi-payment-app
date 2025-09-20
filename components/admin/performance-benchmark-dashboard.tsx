@@ -165,7 +165,7 @@ export function PerformanceBenchmarkDashboard() {
         ...prev,
         [testType]: result,
       }));
-    } catch (error) {
+    } catch (_error) {
       setError(error instanceof Error ? error.message : 'Unknown error occurred');
       setTestResults((prev) => ({
         ...prev,

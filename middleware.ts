@@ -1,54 +1,71 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUserEdge, hasRoleEdge } from '@/lib/auth/edge-auth';
 
-// Define route matchers
-const isAdminRoute = createRouteMatcher(['/admin(.*)']);
-const isApiAdminRoute = createRouteMatcher(['/api/admin(.*)']);
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/pay(.*)',
-  '/test-clerk',
-  '/api/test-clerk',
-  '/api/orders(.*)',
-  '/api/csrf-token(.*)',
-]);
+// Define route patterns
+const isAdminRoute = (pathname: string) => pathname.startsWith('/admin');
+const isApiAdminRoute = (pathname: string) => pathname.startsWith('/api/admin');
+const isPublicRoute = (pathname: string) => {
+  const publicRoutes = [
+    '/',
+    '/login',
+    '/logout',
+    '/pay/',
+    '/payment-success/',
+    '/api/csrf-token',
+    '/api/health',
+    '/api/orders/',  // Some order routes are public for payment processing
+  ];
 
-export default clerkMiddleware(async (auth, req) => {
-  // Allow public routes
-  if (isPublicRoute(req)) {
-    return NextResponse.next();
-  }
-
-  // For admin routes, require authentication and admin role
-  if (isAdminRoute(req) || isApiAdminRoute(req)) {
-    const { userId } = await auth();
-    
-    if (!userId) {
-      // Redirect to sign-in for admin routes
-      const signInUrl = new URL('/sign-in', req.url);
-      signInUrl.searchParams.set('redirect', req.nextUrl.pathname);
-      return NextResponse.redirect(signInUrl);
+  return publicRoutes.some(route => {
+    if (route.endsWith('/')) {
+      return pathname.startsWith(route);
     }
-    
-    // TODO: Add role checking here when Redis is working
-    // For now, just ensure authentication
-    
+    return pathname === route || pathname.startsWith(route + '/');
+  });
+};
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Allow public routes
+  if (isPublicRoute(pathname)) {
     return NextResponse.next();
   }
 
-  // For all other protected routes, require authentication
-  const { userId } = await auth();
-  
-  if (!userId) {
-    const signInUrl = new URL('/sign-in', req.url);
-    signInUrl.searchParams.set('redirect', req.nextUrl.pathname);
-    return NextResponse.redirect(signInUrl);
+  try {
+    // Check authentication first
+    const user = await getCurrentUserEdge(req);
+
+    if (!user) {
+      // Redirect to login for unauthenticated users
+      const loginUrl = new URL('/login', req.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // For admin routes, require admin role
+    if (isAdminRoute(pathname) || isApiAdminRoute(pathname)) {
+      const isAdmin = await hasRoleEdge('admin', req);
+
+      if (!isAdmin) {
+        // Redirect to unauthorized page
+        const unauthorizedUrl = new URL('/unauthorized', req.url);
+        return NextResponse.redirect(unauthorizedUrl);
+      }
+    }
+
+    // User is authenticated and authorized
+    return NextResponse.next();
+
+  } catch (error) {
+    console.error('[Middleware] Authentication error:', error);
+
+    // On auth error, redirect to login
+    const loginUrl = new URL('/login', req.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
   }
-  
-  return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: [

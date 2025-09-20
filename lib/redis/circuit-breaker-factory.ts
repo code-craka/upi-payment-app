@@ -10,7 +10,7 @@ import {
   PersistentCircuitBreaker,
   PersistentCircuitBreakerConfig,
   CircuitBreakerError,
-  CircuitState,
+  CircuitState as _CircuitState,
   defaultCircuitBreakerConfig,
 } from './persistent-circuit-breaker';
 
@@ -168,13 +168,13 @@ export const CircuitBreakers = {
  * Circuit breaker middleware for Next.js API routes
  */
 export function withCircuitBreaker(
-  handler: (req: Request, context?: any) => Promise<Response>,
+  handler: (req: Request, context?: unknown) => Promise<Response>,
   serviceName: string = 'api-route',
   config?: Partial<PersistentCircuitBreakerConfig>,
 ) {
   const circuitBreaker = createCircuitBreaker(serviceName, config);
 
-  return async (req: Request, context?: any): Promise<Response> => {
+  return async (req: Request, context?: unknown): Promise<Response> => {
     try {
       // Check if circuit breaker allows the request
       const isAvailable = await circuitBreaker.isAvailable();
@@ -242,7 +242,7 @@ export function useCircuitBreaker(_serviceName: string) {
  */
 export async function getCircuitBreakerHealth(): Promise<{
   overall: 'healthy' | 'degraded' | 'unhealthy';
-  services: Record<string, any>;
+  services: Record<string, unknown>;
   timestamp: number;
 }> {
   const services = ['redis', 'database', 'api', 'auth'] as const;
@@ -272,16 +272,16 @@ export async function getCircuitBreakerHealth(): Promise<{
       }
       return acc;
     },
-    {} as Record<string, any>,
+    {} as Record<string, unknown>,
   );
 
   // Determine overall health
   const unhealthyCount = Object.values(serviceHealth).filter(
-    (h: any) => h.status === 'unhealthy',
+    (h: unknown) => h.status === 'unhealthy',
   ).length;
 
   const degradedCount = Object.values(serviceHealth).filter(
-    (h: any) => h.status === 'degraded',
+    (h: unknown) => h.status === 'degraded',
   ).length;
 
   let overall: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
@@ -331,7 +331,7 @@ export const CircuitBreakerMonitoring = {
         }
         return acc;
       },
-      {} as Record<string, any>,
+      {} as Record<string, unknown>,
     );
   },
 
@@ -377,15 +377,15 @@ export const CircuitBreakerMonitoring = {
     }> = [];
 
     Object.entries(metrics).forEach(([service, data]) => {
-      if (data.error) {
+      if ((data as { error?: string }).error) {
         alerts.push({
           service,
           type: 'error',
-          message: `Circuit breaker error: ${data.error}`,
+          message: `Circuit breaker error: ${(data as { error: string }).error}`,
           timestamp: Date.now(),
         });
-      } else if (data.metrics) {
-        const m = data.metrics;
+      } else if ((data as { metrics?: { availability: number; errorRate: number; responseTime: number; successCount: number; errorCount: number; totalRequests: number; totalFailures: number } }).metrics) {
+        const m = (data as { metrics: { availability: number; errorRate: number; responseTime: number; successCount: number; errorCount: number; totalRequests: number; totalFailures: number } }).metrics;
 
         // Check availability
         if (m.availability < 90) {

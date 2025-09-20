@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
+import { getSafeUser } from '@/lib/auth/safe-auth';
 import { connectDB } from '@/lib/db/connection';
 import { OrderModel } from '@/lib/db/models/Order';
 import { AuditLogModel } from '@/lib/db/models/AuditLog';
@@ -74,13 +74,12 @@ export async function PATCH(
     // Connect to database
     await connectDB();
 
-    const user = await currentUser();
+    const user = await getSafeUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userRole = user.publicMetadata?.role as string;
-    if (!['admin'].includes(userRole)) {
+    if (user.role !== 'admin') {
       return NextResponse.json(
         {
           error: 'Insufficient permissions',
@@ -125,7 +124,7 @@ export async function PATCH(
       entityType: 'Order',
       entityId: orderId,
       userId: user.id,
-      userEmail: user.emailAddresses[0]?.emailAddress || '',
+      userEmail: user.email,
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
       userAgent: request.headers.get('user-agent') || 'unknown',
       metadata: {

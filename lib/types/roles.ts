@@ -1,4 +1,5 @@
-import type { UserRole } from '@/lib/types';
+// Define UserRole locally to match our new role system
+export type UserRole = 'admin' | 'merchant' | 'user';
 
 /**
  * Static mapping of roles to their permissions
@@ -42,6 +43,9 @@ export const rolePermissions = {
   ],
 
   merchant: [
+    // User Management (limited)
+    'create_users',
+
     // Order Management (own orders only)
     'view_own_orders',
     'create_orders',
@@ -62,7 +66,7 @@ export const rolePermissions = {
     'view_own_audit_logs',
   ],
 
-  viewer: [
+  user: [
     // Read-only access
     'view_public_data',
     'view_own_profile',
@@ -220,5 +224,10 @@ export const PERMISSIONS = {
 // Type for all permission strings
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
-// Export role types for consistency
-export type { UserRole } from '@/lib/types';
+// UserRole is already defined above
+
+// Update legacy viewer references to user
+export const getLegacyRole = (role: string): UserRole => {
+  if (role === 'viewer') return 'user';
+  return role as UserRole;
+};

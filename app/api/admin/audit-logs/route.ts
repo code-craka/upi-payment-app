@@ -1,8 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
+import { getSafeUser, requireRole } from '@/lib/auth/safe-auth';
 import { connectDB } from '@/lib/db/connection';
 import { AuditLogModel } from '@/lib/db/models/AuditLog';
-import { getSession } from '@/lib/session/redis';
 import { serverLogger } from '@/lib/utils/server-logger';
 import { z } from 'zod';
 import type { Types } from 'mongoose';
@@ -24,7 +23,7 @@ const AuditLogQuerySchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     // 1. Authentication check
-    const user = await currentUser();
+    const user = await getSafeUser();
 
     if (!user) {
       serverLogger.middleware('Unauthenticated audit log API access', {
@@ -39,37 +38,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 2. Role validation from Redis session (primary source of truth)
-    const session = await getSession(user.id);
-    if (!session) {
-      serverLogger.middleware('No Redis session for audit log access', {
+    // 2. Role validation - check if user is admin
+    if (user.role !== 'admin') {
+      serverLogger.middleware('Insufficient permissions for audit log access', {
         endpoint: '/api/admin/audit-logs',
         userId: user.id,
-        email: user.emailAddresses?.[0]?.emailAddress,
+        email: user.email,
+        role: user.role,
       });
       return NextResponse.json(
         {
-          error: 'Session Not Found',
-          message: 'User session not initialized. Please contact administrator.',
-          needsBootstrap: true,
-        },
-        { status: 403 },
-      );
-    }
-
-    if (session.role !== 'admin') {
-      serverLogger.middleware('Insufficient privileges for audit log access', {
-        endpoint: '/api/admin/audit-logs',
-        userId: user.id,
-        currentRole: session.role,
-        requiredRole: 'admin',
-      });
-      return NextResponse.json(
-        {
-          error: 'Access Denied',
+          error: 'Insufficient Permissions',
           message: 'Admin privileges required to access audit logs',
           requiredRole: 'admin',
-          currentRole: session.role,
+          currentRole: user.role,
         },
         { status: 403 },
       );
@@ -136,7 +118,7 @@ export async function GET(request: NextRequest) {
     // Success logging
     serverLogger.info('Audit logs retrieved successfully', {
       userId: user.id,
-      role: session.role,
+      role: user.role,
       totalLogs: total,
       returnedLogs: formattedLogs.length,
       page: validatedQuery.page,

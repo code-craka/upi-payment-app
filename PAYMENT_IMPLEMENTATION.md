@@ -40,7 +40,7 @@ pnpm dev
 Visit: `http://localhost:3000/test-payment`
 
 1. Fill out the order creation form
-2. Click "Create Order" 
+2. Click "Create Order"
 3. Click "Open Payment Page" on the created order
 
 ### Step 3: Test Payment Flow

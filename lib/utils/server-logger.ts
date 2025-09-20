@@ -14,10 +14,10 @@ class ServerLogger {
     if (!this.isServer) return;
 
     if (context) {
-      // eslint-disable-next-line no-console
+       
       console.log(`[INFO] ${message}`, context);
     } else {
-      // eslint-disable-next-line no-console
+       
       console.log(`[INFO] ${message}`);
     }
   }
@@ -64,10 +64,10 @@ class ServerLogger {
     if (!this.isServer) return;
 
     if (context) {
-      // eslint-disable-next-line no-console
+       
       console.log(`[MIDDLEWARE] ${message}`, context);
     } else {
-      // eslint-disable-next-line no-console
+       
       console.log(`[MIDDLEWARE] ${message}`);
     }
   }
@@ -90,7 +90,7 @@ class ServerLogger {
       ...context,
     };
 
-    // eslint-disable-next-line no-console
+     
     console.log(`[AUDIT] ${action} on ${entityType}:${entityId} by user:${userId}`, auditContext);
   }
 
@@ -98,10 +98,10 @@ class ServerLogger {
     if (!this.isServer || process.env.NODE_ENV !== 'development') return;
 
     if (context) {
-      // eslint-disable-next-line no-console
+       
       console.debug(`[DEBUG] ${message}`, context);
     } else {
-      // eslint-disable-next-line no-console
+       
       console.debug(`[DEBUG] ${message}`);
     }
   }

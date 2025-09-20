@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 
 export function UserDebugInfo() {
-  const { user, isLoaded, isSignedIn } = useUser();
+  const { user, isLoaded, isSignedIn } = useAuth();
   const [, setRefreshKey] = useState(0);
 
   const handleRefresh = () => {
@@ -36,8 +36,6 @@ export function UserDebugInfo() {
     );
   }
 
-  const userRole = user.publicMetadata?.role as string;
-
   return (
     <Card className="border-blue-200 bg-blue-50">
       <CardHeader className="pb-3">
@@ -57,19 +55,17 @@ export function UserDebugInfo() {
           </div>
           <div>
             <strong>Email:</strong>
-            <p>{user.emailAddresses[0]?.emailAddress}</p>
+            <p>{user.email}</p>
           </div>
           <div>
             <strong>Name:</strong>
-            <p>
-              {user.firstName} {user.lastName}
-            </p>
+            <p>{user.name || 'N/A'}</p>
           </div>
           <div>
             <strong>Role:</strong>
-            {userRole ? (
-              <Badge variant={userRole === 'admin' ? 'default' : 'secondary'} className="text-xs">
-                {userRole}
+            {user.role ? (
+              <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className="text-xs">
+                {user.role}
               </Badge>
             ) : (
               <Badge variant="destructive" className="text-xs">
@@ -80,20 +76,13 @@ export function UserDebugInfo() {
         </div>
 
         <div>
-          <strong>Public Metadata:</strong>
-          <pre className="mt-1 overflow-auto rounded bg-gray-100 p-2 text-xs">
-            {JSON.stringify(user.publicMetadata, null, 2)}
-          </pre>
-        </div>
-
-        <div>
           <strong>Created:</strong>
-          <p>{new Date(user.createdAt!).toLocaleString()}</p>
+          <p>{new Date(user.createdAt).toLocaleString()}</p>
         </div>
 
         <div>
           <strong>Updated:</strong>
-          <p>{new Date(user.updatedAt!).toLocaleString()}</p>
+          <p>{new Date(user.updatedAt).toLocaleString()}</p>
         </div>
       </CardContent>
     </Card>

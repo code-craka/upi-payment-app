@@ -39,7 +39,7 @@ export function SecuritySettings() {
         title: 'Security settings saved',
         description: 'Your security configuration has been updated.',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error saving settings',
         description: 'There was a problem saving the security settings.',
@@ -61,7 +61,7 @@ export function SecuritySettings() {
           'Your old API key has been revoked. Update your integrations with the new key.',
         variant: 'destructive',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error generating API key',
         description: 'There was a problem generating a new API key.',

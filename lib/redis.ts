@@ -191,7 +191,7 @@ export async function invalidateUserRole(userId: string): Promise<void> {
     );
 
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
+       
       console.log(`[Redis] Atomically invalidated ${deletedCount} cache keys for user ${userId}`);
     }
   } catch (error) {
@@ -282,7 +282,7 @@ export async function updateRoleStats(roleChange: {
     );
 
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
+       
       console.log('[Redis] Updated role stats:', stats);
     }
   } catch (error) {
@@ -377,7 +377,7 @@ export async function batchInvalidateRoles(userIds: string[]): Promise<void> {
     );
 
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
+       
       console.log(
         `[Redis] Batch invalidated ${deletedCount} cache keys for ${userIds.length} users`,
       );

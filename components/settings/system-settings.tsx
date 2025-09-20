@@ -47,7 +47,7 @@ export function SystemSettings({ initialSettings }: SystemSettingsProps) {
         title: 'Settings saved successfully',
         description: 'System settings have been updated.',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error saving settings',
         description: 'There was a problem saving the settings. Please try again.',

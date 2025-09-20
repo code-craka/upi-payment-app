@@ -36,23 +36,30 @@ export function DashboardHeader({ title, breadcrumbs, actions }: DashboardHeader
   const displayBreadcrumbs = breadcrumbs || defaultBreadcrumbs;
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-      <SidebarTrigger className="-ml-1" />
-      <Separator orientation="vertical" className="mr-2 h-4" />
+    <header className="flex h-16 shrink-0 items-center gap-4 border-b border-gray-200 bg-white px-6 shadow-sm">
+      <SidebarTrigger className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md" />
+      <Separator orientation="vertical" className="h-6 border-gray-300" />
 
       <div className="flex flex-1 items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {displayBreadcrumbs.length > 0 && (
             <Breadcrumb>
               <BreadcrumbList>
                 {displayBreadcrumbs.map((crumb, index) => (
                   <div key={index} className="flex items-center">
-                    {index > 0 && <BreadcrumbSeparator />}
+                    {index > 0 && <BreadcrumbSeparator className="text-gray-400" />}
                     <BreadcrumbItem>
                       {crumb.href ? (
-                        <BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
+                        <BreadcrumbLink
+                          href={crumb.href}
+                          className="text-gray-600 hover:text-gray-900 font-medium"
+                        >
+                          {crumb.label}
+                        </BreadcrumbLink>
                       ) : (
-                        <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                        <BreadcrumbPage className="text-gray-900 font-semibold">
+                          {crumb.label}
+                        </BreadcrumbPage>
                       )}
                     </BreadcrumbItem>
                   </div>
@@ -63,13 +70,13 @@ export function DashboardHeader({ title, breadcrumbs, actions }: DashboardHeader
 
           {title && (
             <>
-              <Separator orientation="vertical" className="h-4" />
-              <h1 className="text-lg font-semibold">{title}</h1>
+              <Separator orientation="vertical" className="h-6 border-gray-300" />
+              <h1 className="text-xl font-bold text-gray-900">{title}</h1>
             </>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {actions}
           <NoSSR>
             <AuthNavigation showSignInButton={false} />

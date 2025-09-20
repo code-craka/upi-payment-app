@@ -48,7 +48,7 @@ async function getCompletedOrder(orderId: string) {
   }
 }
 
-function PaymentSuccessContent({ order }: { order: any }) {
+function PaymentSuccessContent({ order }: { order: unknown }) {
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);

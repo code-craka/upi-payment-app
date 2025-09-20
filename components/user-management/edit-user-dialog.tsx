@@ -36,7 +36,7 @@ export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: Edit
     email: '',
     firstName: '',
     lastName: '',
-    role: 'merchant' as 'admin' | 'merchant' | 'viewer',
+    role: 'merchant' as 'admin' | 'merchant' | 'user',
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -75,7 +75,7 @@ export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: Edit
       });
 
       onOpenChange(false);
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error updating user',
         description: 'There was a problem updating the user. Please try again.',
@@ -88,77 +88,134 @@ export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: Edit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Edit User</DialogTitle>
-          <DialogDescription>Update user information and role permissions.</DialogDescription>
+      <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200 shadow-2xl">
+        <DialogHeader className="text-center">
+          <DialogTitle className="text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
+            <div className="rounded-full bg-blue-500 p-2">
+              <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+            Edit User
+          </DialogTitle>
+          <DialogDescription className="text-gray-600 mt-2">
+            Update user information and role permissions.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                Email
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            {/* Email Field */}
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                Email Address *
               </Label>
               <Input
                 id="email"
                 type="email"
+                placeholder="user@example.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="col-span-3"
+                className="h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white"
                 required
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="firstName" className="text-right">
-                First Name
-              </Label>
-              <Input
-                id="firstName"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="col-span-3"
-                required
-              />
+
+            {/* Name Fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
+                  First Name *
+                </Label>
+                <Input
+                  id="firstName"
+                  placeholder="John"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  className="h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
+                  Last Name *
+                </Label>
+                <Input
+                  id="lastName"
+                  placeholder="Doe"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  className="h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white"
+                  required
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="lastName" className="text-right">
-                Last Name
-              </Label>
-              <Input
-                id="lastName"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="col-span-3"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role" className="text-right">
-                Role
+
+            {/* Role Field */}
+            <div className="space-y-2">
+              <Label htmlFor="role" className="text-sm font-medium text-gray-700">
+                User Role *
               </Label>
               <Select
                 value={formData.role}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, role: value as 'admin' | 'merchant' | 'viewer' })
+                  setFormData({ ...formData, role: value as 'admin' | 'merchant' | 'user' })
                 }
               >
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger className="h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="merchant">Merchant</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg">
+                  <SelectItem value="admin" className="hover:bg-blue-50">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                      <span>Admin - Full access</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="merchant" className="hover:bg-green-50">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                      <span>Merchant - User & payment management</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="user" className="hover:bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-gray-500"></div>
+                      <span>User - Read-only access</span>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+
+          <DialogFooter className="flex gap-3 pt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="flex-1 h-11 border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Updating...' : 'Update User'}
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+            >
+              {isLoading ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Update User
+                </>
+              )}
             </Button>
           </DialogFooter>
         </form>

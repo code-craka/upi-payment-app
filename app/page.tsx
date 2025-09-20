@@ -1,5 +1,5 @@
-import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
+import { getCurrentUser } from '@/lib/auth/requireRole';
 import { Header } from '@/components/landing/header';
 import { HeroSection } from '@/components/landing/hero-section';
 import { FeaturesSection } from '@/components/landing/features-section';
@@ -9,16 +9,20 @@ import { CTASection } from '@/components/landing/cta-section';
 import { Footer } from '@/components/landing/footer';
 
 export default async function HomePage() {
-  const user = await currentUser();
+  // Check if user is authenticated using our custom session
+  try {
+    const user = await getCurrentUser();
 
-  // Redirect authenticated users to their appropriate dashboard
-  if (user) {
-    const userRole = user.publicMetadata?.role as string;
-    if (userRole === 'admin') {
-      redirect('/admin');
-    } else {
-      redirect('/dashboard');
+    // Redirect authenticated users to their appropriate dashboard
+    if (user) {
+      if (user.role === 'admin') {
+        redirect('/admin');
+      } else {
+        redirect('/dashboard');
+      }
     }
+  } catch (_error) {
+    // User not authenticated, continue to landing page
   }
 
   return (

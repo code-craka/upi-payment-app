@@ -1,4 +1,3 @@
-import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { StatsCards } from '@/components/shared/stats-cards';
 import { formatCurrency } from '@/lib/utils';
 import { Plus, Eye } from 'lucide-react'; // Only keep icons used in this server component
+import { getSafeUser } from '@/lib/auth/safe-auth';
 
 // Mock data for merchant dashboard
 const mockMerchantStats = {
@@ -136,14 +136,13 @@ function RecentOrders() {
 }
 
 export default async function MerchantDashboard() {
-  const { userId, sessionClaims } = await auth();
+  const user = await getSafeUser();
 
-  if (!userId) {
-    redirect('/sign-in');
+  if (!user) {
+    redirect('/login');
   }
 
-  const userRole = (sessionClaims?.publicMetadata as { role?: string })?.role as string;
-  const userName = (sessionClaims?.firstName as string) || 'User';
+  const userName = user.firstName || 'User';
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
@@ -152,7 +151,7 @@ export default async function MerchantDashboard() {
         <Separator orientation="vertical" className="mr-2 h-4" />
         <div>
           <h1 className="text-2xl font-bold">Welcome back, {userName}!</h1>
-          <p className="text-muted-foreground capitalize">{userRole} Dashboard</p>
+          <p className="text-muted-foreground capitalize">{user.role} Dashboard</p>
         </div>
       </div>
 

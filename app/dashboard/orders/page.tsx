@@ -1,10 +1,15 @@
-import { auth } from '@clerk/nextjs/server';
+import { getSafeUser } from '@/lib/auth/safe-auth';
+import { redirect } from 'next/navigation';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { OrdersTable } from '@/components/orders/orders-table';
 
 export default async function MerchantOrdersPage() {
-  const { userId } = await auth();
+  const user = await getSafeUser();
+  
+  if (!user) {
+    redirect('/login');
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
@@ -14,7 +19,7 @@ export default async function MerchantOrdersPage() {
         <h1 className="text-2xl font-bold">My Orders</h1>
       </div>
 
-      <OrdersTable showAllOrders={false} userId={userId || undefined} />
+      <OrdersTable showAllOrders={false} userId={user.id} />
     </div>
   );
 }

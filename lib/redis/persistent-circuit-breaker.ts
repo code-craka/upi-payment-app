@@ -90,12 +90,54 @@ const getMetricsKey = (serviceName: string) => `circuit_breaker:metrics:${servic
 const getLockKey = (serviceName: string) => `circuit_breaker:lock:${serviceName}`;
 
 /**
+ * Safe JSON parse utility with fallback and error handling
+ */
+function safeParse<T>(input: string, fallback: T): T {
+  try {
+    if (!input || typeof input !== 'string') {
+      console.warn('[CircuitBreaker] Invalid input for JSON parsing, using fallback');
+      return fallback;
+    }
+
+    // Check for common invalid JSON patterns
+    if (input.trim() === '' || input === '[object Object]' || input === 'undefined' || input === 'null') {
+      console.warn('[CircuitBreaker] Detected invalid JSON pattern, using fallback:', input.substring(0, 50));
+      return fallback;
+    }
+
+    const parsed = JSON.parse(input) as T;
+    return parsed;
+  } catch (error) {
+    console.warn('[CircuitBreaker] JSON parse failed, using fallback:', error);
+    return fallback;
+  }
+}
+
+/**
+ * Get default circuit breaker state
+ */
+function getDefaultState(): CircuitBreakerState {
+  return {
+    state: CircuitState.CLOSED,
+    failures: 0,
+    successes: 0,
+    lastFailureTime: null,
+    lastSuccessTime: null,
+    lastStateChange: Date.now(),
+    recoveryAttempts: 0,
+    consecutiveSuccesses: 0,
+    consecutiveFailures: 0,
+  };
+}
+
+/**
  * Persistent Redis-Backed Circuit Breaker
  */
 export class PersistentCircuitBreaker {
   private config: PersistentCircuitBreakerConfig;
   private redis: Redis;
-  private localCache: Map<string, { data: any; expires: number }> = new Map();
+  private stateCache: Map<string, { data: CircuitBreakerState; expires: number }> = new Map();
+  private metricsCache: Map<string, { data: CircuitBreakerMetrics; expires: number }> = new Map();
 
   constructor(redis: Redis, config: Partial<PersistentCircuitBreakerConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -140,7 +182,7 @@ export class PersistentCircuitBreaker {
     } catch (error) {
       // Record failure (but not for circuit breaker errors)
       if (!(error instanceof CircuitBreakerError)) {
-        await this.recordFailure(operationName, Date.now() - startTime, error);
+        await this.recordFailure(operationName, Date.now() - startTime, error as Error);
       }
 
       throw error;
@@ -153,7 +195,7 @@ export class PersistentCircuitBreaker {
   private async getState(): Promise<CircuitBreakerState> {
     try {
       const stateKey = getStateKey(this.config.serviceName);
-      const cached = this.localCache.get(stateKey);
+      const cached = this.stateCache.get(stateKey);
 
       // Check local cache first
       if (cached && cached.expires > Date.now()) {
@@ -183,18 +225,26 @@ export class PersistentCircuitBreaker {
 
       const state = JSON.parse(stateData as string) as CircuitBreakerState;
 
-      // Update local cache
-      this.localCache.set(stateKey, {
+      // Update state cache
+      this.stateCache.set(stateKey, {
         data: state,
         expires: Date.now() + 5000, // 5 second local cache
       });
 
       return state;
-    } catch (error) {
-      console.warn('[CircuitBreaker] Failed to get state from Redis, using fallback:', error);
+    } catch (parseError) {
+      console.warn('[CircuitBreaker] Failed to parse state from Redis, clearing corrupted data:', parseError);
 
-      // Fallback to closed state if Redis is unavailable
-      return {
+      // Clear corrupted data and return default state
+      try {
+        const stateKey = getStateKey(this.config.serviceName);
+        await this.redis.del(stateKey);
+      } catch (delError) {
+        console.error('[CircuitBreaker] Failed to clear corrupted state:', delError);
+      }
+
+      // Return default state
+      const defaultState: CircuitBreakerState = {
         state: CircuitState.CLOSED,
         failures: 0,
         successes: 0,
@@ -205,6 +255,8 @@ export class PersistentCircuitBreaker {
         consecutiveSuccesses: 0,
         consecutiveFailures: 0,
       };
+
+      return defaultState;
     }
   }
 
@@ -219,8 +271,8 @@ export class PersistentCircuitBreaker {
       // Use SET with TTL for atomic operation
       await this.redis.setex(stateKey, Math.ceil(this.config.stateTtl / 1000), stateData);
 
-      // Update local cache
-      this.localCache.set(stateKey, {
+      // Update state cache
+      this.stateCache.set(stateKey, {
         data: newState,
         expires: Date.now() + 5000,
       });
@@ -299,20 +351,20 @@ export class PersistentCircuitBreaker {
   private async recordFailure(
     operationName?: string,
     latency?: number,
-    error?: any,
+    error?: Error,
   ): Promise<void> {
     try {
       await this.updateStateWithScript('failure', operationName, latency, error);
       await this.updateMetrics('failure', latency);
-    } catch (error) {
-      console.error('[CircuitBreaker] Failed to record failure:', error);
+    } catch (recordError) {
+      console.error('[CircuitBreaker] Failed to record failure:', recordError);
     }
   }
 
   /**
    * Record timeout
    */
-  private async recordTimeout(operationName?: string): Promise<void> {
+  private async recordTimeout(_operationName?: string): Promise<void> {
     try {
       await this.updateMetrics('timeout');
     } catch (error) {
@@ -325,9 +377,9 @@ export class PersistentCircuitBreaker {
    */
   private async updateStateWithScript(
     type: 'success' | 'failure',
-    operationName?: string,
-    latency?: number,
-    error?: any,
+    _operationName?: string,
+    _latency?: number,
+    _error?: Error,
   ): Promise<void> {
     const stateKey = getStateKey(this.config.serviceName);
     const lockKey = getLockKey(this.config.serviceName);
@@ -356,47 +408,47 @@ export class PersistentCircuitBreaker {
         state = cjson.decode(state_data)
       else
         state = {
-          state = 'CLOSED',
-          failures = 0,
-          successes = 0,
-          lastFailureTime = nil,
-          lastSuccessTime = nil,
-          lastStateChange = current_time,
-          recoveryAttempts = 0,
-          consecutiveSuccesses = 0,
-          consecutiveFailures = 0
+          ["state"] = "CLOSED",
+          ["failures"] = 0,
+          ["successes"] = 0,
+          ["lastFailureTime"] = nil,
+          ["lastSuccessTime"] = nil,
+          ["lastStateChange"] = current_time,
+          ["recoveryAttempts"] = 0,
+          ["consecutiveSuccesses"] = 0,
+          ["consecutiveFailures"] = 0
         }
       end
 
       -- Update based on operation result
       if update_type == 'success' then
-        state.successes = state.successes + 1
-        state.consecutiveSuccesses = state.consecutiveSuccesses + 1
-        state.consecutiveFailures = 0
-        state.lastSuccessTime = current_time
+        state["successes"] = state["successes"] + 1
+        state["consecutiveSuccesses"] = state["consecutiveSuccesses"] + 1
+        state["consecutiveFailures"] = 0
+        state["lastSuccessTime"] = current_time
 
         -- Check if should close circuit from half-open
-        if state.state == 'HALF_OPEN' and state.consecutiveSuccesses >= success_threshold then
-          state.state = 'CLOSED'
-          state.failures = 0
-          state.recoveryAttempts = 0
-          state.lastStateChange = current_time
+        if state["state"] == 'HALF_OPEN' and state["consecutiveSuccesses"] >= success_threshold then
+          state["state"] = 'CLOSED'
+          state["failures"] = 0
+          state["recoveryAttempts"] = 0
+          state["lastStateChange"] = current_time
         end
 
       elseif update_type == 'failure' then
-        state.failures = state.failures + 1
-        state.consecutiveFailures = state.consecutiveFailures + 1
-        state.consecutiveSuccesses = 0
-        state.lastFailureTime = current_time
+        state["failures"] = state["failures"] + 1
+        state["consecutiveFailures"] = state["consecutiveFailures"] + 1
+        state["consecutiveSuccesses"] = 0
+        state["lastFailureTime"] = current_time
 
         -- Check if should open circuit
-        if state.state == 'CLOSED' and state.consecutiveFailures >= failure_threshold then
-          state.state = 'OPEN'
-          state.lastStateChange = current_time
-        elseif state.state == 'HALF_OPEN' then
-          state.state = 'OPEN'
-          state.recoveryAttempts = state.recoveryAttempts + 1
-          state.lastStateChange = current_time
+        if state["state"] == 'CLOSED' and state["consecutiveFailures"] >= failure_threshold then
+          state["state"] = 'OPEN'
+          state["lastStateChange"] = current_time
+        elseif state["state"] == 'HALF_OPEN' then
+          state["state"] = 'OPEN'
+          state["recoveryAttempts"] = state["recoveryAttempts"] + 1
+          state["lastStateChange"] = current_time
         end
       end
 
@@ -469,7 +521,7 @@ export class PersistentCircuitBreaker {
           currentState.state === CircuitState.CLOSED &&
           currentState.consecutiveFailures >= this.config.failureThreshold
         ) {
-          currentState.state = CircuitState.CLOSED;
+          currentState.state = CircuitState.OPEN;
           currentState.lastStateChange = now;
         } else if (currentState.state === CircuitState.HALF_OPEN) {
           currentState.state = CircuitState.OPEN;
@@ -507,32 +559,32 @@ export class PersistentCircuitBreaker {
           metrics = cjson.decode(metrics_data)
         else
           metrics = {
-            totalRequests = 0,
-            totalFailures = 0,
-            totalSuccesses = 0,
-            totalTimeouts = 0,
-            stateChanges = 0,
-            recoveryAttempts = 0,
-            lastResetTime = current_time,
-            uptime = 0,
-            availability = 100
+            ["totalRequests"] = 0,
+            ["totalFailures"] = 0,
+            ["totalSuccesses"] = 0,
+            ["totalTimeouts"] = 0,
+            ["stateChanges"] = 0,
+            ["recoveryAttempts"] = 0,
+            ["lastResetTime"] = current_time,
+            ["uptime"] = 0,
+            ["availability"] = 100
           }
         end
 
         -- Update metrics
-        metrics.totalRequests = metrics.totalRequests + 1
+        metrics["totalRequests"] = metrics["totalRequests"] + 1
 
         if update_type == 'success' then
-          metrics.totalSuccesses = metrics.totalSuccesses + 1
+          metrics["totalSuccesses"] = metrics["totalSuccesses"] + 1
         elseif update_type == 'failure' then
-          metrics.totalFailures = metrics.totalFailures + 1
+          metrics["totalFailures"] = metrics["totalFailures"] + 1
         elseif update_type == 'timeout' then
-          metrics.totalTimeouts = metrics.totalTimeouts + 1
+          metrics["totalTimeouts"] = metrics["totalTimeouts"] + 1
         end
 
         -- Calculate availability
-        if metrics.totalRequests > 0 then
-          metrics.availability = (metrics.totalSuccesses / metrics.totalRequests) * 100
+        if metrics["totalRequests"] > 0 then
+          metrics["availability"] = (metrics["totalSuccesses"] / metrics["totalRequests"]) * 100
         end
 
         -- Save updated metrics
@@ -619,7 +671,7 @@ export class PersistentCircuitBreaker {
       console.error('[CircuitBreaker] Failed to reset metrics:', error);
     }
 
-    console.log(`[CircuitBreaker:${this.config.serviceName}] Circuit breaker reset`);
+    console.warn(`[CircuitBreaker:${this.config.serviceName}] Circuit breaker reset`);
   }
 
   /**
@@ -631,7 +683,7 @@ export class PersistentCircuitBreaker {
     currentState.lastStateChange = Date.now();
 
     await this.setState(currentState);
-    console.log(`[CircuitBreaker:${this.config.serviceName}] Circuit forced OPEN`);
+    console.warn(`[CircuitBreaker:${this.config.serviceName}] Circuit forced OPEN`);
   }
 
   /**
@@ -645,7 +697,7 @@ export class PersistentCircuitBreaker {
     currentState.lastStateChange = Date.now();
 
     await this.setState(currentState);
-    console.log(`[CircuitBreaker:${this.config.serviceName}] Circuit forced CLOSED`);
+    console.warn(`[CircuitBreaker:${this.config.serviceName}] Circuit forced CLOSED`);
   }
 
   /**
@@ -726,7 +778,7 @@ export class PersistentCircuitBreaker {
     try {
       const state = await this.getState();
       this.lastKnownState = state.state;
-    } catch (error) {
+    } catch {
       // Keep the last known state if we can't fetch current state
     }
   }
@@ -740,9 +792,9 @@ export class CircuitBreakerError extends Error {
   static readonly CODE_SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE';
 
   public readonly code: string;
-  public readonly details?: any;
+  public readonly details?: Record<string, unknown>;
 
-  constructor(message: string, code: string, details?: any) {
+  constructor(message: string, code: string, details?: Record<string, unknown>) {
     super(message);
     this.name = 'CircuitBreakerError';
     this.code = code;

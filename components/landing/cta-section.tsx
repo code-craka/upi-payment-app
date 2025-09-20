@@ -47,7 +47,7 @@ export function CTASection() {
             size="lg"
             className="w-full border-white/30 px-8 py-4 text-lg font-semibold text-white backdrop-blur-sm hover:bg-white/10 sm:w-auto"
           >
-            <Link href="/sign-in">Sign In</Link>
+            <Link href="/login">Sign In</Link>
           </Button>
         </div>
 

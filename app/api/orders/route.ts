@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
+import { getSafeUser } from '@/lib/auth/safe-auth';
 import { z } from 'zod';
 import { connectDB } from '@/lib/db/connection';
 import { OrderModel } from '@/lib/db/models/Order';
@@ -23,7 +23,7 @@ const CreateOrderSchema = z.object({
     .optional(),
   amount: z.number().positive('Amount must be positive').max(100000, 'Amount too large'),
   description: z.string().min(1, 'Description is required').max(500),
-  expiresInMinutes: z.number().min(1).max(60).default(9),
+  expiresInMinutes: z.number().min(1).max(10080).default(540), // Allow up to 7 days (10080 minutes), default 9 hours
 });
 
 export async function GET(request: Request) {
@@ -31,13 +31,13 @@ export async function GET(request: Request) {
     // Connect to database
     await connectDB();
 
-    const user = await currentUser();
+    const user = await getSafeUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userRole = user.publicMetadata?.role as string;
-    if (!['admin', 'merchant', 'viewer'].includes(userRole)) {
+    const userRole = user.role as string;
+    if (!['admin', 'merchant', 'user'].includes(userRole)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     const search = searchParams.get('search');
 
     // Build query based on user role
-    const query: any = {};
+    const query: unknown = {};
 
     // Non-admin users can only see their own orders
     if (userRole !== 'admin') {
@@ -83,7 +83,7 @@ export async function GET(request: Request) {
       entityType: 'Order',
       entityId: 'multiple',
       userId: user.id,
-      userEmail: user.emailAddresses[0]?.emailAddress || '',
+      userEmail: user.email || '',
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
       userAgent: request.headers.get('user-agent') || 'unknown',
       metadata: { query, total, page, limit },
@@ -118,12 +118,12 @@ export async function POST(request: Request) {
     // Connect to database
     await connectDB();
 
-    const user = await currentUser();
+    const user = await getSafeUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userRole = user.publicMetadata?.role as string;
+    const userRole = user.role as string;
     if (!['admin', 'merchant'].includes(userRole)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
@@ -173,7 +173,7 @@ export async function POST(request: Request) {
       entityType: 'Order',
       entityId: orderId,
       userId: user.id,
-      userEmail: user.emailAddresses[0]?.emailAddress || '',
+      userEmail: user.email || '',
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
       userAgent: request.headers.get('user-agent') || 'unknown',
       metadata: {

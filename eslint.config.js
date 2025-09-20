@@ -4,9 +4,22 @@ import tsparser from '@typescript-eslint/parser';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
+import nextPlugin from '@next/eslint-plugin-next';
 
 export default [
   js.configs.recommended,
+  {
+    // Next.js specific rules
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    plugins: {
+      '@next/next': nextPlugin,
+    },
+    rules: {
+      '@next/next/no-html-link-for-pages': 'error',
+      '@next/next/no-sync-scripts': 'error',
+      '@next/next/no-unwanted-polyfillio': 'error',
+    },
+  },
   {
     files: ['**/*.{js,mjs,cjs}'],
     languageOptions: {
@@ -37,19 +50,23 @@ export default [
     },
     rules: {
       // General rules
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': ['error', { allow: ['warn', 'error'] }],
       'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': ['error', { 
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_'
+      }],
+      '@typescript-eslint/no-explicit-any': 'error',
       'no-case-declarations': 'error',
 
       // React/Next.js rules
-      'react/react-in-jsx-scope': 'off', // Next.js handles React
-      'react/jsx-key': 'warn',
-      'react/display-name': 'warn',
-      'react/prop-types': 'off', // We use TypeScript for prop validation
+      'react/react-in-jsx-scope': 'off',
+      'react/jsx-key': 'error',
+      'react/display-name': 'error',
+      'react/prop-types': 'off',
       'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/exhaustive-deps': 'error',
     },
     settings: {
       react: {
@@ -57,8 +74,19 @@ export default [
       },
     },
   },
+  // Allow console.log in server-side files
+  {
+    files: ['app/api/**/*.ts', 'lib/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
   {
     files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', '__tests__/**/*.{ts,tsx}'],
+    rules: {
+      'no-console': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
     languageOptions: {
       globals: {
         ...globals.browser,

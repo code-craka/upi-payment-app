@@ -294,10 +294,10 @@ class CacheMonitoringService {
       throw new Error('Failed to execute Redis pipeline');
     }
 
-    const hits = parseInt(((results[0] as [Error | null, any])?.[1] as string) || '0');
-    const misses = parseInt(((results[1] as [Error | null, any])?.[1] as string) || '0');
-    const totalOperations = parseInt(((results[2] as [Error | null, any])?.[1] as string) || '0');
-    const keyCount = ((results[3] as [Error | null, any])?.[1] as number) || 0;
+    const hits = parseInt(((results[0] as [Error | null, unknown])?.[1] as string) || '0');
+    const misses = parseInt(((results[1] as [Error | null, unknown])?.[1] as string) || '0');
+    const totalOperations = parseInt(((results[2] as [Error | null, unknown])?.[1] as string) || '0');
+    const keyCount = ((results[3] as [Error | null, unknown])?.[1] as number) || 0;
 
     const hitRatio = totalOperations > 0 ? hits / totalOperations : 0;
 
@@ -341,9 +341,9 @@ class CacheMonitoringService {
       throw new Error('Failed to execute Redis pipeline');
     }
 
-    const hits = parseInt(((results[0] as [Error | null, any])?.[1] as string) || '0');
-    const misses = parseInt(((results[1] as [Error | null, any])?.[1] as string) || '0');
-    const totalOperations = parseInt(((results[2] as [Error | null, any])?.[1] as string) || '0');
+    const hits = parseInt(((results[0] as [Error | null, unknown])?.[1] as string) || '0');
+    const misses = parseInt(((results[1] as [Error | null, unknown])?.[1] as string) || '0');
+    const totalOperations = parseInt(((results[2] as [Error | null, unknown])?.[1] as string) || '0');
 
     const hitRatio = totalOperations > 0 ? hits / totalOperations : 0;
     const latencyMetrics = await this.getLatencyPercentiles(
@@ -384,9 +384,9 @@ class CacheMonitoringService {
       throw new Error('Failed to execute Redis pipeline');
     }
 
-    const hits = parseInt(((results[0] as [Error | null, any])?.[1] as string) || '0');
-    const misses = parseInt(((results[1] as [Error | null, any])?.[1] as string) || '0');
-    const totalOperations = parseInt(((results[2] as [Error | null, any])?.[1] as string) || '0');
+    const hits = parseInt(((results[0] as [Error | null, unknown])?.[1] as string) || '0');
+    const misses = parseInt(((results[1] as [Error | null, unknown])?.[1] as string) || '0');
+    const totalOperations = parseInt(((results[2] as [Error | null, unknown])?.[1] as string) || '0');
 
     const hitRatio = totalOperations > 0 ? hits / totalOperations : 0;
     const latencyMetrics = await this.getLatencyPercentiles(`cache:latency:role:${role}`);
@@ -413,7 +413,7 @@ class CacheMonitoringService {
    * Get time window metrics (5min, 1hour, 24hours, 7days)
    */
   private async getTimeWindowMetrics(): Promise<CacheAnalytics['byTimeWindow']> {
-    const now = new Date();
+    const _now = new Date();
 
     // Calculate time windows
     const last5Min = await this.getMetricsForTimeWindow(5 * 60 * 1000); // 5 minutes
@@ -691,7 +691,7 @@ class CacheMonitoringService {
   /**
    * Generate date keys for time range
    */
-  private generateDateKeys(startTime: number, endTime: number, windowMs: number): string[] {
+  private generateDateKeys(startTime: number, endTime: number, _windowMs: number): string[] {
     const keys: string[] = [];
 
     // For windows less than a day, use daily keys
@@ -764,7 +764,7 @@ class CacheMonitoringService {
   /**
    * Export cache metrics to external monitoring systems
    */
-  public async exportMetrics(): Promise<any> {
+  public async exportMetrics(): Promise<unknown> {
     const analytics = await this.getCacheAnalytics();
 
     // Format for external systems (e.g., Prometheus, DataDog)

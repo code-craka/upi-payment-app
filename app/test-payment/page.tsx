@@ -101,7 +101,7 @@ export default function TestPaymentFlow() {
       if (response.ok) {
         setOrders(data.data || [])
       }
-    } catch (error) {
+    } catch (_error) {
       console.error('Failed to load orders:', error)
     } finally {
       setLoadingOrders(false)

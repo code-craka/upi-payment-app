@@ -45,7 +45,7 @@ export function SessionRoleDemo() {
     setIsRefreshing(true);
     try {
       await refresh(true);
-    } catch (error) {
+    } catch (_error) {
       console.error('Manual refresh failed:', error);
     } finally {
       setIsRefreshing(false);

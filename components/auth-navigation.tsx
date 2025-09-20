@@ -1,10 +1,20 @@
 'use client';
 
-import React, { Suspense } from 'react';
-import { UserButton, useUser } from '@clerk/nextjs';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { LogOut, User } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface AuthNavigationProps {
   showUserButton?: boolean;
@@ -21,12 +31,9 @@ export function AuthNavigation({
   showSignInButton = true,
   className = '',
 }: AuthNavigationProps) {
-  const { user, isLoaded, isSignedIn } = useUser();
+  const { user, isLoaded, isSignedIn } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-
-  // Get user role for role-based UI
-  const userRole = user?.publicMetadata?.role as string;
 
   if (!isLoaded) {
     return (
@@ -37,15 +44,27 @@ export function AuthNavigation({
   }
 
   const handleSignInClick = () => {
-    router.push('/sign-in');
+    router.push('/login');
   };
 
   const handleSignUpClick = () => {
-    router.push('/sign-up');
+    router.push('/login');
   };
 
   const handleDashboardClick = () => {
-    router.push(userRole === 'admin' ? '/admin' : '/dashboard');
+    router.push(user?.role === 'admin' ? '/admin' : '/dashboard');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (
@@ -65,11 +84,11 @@ export function AuthNavigation({
         </>
       )}
 
-      {isSignedIn && user && userRole && (
+      {isSignedIn && user && (
         <div className="flex items-center space-x-3">
           {/* Role badge */}
-          <Badge variant={userRole === 'admin' ? 'default' : 'secondary'} className="capitalize">
-            {userRole}
+          <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className="capitalize">
+            {user.role}
           </Badge>
 
           {/* Dashboard link based on role */}
@@ -79,20 +98,40 @@ export function AuthNavigation({
             </Button>
           )}
 
-          {/* User button with Suspense */}
+          {/* User button with dropdown */}
           {showUserButton && (
-            <Suspense fallback={<div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />}>
-              <UserButton
-                afterSignOutUrl="/"
-                appearance={{
-                  elements: {
-                    avatarBox: 'w-8 h-8',
-                    userButtonPopoverCard: 'shadow-lg border',
-                    userButtonPopoverActionButton: 'hover:bg-gray-100',
-                  },
-                }}
-              />
-            </Suspense>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="" alt={user.name || user.email} />
+                    <AvatarFallback>
+                      <User className="h-4 w-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {user.name || 'User'}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleDashboardClick}>
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       )}
@@ -111,15 +150,13 @@ interface RoleGuardProps {
 }
 
 export function RoleGuard({ allowedRoles, children, fallback = null }: RoleGuardProps) {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useAuth();
 
   if (!isLoaded) {
     return null; // or loading spinner
   }
 
-  const userRole = user?.publicMetadata?.role as string;
-
-  if (!userRole || !allowedRoles.includes(userRole)) {
+  if (!user?.role || !allowedRoles.includes(user.role)) {
     return <>{fallback}</>;
   }
 
