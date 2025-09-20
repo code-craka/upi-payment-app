@@ -2,7 +2,6 @@
   "framework": "nextjs",
   "buildCommand": "pnpm build",
   "devCommand": "pnpm dev",
-  "installCommand": "pnpm install --registry https://registry.npmjs.org/ --fetch-timeout 300000",
   "functions": {
     "app/api/**/*.ts": {
       "maxDuration": 30
