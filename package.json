@@ -48,7 +48,6 @@
     "user-administration"
   ],
   "packageManager": "pnpm@10.17.0",
-  "type":"module",
   "scripts": {
     "build": "next build",
     "dev": "next dev",
