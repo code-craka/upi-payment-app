@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Enterprise-grade UPI payment management system built with Next.js 15, TypeScript, MongoDB, Upstash Redis, and custom authentication. Features Redis-based session management, circuit breaker patterns, comprehensive monitoring, and production-ready security with admin-only account creation.
+Enterprise-grade UPI payment management system built with Next.js 15, TypeScript, MongoDB, Upstash Redis, and custom authentication. Features Redis-based session management, role-based access control, comprehensive monitoring, and production-ready security with admin-only account creation.
+
+**🔥 MAJOR UPDATE: Clerk authentication has been completely removed and replaced with a custom authentication system built on Redis sessions, bcrypt password hashing, and role-based access control.**
 
 ## Development Commands
 
@@ -56,12 +58,14 @@ node scripts/fix-database-indexes.cjs  # Fix database indexes
 - **Icons**: Lucide React with custom IconWrapper
 
 ### Authentication System
-Custom session-based authentication with Redis storage:
+Custom session-based authentication with Redis storage (Clerk completely removed):
 - **Session Storage**: Redis with 24-hour TTL and auto-refresh
 - **Password Security**: bcrypt hashing with 12 salt rounds
 - **Cookie Management**: HTTP-only session cookies with secure flags
 - **Account Creation**: Admin-only account creation (no public signup)
 - **Edge Runtime**: Compatible session validation for middleware
+- **Session Token**: Stored in 'session' cookie for consistent access
+- **Role Management**: Real-time role switching and permission checking
 
 ### Key Directories
 - `app/` - Next.js App Router pages and API routes
@@ -210,3 +214,40 @@ Use built-in benchmarking endpoints:
 3. Run `node scripts/fix-database-indexes.cjs` if encountering index conflicts
 
 Always run lint and type-check commands before committing code changes.
+
+## Recent Major Changes (v3.0.0)
+
+### 🔥 Complete Clerk Removal & Custom Authentication
+
+**What Changed:**
+- ✅ **Removed all Clerk dependencies** - Zero Clerk imports or references
+- ✅ **Custom authentication system** - Redis-based sessions with bcrypt
+- ✅ **Role-based access control** - Admin, Merchant, User with proper data isolation
+- ✅ **Enhanced dashboards** - Role-specific dashboards with appropriate features
+- ✅ **Payment links system** - Full CRUD for merchants and admins
+- ✅ **Advanced analytics** - Role-based analytics and reporting
+
+**New Authentication Flow:**
+1. **Login**: `/login` page with email/password authentication
+2. **Session Creation**: Redis-stored session with 24-hour TTL
+3. **Middleware Protection**: Edge-runtime compatible auth checking
+4. **Role-based Routing**: Different dashboards based on user roles
+5. **Logout**: Proper session cleanup and redirect
+
+**Key Files Added/Modified:**
+- `lib/auth/session-edge.ts` - Edge-compatible session management
+- `lib/auth/edge-auth.ts` - Middleware authentication
+- `app/api/auth/*` - Custom auth API endpoints
+- `app/dashboard/*` - Role-based dashboards
+- `components/admin-sidebar.tsx` - Dynamic navigation based on roles
+
+**Migration Notes:**
+- No more Clerk webhooks or API calls
+- Session tokens stored in 'session' cookie
+- User management through admin interface only
+- All authentication handled by custom Redis-based system
+
+**Dashboard Access:**
+- **Admin**: `/admin/*` - Full system access and management
+- **Merchant**: `/dashboard/*` - Payment links, orders, analytics
+- **User**: `/dashboard/*` - Personal orders and basic features
