@@ -70,7 +70,7 @@ export function ViewPaymentLinkDialog({
 
   if (!paymentLink) return null;
 
-  const publicUrl = `${window.location.origin}/pay/${paymentLink.linkId}`;
+  const publicUrl = `${window.location.origin}/link/${paymentLink.linkId}`;
   const isExpired = paymentLink.expiresAt ? new Date(paymentLink.expiresAt) < new Date() : false;
   const isLimitReached = paymentLink.usageLimit ? paymentLink.usageCount >= paymentLink.usageLimit : false;
   const canBeUsed = paymentLink.isActive && !isExpired && !isLimitReached;

@@ -42,6 +42,7 @@ export const OrderSchema = z.object({
   updatedAt: z.date(),
   verifiedAt: z.date().optional(),
   verifiedBy: z.string().optional(),
+  paymentLinkId: z.string().optional(),
 });
 
 export type Order = z.infer<typeof OrderSchema>;

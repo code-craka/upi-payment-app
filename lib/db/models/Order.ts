@@ -102,6 +102,10 @@ const OrderSchema = new Schema<OrderDocument>(
       maxlength: [1000, 'Admin notes cannot exceed 1000 characters']
     },
     completedAt: Date,
+    paymentLinkId: {
+      type: String,
+      index: true,
+    },
   },
   {
     timestamps: true,

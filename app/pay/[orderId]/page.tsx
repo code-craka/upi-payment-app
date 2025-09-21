@@ -13,25 +13,18 @@ async function getOrder(orderId: string) {
   try {
     await connectDB()
     
-    const order = await OrderModel.findOne({ 
+    // Only exclude failed orders, allow all others (remove expired check)
+    const order = await OrderModel.findOne({
       orderId: orderId,
-      status: { $nin: ['expired', 'failed'] }
+      status: { $nin: ['failed'] }
     }).lean()
 
     if (!order) {
       return null
     }
 
-    // Check if order is expired
-    const now = new Date()
-    if (order.expiresAt && new Date(order.expiresAt) < now && order.status === 'pending') {
-      // Update order status to expired
-      await OrderModel.findByIdAndUpdate(order._id, { 
-        status: 'expired',
-        updatedAt: now
-      })
-      return null
-    }
+    // Remove expiration check completely since timer is dummy
+    // Orders won't auto-expire based on time
 
     // Transform MongoDB document to match component interface
     return {

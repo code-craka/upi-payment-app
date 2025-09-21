@@ -20,28 +20,40 @@ export function PaymentPageClient({ order }: PaymentPageClientProps) {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const { toast } = useToast();
 
-  // Timer effect
+  // Dummy Timer effect - Always shows 9 minutes countdown and resets
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date().getTime();
-      const expiry = new Date(currentOrder.expiresAt).getTime();
-      const difference = expiry - now;
-      return Math.max(0, difference);
+    // Set initial time to 9 minutes (540 seconds) in milliseconds
+    const TIMER_DURATION = 9 * 60 * 1000; // 9 minutes in milliseconds
+
+    // Get the start time from sessionStorage or create new one
+    const getStartTime = () => {
+      const stored = sessionStorage.getItem('paymentTimerStart');
+      if (stored) {
+        return parseInt(stored);
+      }
+      const now = Date.now();
+      sessionStorage.setItem('paymentTimerStart', now.toString());
+      return now;
     };
 
+    const startTime = getStartTime();
+
     const updateTimer = () => {
-      const remaining = calculateTimeLeft();
+      const now = Date.now();
+      const elapsed = now - startTime;
+      const cyclePosition = elapsed % TIMER_DURATION;
+      const remaining = TIMER_DURATION - cyclePosition;
+
       setTimeLeft(remaining);
 
-      if (remaining === 0) {
-        setCurrentOrder((prev) => ({ ...prev, status: 'expired' }));
-      }
+      // Don't expire the payment - just let the timer reset
+      // Remove the expiration logic completely
     };
 
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [currentOrder.expiresAt]);
+  }, []); // Remove dependency on currentOrder.expiresAt
 
   const formatTime = (milliseconds: number) => {
     const totalSeconds = Math.floor(milliseconds / 1000);
@@ -199,7 +211,8 @@ export function PaymentPageClient({ order }: PaymentPageClientProps) {
     );
   }
 
-  if (currentOrder.status === 'expired' || currentOrder.status === 'failed') {
+  // Only show failed status screen, not expired (since timer is dummy)
+  if (currentOrder.status === 'failed') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
         <Card className="w-full max-w-md">
@@ -207,13 +220,9 @@ export function PaymentPageClient({ order }: PaymentPageClientProps) {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
               <XCircle className="h-8 w-8 text-red-600" />
             </div>
-            <CardTitle className="text-red-800">
-              Payment {currentOrder.status === 'expired' ? 'Expired' : 'Failed'}
-            </CardTitle>
+            <CardTitle className="text-red-800">Payment Failed</CardTitle>
             <CardDescription>
-              {currentOrder.status === 'expired'
-                ? 'This payment link has expired. Please request a new payment link.'
-                : 'There was an issue with your payment. Please try again.'}
+              There was an issue with your payment. Please try again.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
@@ -239,7 +248,7 @@ export function PaymentPageClient({ order }: PaymentPageClientProps) {
 
         {/* Countdown Timer */}
         <div className="text-center space-y-3">
-          <p className="text-gray-700 font-medium text-sm">Order will be closed in:</p>
+          <p className="text-gray-700 font-medium text-sm">Payment Timer:</p>
           <div className="flex justify-center gap-2">
             <div className="bg-blue-600 text-white px-3 py-2 rounded-lg text-xl font-bold min-w-[50px]">
               {time.minutes}
@@ -249,7 +258,7 @@ export function PaymentPageClient({ order }: PaymentPageClientProps) {
               {time.seconds}
             </div>
           </div>
-          <p className="text-xs text-gray-500">Minutes : Seconds</p>
+          <p className="text-xs text-gray-500">Minutes : Seconds (Auto-resets)</p>
         </div>
 
         {/* Amount Section */}
@@ -283,20 +292,20 @@ export function PaymentPageClient({ order }: PaymentPageClientProps) {
         </div>
 
         {/* Important Notice */}
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-red-800">Important Notice:</p>
-              <div className="mt-2 text-sm text-red-700">
+              <p className="text-sm font-medium text-blue-800">Important Notice:</p>
+              <div className="mt-2 text-sm text-blue-700">
                 <ul className="list-disc list-inside space-y-1">
                   <li>One UPI ID can only transfer money <strong>once</strong></li>
                   <li>Don't change the <strong>payment amount</strong></li>
-                  <li>Order will be auto-cancelled if payment is not completed</li>
+                  <li>Take your time - payment link never expires</li>
                 </ul>
               </div>
             </div>

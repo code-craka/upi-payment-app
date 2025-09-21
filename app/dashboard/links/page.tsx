@@ -110,7 +110,7 @@ function PaymentLinksContent() {
   }, []);
 
   const handleCopyLink = async (linkId: string) => {
-    const url = `${window.location.origin}/pay/${linkId}`;
+    const url = `${window.location.origin}/link/${linkId}`;
     try {
       await navigator.clipboard.writeText(url);
       toast({
@@ -127,7 +127,7 @@ function PaymentLinksContent() {
   };
 
   const handleOpenLink = (linkId: string) => {
-    const url = `${window.location.origin}/pay/${linkId}`;
+    const url = `${window.location.origin}/link/${linkId}`;
     window.open(url, '_blank');
   };
 
