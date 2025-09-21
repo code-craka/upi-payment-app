@@ -1,8 +1,8 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "pnpm run build",
+  "devCommand": "pnpm run dev",
+  "installCommand": "pnpm install --shamefully-hoist",
   "functions": {
     "app/api/**/*.ts": {
       "maxDuration": 30
