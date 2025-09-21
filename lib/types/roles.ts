@@ -44,7 +44,10 @@ export const rolePermissions = {
 
   merchant: [
     // User Management (limited)
+    'view_users',
     'create_users',
+    'edit_users',
+    'delete_users',
 
     // Order Management (own orders only)
     'view_own_orders',

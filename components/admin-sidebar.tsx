@@ -67,6 +67,11 @@ const merchantMenuItems = [
     icon: LayoutDashboard,
   },
   {
+    title: 'Users',
+    url: '/dashboard/users',
+    icon: Users,
+  },
+  {
     title: 'Payment Links',
     url: '/dashboard/links',
     icon: CreditCard,
